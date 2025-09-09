@@ -1,20 +1,127 @@
 {% extends "base.html" %}
-{% block title %}Inicio{% endblock %}
+{% load static %}
+{% block title %}EduLink · Inicio{% endblock %}
+
 {% block content %}
-  <div class="row align-items-center py-5">
+
+<!-- HERO -->
+<section class="hero-wrap p-4 p-md-5 mb-4">
+  <div class="hero-blob d-none d-md-block"></div>
+  <div class="row align-items-center g-4">
     <div class="col-lg-7">
-      <h1 class="fw-bold mb-3">Conectá Alumnos con Maestros Particulares</h1>
-      <p class="lead text-muted">
-        Encontrá clases por materia, modalidad u ubicación. Todo en un solo lugar.
+      <h1 class="display-5 fw-bold text-dark mb-3">Aprendé lo que quieras, con el profe ideal</h1>
+      <p class="lead text-muted mb-4">
+        Conectamos <strong>alumnos</strong> y <strong>maestros particulares</strong> por materia, modalidad y ciudad.
       </p>
-      <a class="btn btn-acento btn-lg me-2" href="{% url 'registro_persona' %}">Crear cuenta</a>
-      <a class="btn btn-outline-primary btn-lg" href="{% url 'login' %}">Iniciar sesión</a>
+      <!-- Buscador (a futuro podés apuntarlo a /maestros/) -->
+      <div class="search-card p-3 p-md-4">
+        <form method="get" action="{% url 'maestros_list' %}" class="row g-2 g-md-3">
+          <div class="col-md-4">
+            <label class="form-label mb-1">Materia</label>
+            <input name="materia" class="form-control" placeholder="Ej: Matemática, Inglés, Programación">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label mb-1">Ciudad</label>
+            <input name="ciudad" class="form-control" placeholder="Ej: Catamarca, Córdoba, Online">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label mb-1">Modalidad</label>
+            <select name="modalidad" class="form-select">
+              <option value="">Cualquiera</option>
+              <option value="online">Online</option>
+              <option value="presencial">Presencial</option>
+            </select>
+          </div>
+          <div class="col-md-1 d-grid">
+            <label class="form-label mb-1 invisible">Buscar</label>
+            <button class="btn btn-primary">Buscar</button>
+          </div>
+        </form>
+      </div>
+      <div class="mt-3">
+        <small class="text-muted">Tip: dejá “Ciudad” vacío para ver maestros en todo el país o modalidad Online.</small>
+      </div>
     </div>
-    <div class="col-lg-5 mt-4 mt-lg-0">
-      <div class="p-4 border rounded-3 bg-light">
-        <h5 class="mb-2">¿Listo para empezar?</h5>
-        <p class="mb-0 text-muted">Pronto vas a poder buscar maestros por materia y ciudad desde acá.</p>
+
+    <!-- Ilustración SVG liviana -->
+    <div class="col-lg-5 text-center">
+      <svg viewBox="0 0 400 300" width="100%" height="auto" role="img" aria-label="Ilustración educativa">
+        <defs>
+          <linearGradient id="g1" x1="0" x2="1">
+            <stop offset="0%" stop-color="#0d6efd"/>
+            <stop offset="100%" stop-color="#74b0ff"/>
+          </linearGradient>
+        </defs>
+        <rect x="20" y="30" width="360" height="220" rx="14" fill="#ffffff" stroke="#dbe7ff"/>
+        <rect x="40" y="55" width="140" height="16" rx="8" fill="url(#g1)"/>
+        <rect x="40" y="85" width="320" height="10" rx="5" fill="#eaf2ff"/>
+        <rect x="40" y="105" width="320" height="10" rx="5" fill="#eaf2ff"/>
+        <rect x="40" y="125" width="220" height="10" rx="5" fill="#eaf2ff"/>
+        <circle cx="330" cy="200" r="46" fill="url(#g1)" opacity=".25"/>
+        <circle cx="320" cy="195" r="36" fill="url(#g1)" opacity=".4"/>
+        <circle cx="310" cy="190" r="24" fill="url(#g1)"/>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- CATEGORÍAS / MATERIAS -->
+{% if materias %}
+<section class="mb-5">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h5 class="mb-0">Materias populares</h5>
+    <a class="text-decoration-none" href="{% url 'maestros_list' %}">Ver todos los maestros →</a>
+  </div>
+  <div class="d-flex flex-wrap">
+    {% for m in materias %}
+      <a class="badge-chip" href="{% url 'maestros_list' %}?materia={{ m.nombre|urlencode }}">{{ m.nombre }}</a>
+    {% empty %}
+      <p class="text-muted mb-0">Aún no hay materias cargadas.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<!-- BENEFICIOS -->
+<section class="mb-5">
+  <div class="row g-3 g-md-4">
+    <div class="col-md-4">
+      <div class="feature-card">
+        <h6 class="fw-semibold mb-2">Encontrá rápido</h6>
+        <p class="text-muted mb-0">Filtrá por materia, ciudad y modalidad para dar con el profe ideal.</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="feature-card">
+        <h6 class="fw-semibold mb-2">Flexible</h6>
+        <p class="text-muted mb-0">Clases online o presenciales, cuando te quede cómodo.</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="feature-card">
+        <h6 class="fw-semibold mb-2">Transparente</h6>
+        <p class="text-muted mb-0">Perfiles con precio por hora y materias declaradas.</p>
       </div>
     </div>
   </div>
+</section>
+
+<!-- CTA -->
+<section class="mb-4">
+  <div class="p-4 p-md-5 text-center border rounded-3" style="background:#f8fbff; border-color:#dbe7ff;">
+    <h4 class="fw-semibold mb-2">¿Listo para empezar?</h4>
+    <p class="text-muted mb-3">Creá tu cuenta gratis y reservá tu primera clase.</p>
+    <a class="btn btn-primary me-2" href="{% url 'registro_persona' %}">Crear cuenta</a>
+    <a class="btn btn-outline-primary" href="{% url 'login' %}">Ya tengo cuenta</a>
+  </div>
+</section>
+
+<!-- FOOTER MINI -->
+<section class="footer-mini pt-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-center">
+    <small>© {{ now|date:"Y" }} EduLink</small>
+    <small class="text-muted">Hecho con Django · Catamarca</small>
+  </div>
+</section>
+
 {% endblock %}

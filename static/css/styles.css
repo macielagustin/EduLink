@@ -1,0 +1,45 @@
+/* Hero */
+.hero-wrap {
+  position: relative;
+  background: linear-gradient(180deg, #eaf2ff 0%, #ffffff 60%);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+.hero-blob {
+  position: absolute;
+  width: 420px;
+  height: 420px;
+  right: -120px;
+  top: -120px;
+  background: radial-gradient(circle at 30% 30%, #0d6efd40, transparent 60%),
+              radial-gradient(circle at 70% 70%, #0d6efd22, transparent 70%);
+  filter: blur(4px);
+}
+.search-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+.badge-chip {
+  background: #f2f6ff;
+  color: #0d47a1;
+  border: 1px solid #dbe7ff;
+  padding: .5rem .75rem;
+  border-radius: 999px;
+  text-decoration: none;
+  display: inline-block;
+  margin: .25rem .35rem;
+  font-size: .95rem;
+}
+.feature-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.25rem;
+  height: 100%;
+}
+.footer-mini {
+  border-top: 1px solid #e5e7eb;
+  color: #6b7280;
+}
