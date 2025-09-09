@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load widget_tweaks %}
+{% block title %}Registro Alumno{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-7">
+    <div class="card p-4">
+      <h3 class="mb-3">Registro como Alumno</h3>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label">Bio</label>
+          {{ form.bio|add_class:"form-control" }}
+          {{ form.bio.errors }}
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Ciudad</label>
+          {{ form.ciudad|add_class:"form-control" }}
+          {{ form.ciudad.errors }}
+        </div>
+        <div class="form-check mb-3">
+          {{ form.prefiere_online|add_class:"form-check-input" }}
+          <label class="form-check-label">Prefiero clases online</label>
+        </div>
+        <button class="btn btn-acento w-100">Completar Registro</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

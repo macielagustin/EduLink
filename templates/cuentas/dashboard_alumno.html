@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Dashboard Alumno{% endblock %}
+{% block content %}
+  <div class="card p-4">
+    <h3 class="mb-2">¡Hola, {{ request.user.username }}!</h3>
+    <p class="text-muted mb-4">Tu rol: <strong>{{ request.user.rol }}</strong></p>
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div class="p-3 border rounded bg-light">
+          <h6 class="mb-2">Buscar maestros</h6>
+          <p class="text-muted">Pronto podrás filtrar por materia, modalidad y ciudad.</p>
+          <a class="btn btn-primary" href="#">Ir a búsqueda</a>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="p-3 border rounded bg-light">
+          <h6 class="mb-2">Mis solicitudes</h6>
+          <p class="text-muted mb-0">Acá verás el estado de tus pedidos de clase.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

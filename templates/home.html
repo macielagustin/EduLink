@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Inicio{% endblock %}
+{% block content %}
+  <div class="row align-items-center py-5">
+    <div class="col-lg-7">
+      <h1 class="fw-bold mb-3">Conectá Alumnos con Maestros Particulares</h1>
+      <p class="lead text-muted">
+        Encontrá clases por materia, modalidad u ubicación. Todo en un solo lugar.
+      </p>
+      <a class="btn btn-acento btn-lg me-2" href="{% url 'registro_persona' %}">Crear cuenta</a>
+      <a class="btn btn-outline-primary btn-lg" href="{% url 'login' %}">Iniciar sesión</a>
+    </div>
+    <div class="col-lg-5 mt-4 mt-lg-0">
+      <div class="p-4 border rounded-3 bg-light">
+        <h5 class="mb-2">¿Listo para empezar?</h5>
+        <p class="mb-0 text-muted">Pronto vas a poder buscar maestros por materia y ciudad desde acá.</p>
+      </div>
+    </div>
+  </div>
+{% endblock %}

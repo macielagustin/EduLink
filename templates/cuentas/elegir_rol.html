@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Elegir rol{% endblock %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-md-6">
+    <div class="card p-4 h-100">
+      <h4 class="mb-2">Registrarme como Alumno</h4>
+      <p class="text-muted">Pedí clases y encontrá maestros por materia y ciudad.</p>
+      <a class="btn btn-acento" href="{% url 'registro_alumno' %}">Soy Alumno</a>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card p-4 h-100">
+      <h4 class="mb-2">Registrarme como Maestro</h4>
+      <p class="text-muted">Publicá tu perfil, materias y modalidad de enseñanza.</p>
+      <a class="btn btn-acento" href="{% url 'registro_maestro' %}">Soy Maestro</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
