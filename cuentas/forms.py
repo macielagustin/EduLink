@@ -40,4 +40,4 @@ class RegistroMaestroForm(forms.ModelForm):
         }
 
 class LoginForm(AuthenticationForm):
-    username = forms.CharField(label="Usuario")
+    username = forms.CharField(label="Usuario o Email")
