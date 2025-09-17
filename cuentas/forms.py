@@ -1,28 +1,85 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
-from .models import Usuario, Alumno, Maestro
+from .models import Usuario, Alumno, Maestro, Provincia, Departamento, Municipio, Localidad
 from catalogo.models import Materia
+
 
 class RegistroPersonaForm(UserCreationForm):
     email = forms.EmailField(required=True)
+    fecha_nacimiento = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date'}), 
+        required=False
+    )
+    bio = forms.CharField(  # campo personalizado que mapea a descripcion
+        widget=forms.Textarea(attrs={"rows": 3}),
+        required=False,
+        label="Descripción"
+    )
+
+    # Campos de geolocalización
+    provincia = forms.ModelChoiceField(queryset=Provincia.objects.all(), required=False)
+    departamento = forms.ModelChoiceField(queryset=Departamento.objects.none(), required=False)
+    municipio = forms.ModelChoiceField(queryset=Municipio.objects.none(), required=False)
+    localidad = forms.ModelChoiceField(queryset=Localidad.objects.none(), required=False)
+    calle = forms.CharField(max_length=255, required=False)
+    latitud = forms.FloatField(widget=forms.HiddenInput(), required=False)
+    longitud = forms.FloatField(widget=forms.HiddenInput(), required=False)
 
     class Meta:
         model = Usuario
-        fields = ("username", "email", "password1", "password2")
+        fields = (
+            "username", "email", "password1", "password2",
+            "telefono", "fecha_nacimiento", "foto_perfil",
+            "provincia", "departamento", "municipio", "localidad",
+            "calle", "latitud", "longitud"
+        )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Mensajitos útiles
         self.fields["password1"].help_text = "Mín. 8 caracteres y al menos una mayúscula."
         self.fields["password2"].help_text = "Repetí la misma contraseña."
+
+        # --- selects dependientes (geolocalización) ---
+        if 'provincia' in self.data:
+            try:
+                provincia_id = int(self.data.get('provincia'))
+                self.fields['departamento'].queryset = Departamento.objects.filter(provincia_id=provincia_id)
+            except (ValueError, TypeError):
+                pass
+        elif self.instance.pk and self.instance.provincia:
+            self.fields['departamento'].queryset = self.instance.provincia.departamento_set.all()
+
+        if 'departamento' in self.data:
+            try:
+                departamento_id = int(self.data.get('departamento'))
+                self.fields['municipio'].queryset = Municipio.objects.filter(departamento_id=departamento_id)
+            except (ValueError, TypeError):
+                pass
+        elif self.instance.pk and self.instance.departamento:
+            self.fields['municipio'].queryset = self.instance.departamento.municipio_set.all()
+
+        if 'municipio' in self.data:
+            try:
+                municipio_id = int(self.data.get('municipio'))
+                self.fields['localidad'].queryset = Localidad.objects.filter(municipio_id=municipio_id)
+            except (ValueError, TypeError):
+                pass
+        elif self.instance.pk and self.instance.municipio:
+            self.fields['localidad'].queryset = self.instance.municipio.localidad_set.all()
+
+    def save(self, commit=True):
+        usuario = super().save(commit=False)
+        usuario.descripcion = self.cleaned_data.get("bio")  # mapeo bio → descripcion
+        if commit:
+            usuario.save()
+        return usuario
+
 
 class RegistroAlumnoForm(forms.ModelForm):
     class Meta:
         model = Alumno
-        fields = ("bio", "prefiere_online", "ciudad")
-        widgets = {
-            "bio": forms.Textarea(attrs={"rows": 3})
-        }
+        fields = ("prefiere_online",)   # Alumno ahora solo tiene este campo
+
 
 class RegistroMaestroForm(forms.ModelForm):
     materias = forms.ModelMultipleChoiceField(
@@ -33,11 +90,9 @@ class RegistroMaestroForm(forms.ModelForm):
 
     class Meta:
         model = Maestro
-        fields = ("bio", "precio_hora", "online", "presencial", "ciudad", "materias", "cv")
-        widgets = {
-            "bio": forms.Textarea(attrs={"rows": 3}),
-            "precio_hora": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
-        }
+        fields = ("precio_hora", "online", "presencial", "materias", "cv")
+
 
 class LoginForm(AuthenticationForm):
     username = forms.CharField(label="Usuario o Email")
+
