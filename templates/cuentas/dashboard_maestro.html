@@ -1,23 +1,44 @@
 {% extends "base.html" %}
 {% block title %}Dashboard Maestro{% endblock %}
+
 {% block content %}
-  <div class="card p-4">
-    <h3 class="mb-2">¡Hola, {{ request.user.username }}!</h3>
-    <p class="text-muted mb-4">Tu rol: <strong>{{ request.user.rol }}</strong></p>
-    <div class="row g-3">
-      <div class="col-md-6">
-        <div class="p-3 border rounded bg-light">
-          <h6 class="mb-2">Mi perfil</h6>
-          <p class="text-muted">Actualizá tus materias, precio y modalidad.</p>
-          <a class="btn btn-primary" href="#">Editar perfil</a>
-        </div>
+  <!-- Hero de bienvenida -->
+  <div class="hero-wrap p-4 mb-4">
+    <h3 class="fw-bold">👋 ¡Hola, {{ request.user.username }}!</h3>
+    <p class="text-muted">Tu rol: <strong>{{ request.user.rol }}</strong></p>
+    <a href="#" class="btn btn-acento mt-2">Configurar disponibilidad</a>
+  </div>
+
+  <!-- Secciones principales -->
+  <div class="row g-4">
+    <!-- Solicitudes de clase -->
+    <div class="col-md-6">
+      <div class="feature-card">
+        <h5 class="fw-bold mb-2">📑 Solicitudes de clase</h5>
+        <p class="text-muted">Gestioná las solicitudes que te envían los alumnos.</p>
+        <a class="btn btn-primary btn-sm" href="#">Ver solicitudes</a>
       </div>
-      <div class="col-md-6">
-        <div class="p-3 border rounded bg-light">
-          <h6 class="mb-2">Solicitudes de clase</h6>
-          <p class="text-muted mb-0">Acá verás solicitudes nuevas de alumnos.</p>
-        </div>
+    </div>
+
+    <!-- Mi agenda -->
+    <div class="col-md-6">
+      <div class="feature-card">
+        <h5 class="fw-bold mb-2">📅 Mi agenda</h5>
+        <p class="text-muted">Revisá tus próximas clases y horarios disponibles.</p>
+        <a class="btn btn-outline-primary btn-sm" href="#">Ir a agenda</a>
       </div>
     </div>
   </div>
+
+  <!-- Acciones rápidas -->
+  <div class="mt-5">
+    <h4 class="fw-bold mb-3">Acciones rápidas</h4>
+    <div class="d-flex flex-wrap gap-3">
+      <a href="#" class="btn btn-acento">💬 Mensajes</a>
+      <a href="#" class="btn btn-outline-secondary">⚙️ Editar perfil</a>
+      <a href="#" class="btn btn-outline-dark">⭐ Reseñas</a>
+    </div>
+  </div>
 {% endblock %}
+
+
