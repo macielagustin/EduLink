@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
-from .models import Usuario, Alumno, Maestro, Provincia, Departamento, Municipio, Localidad
+from .models import Usuario, Alumno, Maestro, Provincia, Departamento, Municipio, Localidad, Idioma, NivelEducativo, Disponibilidad
 from catalogo.models import Materia
 
 
@@ -76,9 +76,26 @@ class RegistroPersonaForm(UserCreationForm):
 
 
 class RegistroAlumnoForm(forms.ModelForm):
+    materias_interes = forms.ModelMultipleChoiceField(
+        queryset=Materia.objects.all(),
+        required=False,
+        widget=forms.SelectMultiple(attrs={"class": "form-select", "size": "6"})
+    )
+    disponibilidad = forms.ModelMultipleChoiceField(
+        queryset=Disponibilidad.objects.all(),
+        required=False,
+        widget=forms.SelectMultiple(attrs={"class": "form-select", "size": "4"})
+    )
+
     class Meta:
         model = Alumno
-        fields = ("prefiere_online",)   # Alumno ahora solo tiene este campo
+        fields = (
+            "nivel_educativo",
+            "materias_interes",
+            "objetivo",
+            "disponibilidad",
+            "prefiere_online",
+        )
 
 
 class RegistroMaestroForm(forms.ModelForm):
@@ -87,10 +104,22 @@ class RegistroMaestroForm(forms.ModelForm):
         required=False,
         widget=forms.SelectMultiple(attrs={"class": "form-select", "size": "6"})
     )
+    idiomas = forms.ModelMultipleChoiceField(
+        queryset=Idioma.objects.all(),
+        required=False,
+        widget=forms.SelectMultiple(attrs={"class": "form-select", "size": "4"})
+    )
 
     class Meta:
         model = Maestro
-        fields = ("precio_hora", "online", "presencial", "materias", "cv")
+        fields = (
+            "precio_hora",
+            "modalidad",   # ✅ reemplaza online/presencial
+            "descripcion",
+            "cv",
+            "materias",
+            "idiomas",
+        )
 
 
 class LoginForm(AuthenticationForm):

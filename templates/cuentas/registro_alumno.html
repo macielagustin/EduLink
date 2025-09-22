@@ -8,20 +8,42 @@
       <h3 class="mb-3">Registro como Alumno</h3>
       <form method="post" novalidate>
         {% csrf_token %}
+
+        <!-- Nivel educativo -->
         <div class="mb-3">
-          <label class="form-label">Bio</label>
-          {{ form.bio|add_class:"form-control" }}
-          {{ form.bio.errors }}
+          <label class="form-label">Nivel educativo actual</label>
+          {{ form.nivel_educativo|add_class:"form-select" }}
+          {{ form.nivel_educativo.errors }}
         </div>
+
+        <!-- Materias de interés -->
         <div class="mb-3">
-          <label class="form-label">Ciudad</label>
-          {{ form.ciudad|add_class:"form-control" }}
-          {{ form.ciudad.errors }}
+          <label class="form-label">Materias de interés (Ctrl/Cmd + Click para varias)</label>
+          {{ form.materias_interes }}
+          {{ form.materias_interes.errors }}
         </div>
+
+        <!-- Objetivo -->
+        <div class="mb-3">
+          <label class="form-label">Objetivo de aprendizaje</label>
+          {{ form.objetivo|add_class:"form-control" }}
+          {{ form.objetivo.errors }}
+        </div>
+
+        <!-- Disponibilidad horaria -->
+        <div class="mb-3">
+          <label class="form-label">Disponibilidad horaria</label>
+          {{ form.disponibilidad }}
+          {{ form.disponibilidad.errors }}
+        </div>
+
+        <!-- Prefiere online -->
         <div class="form-check mb-3">
           {{ form.prefiere_online|add_class:"form-check-input" }}
           <label class="form-check-label">Prefiero clases online</label>
+          {{ form.prefiere_online.errors }}
         </div>
+
         <button class="btn btn-acento w-100">Completar Registro</button>
       </form>
     </div>

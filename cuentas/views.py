@@ -6,7 +6,7 @@ from django.shortcuts import render, redirect
 from django.conf import settings
 from django.http import JsonResponse
 from .forms import RegistroPersonaForm, RegistroAlumnoForm, RegistroMaestroForm, LoginForm
-from .models import Departamento, Municipio, Localidad
+from .models import Departamento, Municipio, Localidad, Provincia
 
 
 def home_view(request):
@@ -46,19 +46,19 @@ def registro_persona(request):
 # --- Vistas AJAX para selects dependientes ---
 def load_departamentos(request):
     provincia_id = request.GET.get('provincia_id')
-    departamentos = Departamento.objects.filter(provincia_id=provincia_id).all()
+    departamentos = Departamento.objects.filter(provincia_id=provincia_id)
     return JsonResponse(list(departamentos.values('id', 'nombre')), safe=False)
 
 
 def load_municipios(request):
     departamento_id = request.GET.get('departamento_id')
-    municipios = Municipio.objects.filter(departamento_id=departamento_id).all()
+    municipios = Municipio.objects.filter(departamento_id=departamento_id)
     return JsonResponse(list(municipios.values('id', 'nombre')), safe=False)
 
 
 def load_localidades(request):
     municipio_id = request.GET.get('municipio_id')
-    localidades = Localidad.objects.filter(municipio_id=municipio_id).all()
+    localidades = Localidad.objects.filter(municipio_id=municipio_id)
     return JsonResponse(list(localidades.values('id', 'nombre')), safe=False)
 
 
@@ -129,3 +129,6 @@ def dashboard_alumno(request):
 @login_required
 def dashboard_maestro(request):
     return render(request, "cuentas/dashboard_maestro.html")
+
+def test_geocoding(request):
+    return render(request, "cuentas/test_geocoding.html")

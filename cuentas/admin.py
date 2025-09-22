@@ -33,13 +33,16 @@ class UsuarioAdmin(admin.ModelAdmin):
 
 @admin.register(Alumno)
 class AlumnoAdmin(admin.ModelAdmin):
-    list_display = ("usuario", "prefiere_online")
-    search_fields = ("usuario__username",)
+    list_display = ("usuario", "nivel_educativo", "prefiere_online")
+    search_fields = ("usuario__username", "objetivo")
+    list_filter = ("nivel_educativo", "prefiere_online")
+    filter_horizontal = ("materias_interes", "disponibilidad",)
+
 
 @admin.register(Maestro)
 class MaestroAdmin(admin.ModelAdmin):
-    list_display = ("usuario", "online", "presencial", "precio_hora")
+    list_display = ("usuario", "modalidad", "precio_hora")
     search_fields = ("usuario__username",)
-    filter_horizontal = ("materias",)
+    filter_horizontal = ("materias", "idiomas",)
 
 

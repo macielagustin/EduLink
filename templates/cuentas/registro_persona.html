@@ -10,17 +10,6 @@
       <form method="post" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
         {{ form.non_field_errors }}
-        {% if form.errors %}
-        <div class="alert alert-danger">
-          <ul>
-            {% for field, errors in form.errors.items %}
-            {% for error in errors %}
-            <li><strong>{{ field }}:</strong> {{ error }}</li>
-            {% endfor %}
-            {% endfor %}
-          </ul>
-        </div>
-        {% endif %}
 
         <div class="row">
           <!-- Columna izquierda -->
@@ -61,7 +50,7 @@
           <!-- Columna derecha -->
           <div class="col-md-6">
             <div class="mb-3">
-              <label class="form-label">Descripción</label>
+              <label class="form-label">Bio</label>
               {{ form.bio|add_class:"form-control" }}
               {{ form.bio.errors }}
             </div>
@@ -121,114 +110,183 @@
 {% endblock %}
 
 {% block extra_js %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-  // --- Vista previa de imagen ---
-  const imagenInput = document.getElementById('id_foto_perfil');
-  const previewContainer = document.getElementById('image-preview-container');
-  const imagePreview = document.getElementById('image-preview');
-  const removeButton = document.getElementById('remove-image');
+  document.addEventListener("DOMContentLoaded", function () {
+    console.log("JS cargado correctamente ✅");
 
-  if (imagenInput) {
-    imagenInput.addEventListener('change', function () {
-      if (this.files && this.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-          imagePreview.src = e.target.result;
-          previewContainer.style.display = 'block';
+    // --- Vista previa de imagen ---
+    const imagenInput = document.getElementById('id_foto_perfil');
+    const previewContainer = document.getElementById('image-preview-container');
+    const imagePreview = document.getElementById('image-preview');
+    const removeButton = document.getElementById('remove-image');
+
+    if (imagenInput) {
+      imagenInput.addEventListener('change', function () {
+        if (this.files && this.files[0]) {
+          const reader = new FileReader();
+          reader.onload = function (e) {
+            imagePreview.src = e.target.result;
+            previewContainer.style.display = 'block';
+          }
+          reader.readAsDataURL(this.files[0]);
         }
-        reader.readAsDataURL(this.files[0]);
+      });
+    }
+    if (removeButton) {
+      removeButton.addEventListener('click', function () {
+        imagenInput.value = '';
+        imagePreview.src = '';
+        previewContainer.style.display = 'none';
+      });
+    }
+
+    // --- Mapa con Leaflet ---
+    let map = L.map('map').setView([-28.4696, -65.7795], 13); // Catamarca default
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    let marker;
+    map.on('click', function (e) {
+      if (marker) map.removeLayer(marker);
+      marker = L.marker(e.latlng).addTo(map);
+      document.getElementById("id_latitud").value = e.latlng.lat;
+      document.getElementById("id_longitud").value = e.latlng.lng;
+      document.getElementById("geo-msg").textContent = "Ubicación seleccionada correctamente.";
+    });
+
+    map.on("click", async function (e) {
+      if (marker) map.removeLayer(marker);
+      marker = L.marker(e.latlng).addTo(map);
+
+      document.getElementById("id_latitud").value = e.latlng.lat;
+      document.getElementById("id_longitud").value = e.latlng.lng;
+      document.getElementById("geo-msg").textContent = "Ubicación seleccionada correctamente.";
+
+      try {
+        const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${e.latlng.lat}&lon=${e.latlng.lng}&zoom=18&addressdetails=1`;
+        const resp = await fetch(url, { headers: { "Accept-Language": "es" } });
+        const data = await resp.json();
+        console.log("Datos Nominatim:", data);
+
+        if (data.address) {
+          // --- Provincia ---
+          if (data.address.state) {
+            const provSelect = document.getElementById("id_provincia");
+            const provMatch = [...provSelect.options].find(opt =>
+              opt.text.toLowerCase().includes(data.address.state.toLowerCase())
+            );
+            if (provMatch) {
+              provSelect.value = provMatch.value;
+              provSelect.dispatchEvent(new Event("change"));
+
+              // --- Departamento ---
+              setTimeout(() => {
+                if (data.address.state_district) {
+                  const deptoSelect = document.getElementById("id_departamento");
+                  const deptoMatch = [...deptoSelect.options].find(opt =>
+                    opt.text.toLowerCase().includes(data.address.state_district.toLowerCase())
+                  );
+                  if (deptoMatch) {
+                    deptoSelect.value = deptoMatch.value;
+                    deptoSelect.dispatchEvent(new Event("change"));
+                  }
+                }
+
+                // --- Municipio ---
+                setTimeout(() => {
+                  if (data.address.city) {
+                    const muniSelect = document.getElementById("id_municipio");
+                    const muniMatch = [...muniSelect.options].find(opt =>
+                      opt.text.toLowerCase().includes(data.address.city.toLowerCase())
+                    );
+                    if (muniMatch) {
+                      muniSelect.value = muniMatch.value;
+                      muniSelect.dispatchEvent(new Event("change"));
+                    }
+                  }
+                }, 500); // esperamos a que carguen los municipios
+              }, 500); // esperamos a que carguen los departamentos
+            }
+          }
+
+          // --- Calle ---
+          if (data.address.road) {
+            document.getElementById("id_calle").value = data.address.road;
+          }
+        }
+      } catch (err) {
+        console.error("Error en geocodificación inversa:", err);
       }
     });
-  }
-  if (removeButton) {
-    removeButton.addEventListener('click', function () {
-      imagenInput.value = '';
-      imagePreview.src = '';
-      previewContainer.style.display = 'none';
-    });
-  }
 
-  // --- Mapa con Leaflet ---
-  let map = L.map('map').setView([-28.4696, -65.7795], 13); // Catamarca default
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors'
-  }).addTo(map);
 
-  let marker;
-  map.on('click', function (e) {
-    if (marker) map.removeLayer(marker);
-    marker = L.marker(e.latlng).addTo(map);
-    document.getElementById("id_latitud").value = e.latlng.lat;
-    document.getElementById("id_longitud").value = e.latlng.lng;
-    document.getElementById("geo-msg").textContent = "Ubicación seleccionada correctamente.";
-  });
+    // --- Selects dependientes ---
+    const provinciaSelect = document.getElementById('id_provincia');
+    const departamentoSelect = document.getElementById('id_departamento');
+    const municipioSelect = document.getElementById('id_municipio');
+    const localidadSelect = document.getElementById('id_localidad');
 
-  // --- Selects dependientes ---
-  const provinciaSelect = document.getElementById('id_provincia');
-  const departamentoSelect = document.getElementById('id_departamento');
-  const municipioSelect = document.getElementById('id_municipio');
-  const localidadSelect = document.getElementById('id_localidad');
-
-  async function cargar(url, select, childReset) {
-    try {
-      const resp = await fetch(url);
-      const data = await resp.json();
+    function resetSelect(select) {
       select.innerHTML = '<option value="">--Seleccione--</option>';
-      data.forEach(obj => {
-        const option = document.createElement('option');
-        option.value = obj.id;
-        option.textContent = obj.nombre;
-        select.appendChild(option);
-      });
-      select.disabled = false;
-      if (childReset) childReset();
-    } catch (err) {
-      console.error("Error cargando datos:", err);
-      Swal.fire("Error", "No se pudieron cargar los datos", "error");
+      select.disabled = true;
     }
-  }
 
-  function resetSelect(select) {
-    select.innerHTML = '<option value="">--Seleccione--</option>';
-    select.disabled = true;
-  }
+    async function cargar(url, select, childReset) {
+      try {
+        const resp = await fetch(url);
+        const data = await resp.json();
+        console.log("Respuesta de", url, data);
+        select.innerHTML = '<option value="">--Seleccione--</option>';
+        data.forEach(obj => {
+          const option = document.createElement("option");
+          option.value = obj.id;
+          option.textContent = obj.nombre;
+          select.appendChild(option);
+        });
+        select.disabled = false;
+        if (childReset) childReset();
+      } catch (err) {
+        console.error("Error cargando datos:", err);
+      }
+    }
 
-  provinciaSelect.addEventListener('change', function () {
-    if (this.value) {
-      cargar(`{% url 'departamentos' %}?provincia_id=${this.value}`, departamentoSelect, () => {
+    provinciaSelect.addEventListener('change', function () {
+      console.log("Provincia seleccionada:", this.value);
+      if (this.value) {
+        cargar(`/departamentos/?provincia_id=${this.value}`, departamentoSelect, () => {
+          resetSelect(municipioSelect);
+          resetSelect(localidadSelect);
+        });
+      } else {
+        resetSelect(departamentoSelect);
         resetSelect(municipioSelect);
         resetSelect(localidadSelect);
-      });
-    } else {
-      resetSelect(departamentoSelect); resetSelect(municipioSelect); resetSelect(localidadSelect);
-    }
-  });
+      }
+    });
 
-  departamentoSelect.addEventListener('change', function () {
-    if (this.value) {
-      cargar(`{% url 'municipios' %}?departamento_id=${this.value}`, municipioSelect, () => {
+    departamentoSelect.addEventListener('change', function () {
+      console.log("Departamento seleccionado:", this.value);
+      if (this.value) {
+        cargar(`/municipios/?departamento_id=${this.value}`, municipioSelect, () => {
+          resetSelect(localidadSelect);
+        });
+      } else {
+        resetSelect(municipioSelect);
         resetSelect(localidadSelect);
-      });
-    } else {
-      resetSelect(municipioSelect); resetSelect(localidadSelect);
-    }
-  });
+      }
+    });
 
-  municipioSelect.addEventListener('change', function () {
-    if (this.value) {
-      cargar(`{% url 'localidades' %}?municipio_id=${this.value}`, localidadSelect);
-    } else {
-      resetSelect(localidadSelect);
-    }
-  });
-
-  // --- Forzar precarga si ya hay provincia seleccionada ---
-  document.addEventListener("DOMContentLoaded", function () {
-    if (provinciaSelect.value) {
-      provinciaSelect.dispatchEvent(new Event('change'));
-    }
+    municipioSelect.addEventListener('change', function () {
+      console.log("Municipio seleccionado:", this.value);
+      if (this.value) {
+        cargar(`/localidades/?municipio_id=${this.value}`, localidadSelect);
+      } else {
+        resetSelect(localidadSelect);
+      }
+    });
   });
 </script>
 {% endblock %}

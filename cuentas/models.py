@@ -42,6 +42,10 @@ class Usuario(AbstractUser):
 
 class Alumno(models.Model):
     usuario = models.OneToOneField('Usuario', on_delete=models.CASCADE)
+    nivel_educativo = models.ForeignKey('NivelEducativo', on_delete=models.SET_NULL, null=True, blank=True)
+    materias_interes = models.ManyToManyField('catalogo.Materia', blank=True, related_name='alumnos')
+    objetivo = models.TextField(blank=True, null=True)
+    disponibilidad = models.ManyToManyField('Disponibilidad', blank=True, related_name='alumnos')
     prefiere_online = models.BooleanField(default=True)
 
     def __str__(self):
@@ -51,13 +55,48 @@ class Alumno(models.Model):
 class Maestro(models.Model):
     usuario = models.OneToOneField('Usuario', on_delete=models.CASCADE)
     precio_hora = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    online = models.BooleanField(default=True)
-    presencial = models.BooleanField(default=False)
+    modalidad = models.CharField(
+        max_length=20,
+        choices=[
+            ("Online", "Online"),
+            ("Presencial", "Presencial"),
+            ("Ambos", "Ambos"),
+        ],
+        default="Online",
+    )
+    descripcion = models.TextField(blank=True, null=True)
     cv = models.FileField(upload_to="cv_maestros/", blank=True, null=True)
     materias = models.ManyToManyField('catalogo.Materia', blank=True, related_name='maestros')
+    idiomas = models.ManyToManyField('Idioma', blank=True, related_name='maestros')
 
     def __str__(self):
         return f"Maestro: {self.usuario.username}"
+
+
+# Tabla de idiomas
+class Idioma(models.Model):
+    nombre = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.nombre
+
+
+# Tabla de niveles educativos (opcional, si no querés usar choices)
+class NivelEducativo(models.Model):
+    nombre = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.nombre
+
+
+# Tabla de disponibilidades horarias (opcional, si no querés usar choices)
+class Disponibilidad(models.Model):
+    nombre = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.nombre
+
+
 
 class Provincia(models.Model):
     nombre = models.CharField(max_length=100)
