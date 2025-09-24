@@ -11,6 +11,8 @@ from catalogo.models import Materia
 import math
 
 from .forms import EditarPerfilMaestroForm  # Asegúrate de importar el formulario
+from .models import SolicitudClase
+from django.db.models import Q  # Para búsquedas complejas
 
 
 def home_view(request):
@@ -268,3 +270,59 @@ def editar_perfil_maestro(request):
         form = EditarPerfilMaestroForm(instance=perfil_maestro)
 
     return render(request, "cuentas/editar_perfil_maestro.html", {"form": form})
+
+
+
+@login_required
+def solicitudes_para_maestro(request):
+    try:
+        # Obtenemos el perfil de maestro del usuario actual
+        perfil_maestro = Maestro.objects.get(usuario=request.user)
+        
+        # Filtramos las solicitudes para este maestro
+        solicitudes = SolicitudClase.objects.filter(maestro=perfil_maestro).order_by('-fecha_solicitud')
+        
+        # Filtros por estado
+        estado_filtro = request.GET.get('estado', 'todas')
+        if estado_filtro != 'todas':
+            solicitudes = solicitudes.filter(estado=estado_filtro)
+        
+        # Contadores para los badges
+        contadores = {
+            'todas': SolicitudClase.objects.filter(maestro=perfil_maestro).count(),
+            'pendientes': SolicitudClase.objects.filter(maestro=perfil_maestro, estado='pendiente').count(),
+            'aceptadas': SolicitudClase.objects.filter(maestro=perfil_maestro, estado='aceptada').count(),
+            'rechazadas': SolicitudClase.objects.filter(maestro=perfil_maestro, estado='rechazada').count(),
+        }
+        
+    except Maestro.DoesNotExist:
+        messages.error(request, "No tienes un perfil de maestro.")
+        return redirect("dashboard_maestro")
+    
+    return render(request, "cuentas/solicitudes_para_maestro.html", {
+        "solicitudes": solicitudes,
+        "contadores": contadores,
+        "estado_filtro": estado_filtro
+    })
+
+# Vista para cambiar el estado de una solicitud
+@login_required
+def cambiar_estado_solicitud(request, solicitud_id, nuevo_estado):
+    try:
+        perfil_maestro = Maestro.objects.get(usuario=request.user)
+        solicitud = SolicitudClase.objects.get(id=solicitud_id, maestro=perfil_maestro)
+        
+        if nuevo_estado in ['aceptada', 'rechazada']:
+            solicitud.estado = nuevo_estado
+            solicitud.save()
+            messages.success(request, f"Solicitud {nuevo_estado} correctamente.")
+        else:
+            messages.error(request, "Estado no válido.")
+            
+    except SolicitudClase.DoesNotExist:
+        messages.error(request, "Solicitud no encontrada.")
+    except Maestro.DoesNotExist:
+        messages.error(request, "No tienes permiso para esta acción.")
+    
+    return redirect("solicitudes_para_maestro")
+

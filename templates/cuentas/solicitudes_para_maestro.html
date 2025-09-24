@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Solicitudes de Clase - Maestro{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>📑 Solicitudes de Clase</h2>
+            <p class="text-muted">Gestiona las solicitudes que te envían los alumnos</p>
+        </div>
+        <a href="{% url 'dashboard_maestro' %}" class="btn btn-secondary">
+            ↩️ Volver al Dashboard
+        </a>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Filtrar por estado:</h5>
+            <div class="btn-group" role="group">
+                <a href="?estado=todas" class="btn {% if estado_filtro == 'todas' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    Todas <span class="badge bg-light text-dark">{{ contadores.todas }}</span>
+                </a>
+                <a href="?estado=pendiente" class="btn {% if estado_filtro == 'pendiente' %}btn-warning{% else %}btn-outline-warning{% endif %}">
+                    Pendientes <span class="badge bg-light text-dark">{{ contadores.pendientes }}</span>
+                </a>
+                <a href="?estado=aceptada" class="btn {% if estado_filtro == 'aceptada' %}btn-success{% else %}btn-outline-success{% endif %}">
+                    Aceptadas <span class="badge bg-light text-dark">{{ contadores.aceptadas }}</span>
+                </a>
+                <a href="?estado=rechazada" class="btn {% if estado_filtro == 'rechazada' %}btn-danger{% else %}btn-outline-danger{% endif %}">
+                    Rechazadas <span class="badge bg-light text-dark">{{ contadores.rechazadas }}</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Solicitudes -->
+    {% if solicitudes %}
+        <div class="row">
+            {% for solicitud in solicitudes %}
+            <div class="col-md-6 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">{{ solicitud.materia.nombre }}</h5>
+                        <span class="badge 
+                            {% if solicitud.estado == 'pendiente' %}bg-warning
+                            {% elif solicitud.estado == 'aceptada' %}bg-success
+                            {% elif solicitud.estado == 'rechazada' %}bg-danger
+                            {% else %}bg-secondary{% endif %}">
+                            {{ solicitud.get_estado_display }}
+                        </span>
+                    </div>
+                    
+                    <div class="card-body">
+                        <!-- Información del Alumno -->
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="bg-light rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                👤
+                            </div>
+                            <div>
+                                <strong>{{ solicitud.alumno.usuario.get_full_name|default:solicitud.alumno.usuario.username }}</strong>
+                                <br>
+                                <small class="text-muted">Solicitado: {{ solicitud.fecha_solicitud|date:"d/m/Y H:i" }}</small>
+                            </div>
+                        </div>
+
+                        <!-- Detalles de la Clase -->
+                        <div class="mb-3">
+                            <div class="row">
+                                <div class="col-6">
+                                    <small class="text-muted">📅 Fecha propuesta:</small>
+                                    <br>
+                                    <strong>{{ solicitud.fecha_clase_propuesta|date:"d/m/Y" }}</strong>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">⏰ Hora:</small>
+                                    <br>
+                                    <strong>{{ solicitud.fecha_clase_propuesta|date:"H:i" }}</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <small class="text-muted">⏱️ Duración:</small>
+                            <br>
+                            <strong>{{ solicitud.duracion_minutos }} minutos</strong>
+                        </div>
+
+                        {% if solicitud.mensaje %}
+                        <div class="mb-3">
+                            <small class="text-muted">💬 Mensaje del alumno:</small>
+                            <div class="alert alert-light mt-1">
+                                <em>"{{ solicitud.mensaje }}"</em>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Acciones -->
+                    <div class="card-footer">
+                        {% if solicitud.estado == 'pendiente' %}
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'cambiar_estado_solicitud' solicitud.id 'aceptada' %}" 
+                               class="btn btn-success btn-sm flex-fill"
+                               onclick="return confirm('¿Aceptar esta solicitud de clase?')">
+                                ✅ Aceptar
+                            </a>
+                            <a href="{% url 'cambiar_estado_solicitud' solicitud.id 'rechazada' %}" 
+                               class="btn btn-danger btn-sm flex-fill"
+                               onclick="return confirm('¿Rechazar esta solicitud de clase?')">
+                                ❌ Rechazar
+                            </a>
+                        </div>
+                        {% else %}
+                        <div class="text-center">
+                            <small class="text-muted">
+                                Esta solicitud fue {{ solicitud.get_estado_display|lower }} el 
+                                {{ solicitud.fecha_solicitud|date:"d/m/Y" }}
+                            </small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <!-- Estado cuando no hay solicitudes -->
+        <div class="text-center py-5">
+            <div class="mb-4">
+                <span style="font-size: 4rem;">📭</span>
+            </div>
+            <h4 class="text-muted">
+                {% if estado_filtro == 'todas' %}
+                    No tienes solicitudes de clase
+                {% else %}
+                    No hay solicitudes {{ estado_filtro }}s
+                {% endif %}
+            </h4>
+            <p class="text-muted">
+                {% if estado_filtro == 'todas' %}
+                    Cuando los alumnos te envíen solicitudes de clase, aparecerán aquí.
+                {% else %}
+                    Intenta cambiar el filtro para ver más solicitudes.
+                {% endif %}
+            </p>
+            {% if estado_filtro != 'todas' %}
+                <a href="?estado=todas" class="btn btn-primary">Ver todas las solicitudes</a>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.card {
+    border: none;
+    border-radius: 15px;
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+.btn-group .btn {
+    border-radius: 8px;
+    margin: 0 2px;
+}
+</style>
+{% endblock %}

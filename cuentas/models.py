@@ -128,3 +128,24 @@ class Localidad(models.Model):
     def __str__(self):
         return self.nombre
 
+
+
+class SolicitudClase(models.Model):
+    ESTADOS = [
+        ('pendiente', 'Pendiente'),
+        ('aceptada', 'Aceptada'),
+        ('rechazada', 'Rechazada'),
+        ('cancelada', 'Cancelada'),
+    ]
+    
+    alumno = models.ForeignKey('Alumno', on_delete=models.CASCADE)
+    maestro = models.ForeignKey('Maestro', on_delete=models.CASCADE)
+    materia = models.ForeignKey('catalogo.Materia', on_delete=models.CASCADE)
+    fecha_solicitud = models.DateTimeField(auto_now_add=True)
+    fecha_clase_propuesta = models.DateTimeField()
+    duracion_minutos = models.PositiveIntegerField(default=60)
+    mensaje = models.TextField(blank=True, null=True)
+    estado = models.CharField(max_length=20, choices=ESTADOS, default='pendiente')
+    
+    def __str__(self):
+        return f"Solicitud de {self.alumno.usuario.username} a {self.maestro.usuario.username}"
