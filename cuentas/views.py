@@ -269,7 +269,7 @@ def editar_perfil_maestro(request):
     else:
         form = EditarPerfilMaestroForm(instance=perfil_maestro)
 
-    return render(request, "cuentas/editar_perfil_maestro.html", {"form": form})
+    return render(request, "maestro/editar_perfil_maestro.html", {"form": form})
 
 
 
@@ -299,7 +299,7 @@ def solicitudes_para_maestro(request):
         messages.error(request, "No tienes un perfil de maestro.")
         return redirect("dashboard_maestro")
     
-    return render(request, "cuentas/solicitudes_para_maestro.html", {
+    return render(request, "maestro/solicitudes_para_maestro.html", {
         "solicitudes": solicitudes,
         "contadores": contadores,
         "estado_filtro": estado_filtro
@@ -325,4 +325,56 @@ def cambiar_estado_solicitud(request, solicitud_id, nuevo_estado):
         messages.error(request, "No tienes permiso para esta acción.")
     
     return redirect("solicitudes_para_maestro")
+
+
+
+@login_required
+def agenda_maestro(request):
+    try:
+        perfil_maestro = Maestro.objects.get(usuario=request.user)
+        
+        # Obtener las clases aceptadas (futuras y pasadas)
+        clases_aceptadas = SolicitudClase.objects.filter(
+            maestro=perfil_maestro, 
+            estado='aceptada'
+        ).order_by('fecha_clase_propuesta')
+        
+        # Separar en próximas y pasadas
+        from django.utils import timezone
+        ahora = timezone.now()
+        
+        proximas_clases = clases_aceptadas.filter(fecha_clase_propuesta__gte=ahora)
+        clases_pasadas = clases_aceptadas.filter(fecha_clase_propuesta__lt=ahora)
+        
+    except Maestro.DoesNotExist:
+        messages.error(request, "No tienes un perfil de maestro.")
+        return redirect("dashboard_maestro")
+    
+    return render(request, "maestro/agenda_maestro.html", {
+        "proximas_clases": proximas_clases,
+        "clases_pasadas": clases_pasadas,
+    })
+
+
+
+@login_required
+def perfil_publico_maestro(request):
+    try:
+        perfil_maestro = Maestro.objects.get(usuario=request.user)
+    except Maestro.DoesNotExist:
+        messages.error(request, "No tienes un perfil de maestro.")
+        return redirect("dashboard_maestro")
+    
+    return render(request, "maestro/perfil_publico_maestro.html", {
+        "maestro": perfil_maestro,
+        "usuario": request.user
+    })
+
+# También necesitamos una vista pública para que otros usuarios vean el perfil
+def perfil_maestro_publico(request, maestro_id):
+    maestro = get_object_or_404(Maestro, id=maestro_id)
+    return render(request, "maestro/perfil_maestro_publico.html", {
+        "maestro": maestro,
+        "usuario_maestro": maestro.usuario
+    })
 

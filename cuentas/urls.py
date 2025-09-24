@@ -9,6 +9,8 @@ from .views import (
 
 from .views import editar_perfil_maestro  # Agrega esta importación
 from .views import solicitudes_para_maestro, cambiar_estado_solicitud
+from .views import agenda_maestro
+from .views import perfil_publico_maestro, perfil_maestro_publico
 
 
 urlpatterns = [
@@ -50,6 +52,15 @@ urlpatterns = [
      # Solicitudes para maestros
     path("maestro/solicitudes/", solicitudes_para_maestro, name="solicitudes_para_maestro"),
     path("maestro/solicitud/<int:solicitud_id>/<str:nuevo_estado>/", cambiar_estado_solicitud, name="cambiar_estado_solicitud"),
+
+
+    path("maestro/agenda/", agenda_maestro, name="agenda_maestro"),
+
+
+
+    path("maestro/perfil/publico/", perfil_publico_maestro, name="perfil_publico_maestro"),
+    path("maestro/<int:maestro_id>/", perfil_maestro_publico, name="perfil_maestro_publico"),
+
 
 
 ]

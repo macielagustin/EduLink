@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ usuario_maestro.get_full_name }} | Maestro en EduLink{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header público -->
+    <div class="hero-wrap p-4 mb-4 bg-primary text-white rounded">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="fw-bold mb-1">{{ usuario_maestro.get_full_name|default:usuario_maestro.username }}</h2>
+                <p class="mb-0">🎓 Maestro certificado en EduLink</p>
+            </div>
+            {% if user.is_authenticated and user.rol == 'ALUMNO' %}
+            <a href="#" class="btn btn-light">
+                📨 Solicitar clase
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Contenido del perfil público (similar al anterior pero sin botones de edición) -->
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Mismo contenido que perfil_publico_maestro.html pero sin acciones de edición -->
+            <!-- Solo cambia los botones por acciones para alumnos -->
+        </div>
+    </div>
+</div>
+{% endblock %}

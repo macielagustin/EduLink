@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+{% block title %}Mi Agenda - Maestro{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header de la agenda -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">📅 Mi Agenda</h2>
+            <p class="text-muted">Gestiona tus clases programadas y disponibilidad</p>
+        </div>
+        <div>
+            <a href="{% url 'dashboard_maestro' %}" class="btn btn-outline-secondary">
+                ← Volver al dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Estadísticas rápidas -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">{{ proximas_clases.count }}</h5>
+                    <p class="card-text">Próximas clases</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">{{ clases_pasadas.count }}</h5>
+                    <p class="card-text">Clases completadas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h5 class="card-title">0</h5>
+                    <p class="card-text">Clases hoy</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">0</h5>
+                    <p class="card-text">Ingresos del mes</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pestañas de navegación -->
+    <ul class="nav nav-tabs mb-4" id="agendaTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="proximas-tab" data-bs-toggle="tab" 
+                    data-bs-target="#proximas" type="button" role="tab">
+                🗓️ Próximas Clases ({{ proximas_clases.count }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="pasadas-tab" data-bs-toggle="tab" 
+                    data-bs-target="#pasadas" type="button" role="tab">
+                📊 Historial ({{ clases_pasadas.count }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="disponibilidad-tab" data-bs-toggle="tab" 
+                    data-bs-target="#disponibilidad" type="button" role="tab">
+                ⏰ Mi Disponibilidad
+            </button>
+        </li>
+    </ul>
+
+    <!-- Contenido de las pestañas -->
+    <div class="tab-content" id="agendaTabsContent">
+        
+        <!-- Pestaña de Próximas Clases -->
+        <div class="tab-pane fade show active" id="proximas" role="tabpanel">
+            {% if proximas_clases %}
+                <div class="row">
+                    {% for clase in proximas_clases %}
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span class="badge bg-success">Programada</span>
+                                <small class="text-muted">{{ clase.fecha_clase_propuesta|date:"d/m/Y" }}</small>
+                            </div>
+                            <div class="card-body">
+                                <h6 class="card-title">{{ clase.materia.nombre }}</h6>
+                                <p class="card-text">
+                                    <strong>Alumno:</strong> {{ clase.alumno.usuario.get_full_name }}<br>
+                                    <strong>Duración:</strong> {{ clase.duracion_minutos }} minutos<br>
+                                    <strong>Hora:</strong> {{ clase.fecha_clase_propuesta|time:"H:i" }}<br>
+                                    {% if clase.mensaje %}
+                                    <strong>Mensaje:</strong> {{ clase.mensaje|truncatewords:10 }}
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <div class="card-footer">
+                                <div class="btn-group w-100" role="group">
+                                    <button type="button" class="btn btn-outline-primary btn-sm">
+                                        ✏️ Editar
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger btn-sm">
+                                        🗑️ Cancelar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <div class="mb-3">📭</div>
+                    <h5>No tienes clases programadas</h5>
+                    <p class="text-muted">Las clases que aceptes aparecerán aquí</p>
+                    <a href="{% url 'solicitudes_para_maestro' %}" class="btn btn-primary">
+                        Ver solicitudes pendientes
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Pestaña de Historial -->
+        <div class="tab-pane fade" id="pasadas" role="tabpanel">
+            {% if clases_pasadas %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Alumno</th>
+                                <th>Materia</th>
+                                <th>Duración</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for clase in clases_pasadas %}
+                            <tr>
+                                <td>{{ clase.fecha_clase_propuesta|date:"d/m/Y H:i" }}</td>
+                                <td>{{ clase.alumno.usuario.get_full_name }}</td>
+                                <td>{{ clase.materia.nombre }}</td>
+                                <td>{{ clase.duracion_minutos }} min</td>
+                                <td>
+                                    <span class="badge bg-secondary">Completada</span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary">
+                                        📝 Evaluar
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <div class="mb-3">📊</div>
+                    <h5>No hay historial de clases</h5>
+                    <p class="text-muted">Tus clases completadas aparecerán aquí</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Pestaña de Disponibilidad -->
+        <div class="tab-pane fade" id="disponibilidad" role="tabpanel">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">⏰ Configurar Disponibilidad Semanal</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">Selecciona los horarios en los que estás disponible para dar clases</p>
+                            
+                            <!-- Aquí iría un formulario/interfaz para configurar horarios -->
+                            <div class="alert alert-info">
+                                <strong>Funcionalidad en desarrollo</strong><br>
+                                Próximamente podrás configurar tu disponibilidad horaria semanal.
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Horario preferido</label>
+                                <select class="form-select">
+                                    <option>Mañana (8:00 - 12:00)</option>
+                                    <option>Tarde (14:00 - 18:00)</option>
+                                    <option>Noche (18:00 - 22:00)</option>
+                                    <option>Flexible</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">📋 Disponibilidad Actual</h6>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-unstyled">
+                                <li>✅ Lunes: 14:00-18:00</li>
+                                <li>✅ Martes: 14:00-18:00</li>
+                                <li>✅ Miércoles: 14:00-18:00</li>
+                                <li>✅ Jueves: 14:00-18:00</li>
+                                <li>✅ Viernes: 14:00-18:00</li>
+                                <li>❌ Sábado: No disponible</li>
+                                <li>❌ Domingo: No disponible</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.nav-tabs .nav-link.active {
+    color: #0d6efd;
+    border-bottom: 3px solid #0d6efd;
+    background: none;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+</style>
+{% endblock %}

@@ -25,7 +25,7 @@
       <div class="feature-card">
         <h5 class="fw-bold mb-2">📅 Mi agenda</h5>
         <p class="text-muted">Revisá tus próximas clases y horarios disponibles.</p>
-        <a class="btn btn-outline-primary btn-sm" href="#">Ir a agenda</a>
+        <a class="btn btn-outline-primary btn-sm" href="{% url 'agenda_maestro' %}">Ir a agenda</a>
       </div>
     </div>
   </div>
@@ -37,6 +37,7 @@
       <a href="#" class="btn btn-acento">💬 Mensajes</a>
       <a href="{% url 'editar_perfil_maestro' %}" class="btn btn-outline-secondary">⚙️ Editar perfil</a>
       <a href="#" class="btn btn-outline-dark">⭐ Reseñas</a>
+      <a href="{% url 'perfil_publico_maestro' %}" class="btn btn-outline-primary">👁️ Ver mi perfil público</a>
     </div>
   </div>
 {% endblock %}
