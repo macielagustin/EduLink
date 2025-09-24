@@ -2,12 +2,13 @@ from django.contrib import messages
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
 from django.http import JsonResponse
-from .forms import RegistroPersonaForm, RegistroAlumnoForm, RegistroMaestroForm, LoginForm
-from .models import Departamento, Municipio, Localidad, Provincia
-
+from .forms import RegistroPersonaForm, RegistroAlumnoForm, RegistroMaestroForm, LoginForm, UsuarioForm, AlumnoForm
+from .models import Departamento, Municipio, Localidad, Provincia, Maestro, Alumno
+from catalogo.models import Materia
+import math
 
 def home_view(request):
     return render(request, "home.html")
@@ -120,11 +121,119 @@ def logout_view(request):
     messages.info(request, "Sesión cerrada.")
     return redirect("login")
 
+#######################################
+######### ALUMNO #####################
+######################################
 
 @login_required
 def dashboard_alumno(request):
     return render(request, "cuentas/dashboard_alumno.html")
 
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371  # Radio de la Tierra en km
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+
+    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
+
+@login_required
+def buscar_clases(request):
+    materias = Materia.objects.all()
+    provincias = Provincia.objects.all()
+
+    # Capturar parámetros de búsqueda
+    materia_id = request.GET.get("materia")
+    modalidad = request.GET.get("modalidad")
+    provincia_id = request.GET.get("provincia")
+    radio = request.GET.get("radio")
+
+    # Convertir a enteros los IDs
+    if materia_id:
+        try:
+            materia_id = int(materia_id)
+        except ValueError:
+            materia_id = None
+
+    if provincia_id:
+        try:
+            provincia_id = int(provincia_id)
+        except ValueError:
+            provincia_id = None
+
+    resultados = Maestro.objects.all()
+
+    # Filtros básicos
+    if materia_id:
+        resultados = resultados.filter(materias__id=materia_id)
+    if modalidad:
+        resultados = resultados.filter(modalidad=modalidad)
+    if provincia_id:
+        resultados = resultados.filter(usuario__provincia__id=provincia_id)
+
+    # Filtro por radio solo si es presencial
+    resultados_finales = []
+    if modalidad == "Presencial" and radio:
+        alumno = request.user
+        if alumno.latitud and alumno.longitud:
+            radio = float(radio)
+            for m in resultados:
+                if m.usuario.latitud and m.usuario.longitud:
+                    distancia = haversine(alumno.latitud, alumno.longitud, m.usuario.latitud, m.usuario.longitud)
+                    if distancia <= radio:
+                        resultados_finales.append((m, round(distancia, 1)))
+    else:
+        # Si no aplica filtro de radio → devolvemos todos con distancia = None
+        resultados_finales = [(m, None) for m in resultados]
+
+    context = {
+        "materias": materias,
+        "provincias": provincias,
+        "q": {
+            "materia": materia_id,
+            "modalidad": modalidad or "",
+            "provincia": provincia_id,
+            "radio": radio or "",
+        },
+        "resultados": resultados_finales,  # 👈 siempre lista de tuplas
+    }
+    return render(request, "alumno/buscar_clases.html", context)
+
+
+
+@login_required
+def detalle_maestro(request, maestro_id):
+    maestro = get_object_or_404(Maestro, id=maestro_id)
+    usuario = maestro.usuario
+    return render(request, "alumno/detalle_maestro.html", {"maestro": maestro, "usuario": usuario})
+
+def perfil_alumno(request):
+    alumno = get_object_or_404(Alumno, usuario=request.user)
+
+    if request.method == "POST":
+        usuario_form = UsuarioForm(request.POST, request.FILES, instance=request.user)
+        alumno_form = AlumnoForm(request.POST, instance=alumno)
+
+        if usuario_form.is_valid() and alumno_form.is_valid():
+            usuario_form.save()
+            alumno_form.save()
+            return redirect("dashboard_alumno")
+    else:
+        usuario_form = UsuarioForm(instance=request.user)
+        alumno_form = AlumnoForm(instance=alumno)
+
+    return render(
+        request,
+        "alumno/perfil_alumno.html",
+        {"usuario_form": usuario_form, "alumno_form": alumno_form},
+    )
+
+@login_required
+def perfil_publico(request):
+    alumno = get_object_or_404(Alumno, usuario=request.user)
+    return render(request, "alumno/perfil_publico.html", {"alumno": alumno})
 
 @login_required
 def dashboard_maestro(request):

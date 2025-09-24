@@ -16,6 +16,9 @@ class Usuario(AbstractUser):
     rol = models.CharField(max_length=10, choices=ROL_CHOICES, default='USER')
     telefono = models.CharField(max_length=30, blank=True)
 
+    nombre = models.CharField(max_length=50, blank=False)
+    apellido = models.CharField(max_length=50, blank=False)
+
     # Campos adicionales de tu amigo
     fecha_nacimiento = models.DateField(null=True, blank=True)
     bio = models.TextField(blank=True)  # unifica con "descripcion"

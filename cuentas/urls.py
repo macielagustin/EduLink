@@ -4,7 +4,7 @@ from .views import (
     registro_persona, elegir_rol, registro_alumno, registro_maestro,
     CustomLoginView, logout_view,
     dashboard_alumno, dashboard_maestro,
-    load_departamentos, load_municipios, load_localidades, test_geocoding
+    load_departamentos, load_municipios, load_localidades, test_geocoding, buscar_clases, detalle_maestro, perfil_alumno,perfil_publico,
 )
 
 urlpatterns = [
@@ -30,5 +30,11 @@ urlpatterns = [
     path("maestro/", dashboard_maestro, name="dashboard_maestro"),
 
     path("test-geocoding/", test_geocoding, name="test_geocoding"),
+
+    #Alumno
+    path("alumno/buscar/", buscar_clases, name="buscar_clases"),
+    path("alumno/maestro/<int:maestro_id>/", detalle_maestro, name="detalle_maestro"),
+    path("alumno/perfil", perfil_alumno, name="perfil_alumno"),
+    path("alumno/perfil/publico/", perfil_publico, name="perfil_publico"),
 
 ]

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Mi Perfil | EduLink{% endblock %}
+
+{% block content %}
+<div class="hero-wrap p-4 mb-4">
+  <h3 class="fw-bold">👤 Mi Perfil</h3>
+  <p class="text-muted">Así es como se muestra tu perfil en EduLink.</p>
+</div>
+
+<div class="feature-card p-4">
+  <!-- Foto de perfil -->
+  <div class="mb-3 text-center">
+    {% if alumno.usuario.foto_perfil %}
+      <img src="{{ alumno.usuario.foto_perfil.url }}" class="rounded-circle" width="150" height="150" alt="Foto de perfil">
+    {% else %}
+      <img src="{% static 'img/default-avatar.png' %}" class="rounded-circle" width="150" height="150" alt="Avatar por defecto">
+    {% endif %}
+  </div>
+
+  <!-- Datos personales -->
+  <h5 class="fw-bold mb-2">{{ alumno.usuario.first_name }} {{ alumno.usuario.last_name }}</h5>
+  <p class="text-muted mb-1">📧 {{ alumno.usuario.email }}</p>
+  <p class="text-muted mb-1">📱 {{ alumno.usuario.telefono }}</p>
+  <p class="text-muted mb-1">🎂 {{ alumno.usuario.fecha_nacimiento }}</p>
+
+  <!-- Ubicación -->
+  <p class="text-muted mb-1">📍 
+    {% if alumno.usuario.localidad %}{{ alumno.usuario.localidad.nombre }}, {% endif %}
+    {% if alumno.usuario.municipio %}{{ alumno.usuario.municipio.nombre }}, {% endif %}
+    {% if alumno.usuario.departamento %}{{ alumno.usuario.departamento.nombre }}, {% endif %}
+    {% if alumno.usuario.provincia %}{{ alumno.usuario.provincia.nombre }}{% endif %}
+  </p>
+  {% if alumno.usuario.calle %}
+    <p class="text-muted">🏠 {{ alumno.usuario.calle }}</p>
+  {% endif %}
+
+  <!-- Bio -->
+  {% if alumno.usuario.bio %}
+    <div class="mt-3">
+      <h6 class="fw-bold">Sobre mí</h6>
+      <p>{{ alumno.usuario.bio }}</p>
+    </div>
+  {% endif %}
+
+  <hr>
+
+  <!-- Datos académicos -->
+  <h6 class="fw-bold">Nivel educativo</h6>
+  <p>{{ alumno.nivel_educativo }}</p>
+
+  <h6 class="fw-bold">Materias de interés</h6>
+  <p>
+    {% for m in alumno.materias_interes.all %}
+      <span class="badge-chip">{{ m.nombre }}</span>
+    {% empty %}
+      <span class="text-muted">No especificado</span>
+    {% endfor %}
+  </p>
+
+  <h6 class="fw-bold">Disponibilidad</h6>
+  <p>
+    {% for d in alumno.disponibilidad.all %}
+      <span class="badge-chip">{{ d.nombre }}</span>
+    {% empty %}
+      <span class="text-muted">No especificado</span>
+    {% endfor %}
+  </p>
+
+  <h6 class="fw-bold">Prefiere modalidad</h6>
+  <p>
+    {% if alumno.prefiere_online %} 💻 Online {% else %} 🏫 Presencial {% endif %}
+  </p>
+
+  {% if alumno.objetivo %}
+    <div class="mt-3">
+      <h6 class="fw-bold">Objetivo</h6>
+      <p>{{ alumno.objetivo }}</p>
+    </div>
+  {% endif %}
+
+  <!-- Botones -->
+  <div class="mt-4">
+    <a href="{% url 'perfil_alumno' %}" class="btn btn-outline-primary">✏️ Editar perfil</a>
+    <a href="{% url 'dashboard_alumno' %}" class="btn btn-secondary">⬅️ Volver al dashboard</a>
+  </div>
+</div>
+{% endblock %}

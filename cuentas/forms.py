@@ -6,6 +6,9 @@ from catalogo.models import Materia
 
 class RegistroPersonaForm(UserCreationForm):
     email = forms.EmailField(required=True)
+    nombre = forms.CharField(max_length=50, required=True, label="Nombre")
+    apellido = forms.CharField(max_length=50, required=True, label="Apellido")
+
     fecha_nacimiento = forms.DateField(
         widget=forms.DateInput(attrs={'type': 'date'}), 
         required=False
@@ -29,7 +32,7 @@ class RegistroPersonaForm(UserCreationForm):
         model = Usuario
         fields = (
             "username", "email", "password1", "password2",
-            "telefono", "fecha_nacimiento", "foto_perfil",
+            "nombre", "apellido", "telefono", "fecha_nacimiento", "foto_perfil",
             "provincia", "departamento", "municipio", "localidad",
             "calle", "latitud", "longitud"
         )
@@ -70,9 +73,12 @@ class RegistroPersonaForm(UserCreationForm):
     def save(self, commit=True):
         usuario = super().save(commit=False)
         usuario.descripcion = self.cleaned_data.get("bio")  # mapeo bio → descripcion
+        usuario.nombre = self.cleaned_data.get("nombre")
+        usuario.apellido = self.cleaned_data.get("apellido")
         if commit:
             usuario.save()
         return usuario
+
 
 
 class RegistroAlumnoForm(forms.ModelForm):
@@ -125,3 +131,31 @@ class RegistroMaestroForm(forms.ModelForm):
 class LoginForm(AuthenticationForm):
     username = forms.CharField(label="Usuario o Email")
 
+class UsuarioForm(forms.ModelForm):
+    class Meta:
+        model = Usuario
+        fields = [
+            "first_name", "last_name", "email", "telefono",
+            "fecha_nacimiento", "bio", "foto_perfil"
+        ]
+        widgets = {
+            "first_name": forms.TextInput(attrs={"class": "form-control"}),
+            "last_name": forms.TextInput(attrs={"class": "form-control"}),
+            "email": forms.EmailInput(attrs={"class": "form-control"}),
+            "telefono": forms.TextInput(attrs={"class": "form-control"}),
+            "fecha_nacimiento": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
+            "bio": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            "foto_perfil": forms.ClearableFileInput(attrs={"class": "form-control"}),
+        }
+
+class AlumnoForm(forms.ModelForm):
+    class Meta:
+        model = Alumno
+        fields = ["nivel_educativo", "materias_interes", "objetivo", "disponibilidad", "prefiere_online"]
+        widgets = {
+            "nivel_educativo": forms.Select(attrs={"class": "form-select"}),
+            "materias_interes": forms.SelectMultiple(attrs={"class": "form-select"}),
+            "objetivo": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            "disponibilidad": forms.SelectMultiple(attrs={"class": "form-select"}),
+            "prefiere_online": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }

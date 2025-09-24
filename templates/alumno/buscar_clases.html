@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Buscar maestros | EduLink{% endblock %}
+
+{% block content %}
+<div class="hero-wrap p-4 mb-4">
+  <h3 class="fw-bold">🔍 Buscar maestros</h3>
+  <p class="text-muted">Filtrá por materia, modalidad y provincia.</p>
+</div>
+
+<div class="search-card p-3 mb-4">
+  <form method="get" class="row g-3">
+    <!-- Materia -->
+    <div class="col-md-4">
+      <label class="form-label">Materia</label>
+      <select name="materia" class="form-select">
+        <option value="">Todas</option>
+        {% for m in materias %}
+        <option value="{{ m.id }}" {% if q.materia == m.id %}selected{% endif %}>{{ m.nombre }}</option>
+
+        {{ m.nombre }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Modalidad -->
+    <div class="col-md-4">
+      <label class="form-label">Modalidad</label>
+      <select name="modalidad" class="form-select">
+        <option value="">Cualquiera</option>
+        <option value="Online" {% if q.modalidad == "Online" %}selected{% endif %}>Online</option>
+        <option value="Presencial" {% if q.modalidad == "Presencial" %}selected{% endif %}>Presencial</option>
+        <option value="Ambos" {% if q.modalidad == "Ambos" %}selected{% endif %}>Ambos</option>
+      </select>
+    </div>
+
+    <!-- Provincia -->
+    <div class="col-md-4">
+      <label class="form-label">Provincia</label>
+      <select name="provincia" class="form-select">
+        <option value="">Todas</option>
+        {% for p in provincias %}
+        <option value="{{ p.id }}" {% if q.provincia == p.id %}selected{% endif %}>{{ p.nombre }}</option>
+        {{ p.nombre }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Radio (solo aplica para modalidad presencial) -->
+    <div class="col-md-4">
+      <label class="form-label">Radio (km)</label>
+      <select name="radio" class="form-select">
+        <option value="">Cualquiera</option>
+        <option value="5" {% if q.radio == "5" %}selected{% endif %}>5 km</option>
+        <option value="10" {% if q.radio == "10" %}selected{% endif %}>10 km</option>
+        <option value="20" {% if q.radio == "20" %}selected{% endif %}>20 km</option>
+        <option value="50" {% if q.radio == "50" %}selected{% endif %}>50 km</option>
+      </select>
+    </div>
+
+
+    <div class="col-12">
+      <button class="btn btn-acento">Buscar</button>
+    </div>
+  </form>
+</div>
+
+{% if q.materia or q.modalidad or q.provincia %}
+<div class="mb-3">
+  {% if q.materia %}<span class="badge-chip">Materia seleccionada</span>{% endif %}
+  {% if q.modalidad %}<span class="badge-chip">Modalidad: {{ q.modalidad }}</span>{% endif %}
+  {% if q.provincia %}<span class="badge-chip">Provincia seleccionada</span>{% endif %}
+</div>
+{% endif %}
+
+<div class="row g-3">
+  {% if resultados %}
+  {% for m, distancia in resultados %}
+  <div class="col-md-4">
+    <div class="feature-card">
+      <h6 class="fw-bold mb-1">{{ m.usuario.first_name }} {{ m.usuario.last_name }}</h6>
+      <p class="text-muted mb-1">Materias: {{ m.materias.all|join:", " }}</p>
+      <p class="text-muted mb-1">Modalidad: {{ m.get_modalidad_display }}</p>
+      <p class="fw-bold">💲 {{ m.precio_hora }} /hora</p>
+
+      {% if distancia %}
+      <p class="text-muted">📍 A {{ distancia }} km de tu ubicación</p>
+      {% endif %}
+
+      <a href="{% url 'detalle_maestro' m.id %}" class="btn btn-primary btn-sm">Ver perfil</a>
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <div class="col-12">
+    <div class="feature-card">
+      <p class="mb-0 text-muted">No se encontraron maestros con esos filtros.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

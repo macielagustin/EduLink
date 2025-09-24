@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Editar Perfil Alumno | EduLink{% endblock %}
+
+{% block content %}
+<div class="hero-wrap p-4 mb-4">
+  <h3 class="fw-bold">⚙️ Editar perfil</h3>
+  <p class="text-muted">Actualizá tus datos personales y académicos.</p>
+</div>
+
+<div class="feature-card p-4">
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <h5 class="fw-bold mb-3">Datos personales</h5>
+    {{ usuario_form.as_p }}
+
+    <hr>
+    <h5 class="fw-bold mb-3">Datos académicos</h5>
+    {{ alumno_form.as_p }}
+
+    <button type="submit" class="btn btn-acento mt-3">Guardar cambios</button>
+    <a href="{% url 'dashboard_alumno' %}" class="btn btn-outline-secondary mt-3">Cancelar</a>
+  </form>
+</div>
+{% endblock %}

@@ -16,7 +16,7 @@
       <div class="feature-card">
         <h5 class="fw-bold mb-2">🔍 Buscar maestros</h5>
         <p class="text-muted">Filtrá por materia, modalidad y ciudad.</p>
-        <a class="btn btn-primary btn-sm" href="#">Ir a búsqueda</a>
+        <a class="btn btn-primary btn-sm" href="{% url 'buscar_clases' %}">Ir a búsqueda</a>
       </div>
     </div>
 
@@ -36,7 +36,8 @@
     <div class="d-flex flex-wrap gap-3">
       <a href="#" class="btn btn-acento">📅 Próximas clases</a>
       <a href="#" class="btn btn-outline-secondary">💬 Mensajes</a>
-      <a href="#" class="btn btn-outline-dark">⚙️ Editar perfil</a>
+      <a href="{% url 'perfil_alumno' %}" class="btn btn-outline-dark">⚙️ Editar perfil</a>
+      <a href="{% url 'perfil_publico' %}" class="btn btn-outline-dark">👤 Ver mi perfil público</a>
     </div>
   </div>
 {% endblock %}
