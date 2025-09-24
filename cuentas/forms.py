@@ -159,3 +159,95 @@ class AlumnoForm(forms.ModelForm):
             "disponibilidad": forms.SelectMultiple(attrs={"class": "form-select"}),
             "prefiere_online": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
+
+
+
+
+
+class EditarPerfilMaestroForm(forms.ModelForm):
+    # Campos del usuario que queremos editar
+    first_name = forms.CharField(
+        max_length=30, 
+        required=True, 
+        label="Nombre",
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    last_name = forms.CharField(
+        max_length=30, 
+        required=True, 
+        label="Apellido",
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    email = forms.EmailField(
+        required=True,
+        label="Correo electrónico",
+        widget=forms.EmailInput(attrs={'class': 'form-control'})
+    )
+    
+    # Campos específicos del maestro
+    precio_hora = forms.DecimalField(
+        max_digits=10, 
+        decimal_places=2,
+        label="Precio por hora ($)",
+        widget=forms.NumberInput(attrs={'class': 'form-control'})
+    )
+    
+    modalidad = forms.ChoiceField(
+        choices=[
+            ("Online", "Online"),
+            ("Presencial", "Presencial"),
+            ("Ambos", "Ambos"),
+        ],
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    descripcion = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+        label="Descripción sobre ti"
+    )
+    
+    cv = forms.FileField(
+        required=False,
+        widget=forms.FileInput(attrs={'class': 'form-control'}),
+        label="Curriculum Vitae (PDF)"
+    )
+    
+    materias = forms.ModelMultipleChoiceField(
+        queryset=Materia.objects.all(),
+        widget=forms.SelectMultiple(attrs={'class': 'form-control'}),
+        required=False,
+        label="Materias que enseñas"
+    )
+    
+    idiomas = forms.ModelMultipleChoiceField(
+        queryset=Idioma.objects.all(),
+        widget=forms.SelectMultiple(attrs={'class': 'form-control'}),
+        required=False,
+        label="Idiomas que hablas"
+    )
+
+    class Meta:
+        model = Maestro
+        fields = ['precio_hora', 'modalidad', 'descripcion', 'cv', 'materias', 'idiomas']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Si ya existe una instancia, cargamos los datos del usuario
+        if self.instance and self.instance.usuario:
+            self.fields['first_name'].initial = self.instance.usuario.first_name
+            self.fields['last_name'].initial = self.instance.usuario.last_name
+            self.fields['email'].initial = self.instance.usuario.email
+
+    def save(self, commit=True):
+        maestro = super().save(commit=False)
+        # Actualizamos también los datos del usuario
+        if commit:
+            usuario = maestro.usuario
+            usuario.first_name = self.cleaned_data['first_name']
+            usuario.last_name = self.cleaned_data['last_name']
+            usuario.email = self.cleaned_data['email']
+            usuario.save()
+            maestro.save()
+            self.save_m2m()  # Para guardar las relaciones ManyToMany
+        return maestro

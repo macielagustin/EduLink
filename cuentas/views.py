@@ -10,6 +10,9 @@ from .models import Departamento, Municipio, Localidad, Provincia, Maestro, Alum
 from catalogo.models import Materia
 import math
 
+from .forms import EditarPerfilMaestroForm  # Asegúrate de importar el formulario
+
+
 def home_view(request):
     return render(request, "home.html")
 
@@ -241,3 +244,27 @@ def dashboard_maestro(request):
 
 def test_geocoding(request):
     return render(request, "cuentas/test_geocoding.html")
+
+
+
+"""/////////////////// MAESTRO //////////////////////"""
+
+@login_required
+def editar_perfil_maestro(request):
+    try:
+        # Obtenemos el perfil de maestro del usuario actual
+        perfil_maestro = Maestro.objects.get(usuario=request.user)
+    except Maestro.DoesNotExist:
+        messages.error(request, "No tienes un perfil de maestro.")
+        return redirect("dashboard_maestro")
+
+    if request.method == "POST":
+        form = EditarPerfilMaestroForm(request.POST, request.FILES, instance=perfil_maestro)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "¡Perfil actualizado correctamente!")
+            return redirect("dashboard_maestro")
+    else:
+        form = EditarPerfilMaestroForm(instance=perfil_maestro)
+
+    return render(request, "cuentas/editar_perfil_maestro.html", {"form": form})

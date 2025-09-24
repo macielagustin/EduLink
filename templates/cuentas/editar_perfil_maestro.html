@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Editar Perfil - Maestro{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">✏️ Editar Perfil de Maestro</h4>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <form method="post" enctype="multipart/form-data" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <!-- Información Personal -->
+                            <div class="col-md-6">
+                                <h5 class="text-primary mb-3">👤 Información Personal</h5>
+                                
+                                <div class="mb-3">
+                                    <label for="id_first_name" class="form-label">Nombre</label>
+                                    {{ form.first_name }}
+                                    {% if form.first_name.errors %}
+                                        <div class="text-danger small">{{ form.first_name.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="id_last_name" class="form-label">Apellido</label>
+                                    {{ form.last_name }}
+                                    {% if form.last_name.errors %}
+                                        <div class="text-danger small">{{ form.last_name.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="id_email" class="form-label">Correo Electrónico</label>
+                                    {{ form.email }}
+                                    {% if form.email.errors %}
+                                        <div class="text-danger small">{{ form.email.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Información Profesional -->
+                            <div class="col-md-6">
+                                <h5 class="text-primary mb-3">💼 Información Profesional</h5>
+                                
+                                <div class="mb-3">
+                                    <label for="id_precio_hora" class="form-label">Precio por Hora ($)</label>
+                                    {{ form.precio_hora }}
+                                    {% if form.precio_hora.errors %}
+                                        <div class="text-danger small">{{ form.precio_hora.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="id_modalidad" class="form-label">Modalidad de Enseñanza</label>
+                                    {{ form.modalidad }}
+                                    {% if form.modalidad.errors %}
+                                        <div class="text-danger small">{{ form.modalidad.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Descripción -->
+                        <div class="mb-3">
+                            <label for="id_descripcion" class="form-label">Descripción sobre ti</label>
+                            {{ form.descripcion }}
+                            <div class="form-text">Cuéntales a los alumnos sobre tu experiencia y método de enseñanza.</div>
+                            {% if form.descripcion.errors %}
+                                <div class="text-danger small">{{ form.descripcion.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Especialidades -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="id_materias" class="form-label">Materias que Enseñas</label>
+                                    {{ form.materias }}
+                                    <div class="form-text">Mantén presionado Ctrl para seleccionar múltiples materias.</div>
+                                    {% if form.materias.errors %}
+                                        <div class="text-danger small">{{ form.materias.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="id_idiomas" class="form-label">Idiomas que Hablas</label>
+                                    {{ form.idiomas }}
+                                    <div class="form-text">Mantén presionado Ctrl para seleccionar múltiples idiomas.</div>
+                                    {% if form.idiomas.errors %}
+                                        <div class="text-danger small">{{ form.idiomas.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CV -->
+                        <div class="mb-4">
+                            <label for="id_cv" class="form-label">Curriculum Vitae (PDF)</label>
+                            {{ form.cv }}
+                            {% if form.instance.cv %}
+                                <div class="mt-2">
+                                    <small class="text-muted">Archivo actual: 
+                                        <a href="{{ form.instance.cv.url }}" target="_blank">Ver CV</a>
+                                    </small>
+                                </div>
+                            {% endif %}
+                            {% if form.cv.errors %}
+                                <div class="text-danger small">{{ form.cv.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                💾 Guardar Cambios
+                            </button>
+                            <a href="{% url 'dashboard_maestro' %}" class="btn btn-secondary">
+                                ↩️ Volver al Dashboard
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    border: none;
+    border-radius: 15px;
+}
+
+.card-header {
+    border-radius: 15px 15px 0 0 !important;
+}
+
+.form-control, .form-select {
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    padding: 10px;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.btn {
+    border-radius: 8px;
+    padding: 10px 20px;
+}
+</style>
+{% endblock %}

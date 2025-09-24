@@ -7,6 +7,9 @@ from .views import (
     load_departamentos, load_municipios, load_localidades, test_geocoding, buscar_clases, detalle_maestro, perfil_alumno,perfil_publico,
 )
 
+from .views import editar_perfil_maestro  # Agrega esta importación
+
+
 urlpatterns = [
     path("", home_view, name="home"),
 
@@ -36,5 +39,10 @@ urlpatterns = [
     path("alumno/maestro/<int:maestro_id>/", detalle_maestro, name="detalle_maestro"),
     path("alumno/perfil", perfil_alumno, name="perfil_alumno"),
     path("alumno/perfil/publico/", perfil_publico, name="perfil_publico"),
+
+
+    #Maestro
+     # Nueva ruta para editar perfil de maestro
+    path("maestro/editar-perfil/", editar_perfil_maestro, name="editar_perfil_maestro"),
 
 ]
