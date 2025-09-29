@@ -16,9 +16,6 @@
         <option value="">Todas</option>
         {% for m in materias %}
         <option value="{{ m.id }}" {% if q.materia == m.id %}selected{% endif %}>{{ m.nombre }}</option>
-
-        {{ m.nombre }}
-        </option>
         {% endfor %}
       </select>
     </div>
@@ -41,13 +38,11 @@
         <option value="">Todas</option>
         {% for p in provincias %}
         <option value="{{ p.id }}" {% if q.provincia == p.id %}selected{% endif %}>{{ p.nombre }}</option>
-        {{ p.nombre }}
-        </option>
         {% endfor %}
       </select>
     </div>
 
-    <!-- Radio (solo aplica para modalidad presencial) -->
+    <!-- Radio -->
     <div class="col-md-4">
       <label class="form-label">Radio (km)</label>
       <select name="radio" class="form-select">
@@ -59,13 +54,22 @@
       </select>
     </div>
 
-
-    <div class="col-12">
-      <button class="btn btn-acento">Buscar</button>
+    <div class="col-12 d-flex gap-2">
+      <button type="submit" class="btn btn-acento">Buscar</button>
+      <a href="?{% if q.materia %}materia={{ q.materia }}&{% endif %}{% if q.modalidad %}modalidad={{ q.modalidad }}&{% endif %}{% if q.provincia %}provincia={{ q.provincia }}&{% endif %}{% if q.radio %}radio={{ q.radio }}&{% endif %}view=map" 
+        class="btn btn-outline-primary">
+        Ver mapa
+      </a>
     </div>
   </form>
 </div>
 
+{% if vista == "map" %}
+<!-- Vista mapa -->
+<div id="map" style="height:500px;" class="mb-4"></div>
+<a href="?" class="btn btn-secondary mb-4">⬅️ Volver a lista</a>
+{% else %}
+<!-- Vista lista -->
 {% if q.materia or q.modalidad or q.provincia %}
 <div class="mb-3">
   {% if q.materia %}<span class="badge-chip">Materia seleccionada</span>{% endif %}
@@ -100,5 +104,35 @@
   </div>
   {% endif %}
 </div>
+{% endif %}
+{% endblock %}
 
+{% block extra_js %}
+{% if vista == "map" %}
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+  // Mapa centrado en la ubicación del alumno
+  var alumnoLat = {{ request.user.latitud|default_if_none:"null"|safe }};
+  var alumnoLon = {{ request.user.longitud|default_if_none:"null"|safe }};
+
+  var map = L.map('map').setView([alumnoLat, alumnoLon], 12);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+  }).addTo(map);
+
+  if (alumnoLat && alumnoLon) {
+    L.marker([alumnoLat, alumnoLon]).addTo(map)
+      .bindPopup("📍 Tu ubicación").openPopup();
+  }
+
+  // Marcadores de maestros
+  {% for m, distancia in resultados %}
+    {% if m.usuario.latitud and m.usuario.longitud %}
+      L.marker([{{ m.usuario.latitud|safe }}, {{ m.usuario.longitud|safe }}]).addTo(map)
+        .bindPopup("<b>{{ m.usuario.first_name }} {{ m.usuario.last_name }}</b><br>Materias: {{ m.materias.all|join:', ' }}{% if distancia %}<br>Distancia: {{ distancia }} km{% endif %}");
+    {% endif %}
+  {% endfor %}
+</script>
+{% endif %}
 {% endblock %}

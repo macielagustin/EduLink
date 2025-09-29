@@ -13,17 +13,30 @@ class RegistroPersonaForm(UserCreationForm):
         widget=forms.DateInput(attrs={'type': 'date'}), 
         required=False
     )
-    bio = forms.CharField(  # campo personalizado que mapea a descripcion
+    bio = forms.CharField(
         widget=forms.Textarea(attrs={"rows": 3}),
         required=False,
         label="Descripción"
     )
 
-    # Campos de geolocalización
-    provincia = forms.ModelChoiceField(queryset=Provincia.objects.all(), required=False)
-    departamento = forms.ModelChoiceField(queryset=Departamento.objects.none(), required=False)
-    municipio = forms.ModelChoiceField(queryset=Municipio.objects.none(), required=False)
-    localidad = forms.ModelChoiceField(queryset=Localidad.objects.none(), required=False)
+    # Campos de geolocalización (extras, no del modelo)
+    provincia = forms.CharField(
+    max_length=100, required=False,
+    widget=forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'})
+    )
+    departamento = forms.CharField(
+        max_length=100, required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'})
+    )
+    municipio = forms.CharField(
+        max_length=100, required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'})
+    )
+    localidad = forms.CharField(
+        max_length=100, required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'})
+    )
+
     calle = forms.CharField(max_length=255, required=False)
     latitud = forms.FloatField(widget=forms.HiddenInput(), required=False)
     longitud = forms.FloatField(widget=forms.HiddenInput(), required=False)
@@ -33,51 +46,49 @@ class RegistroPersonaForm(UserCreationForm):
         fields = (
             "username", "email", "password1", "password2",
             "nombre", "apellido", "telefono", "fecha_nacimiento", "foto_perfil",
-            "provincia", "departamento", "municipio", "localidad",
-            "calle", "latitud", "longitud"
+            "calle", "latitud", "longitud"   # 👈 sacamos los FK de aquí
         )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["password1"].help_text = "Mín. 8 caracteres y al menos una mayúscula."
-        self.fields["password2"].help_text = "Repetí la misma contraseña."
-
-        # --- selects dependientes (geolocalización) ---
-        if 'provincia' in self.data:
-            try:
-                provincia_id = int(self.data.get('provincia'))
-                self.fields['departamento'].queryset = Departamento.objects.filter(provincia_id=provincia_id)
-            except (ValueError, TypeError):
-                pass
-        elif self.instance.pk and self.instance.provincia:
-            self.fields['departamento'].queryset = self.instance.provincia.departamento_set.all()
-
-        if 'departamento' in self.data:
-            try:
-                departamento_id = int(self.data.get('departamento'))
-                self.fields['municipio'].queryset = Municipio.objects.filter(departamento_id=departamento_id)
-            except (ValueError, TypeError):
-                pass
-        elif self.instance.pk and self.instance.departamento:
-            self.fields['municipio'].queryset = self.instance.departamento.municipio_set.all()
-
-        if 'municipio' in self.data:
-            try:
-                municipio_id = int(self.data.get('municipio'))
-                self.fields['localidad'].queryset = Localidad.objects.filter(municipio_id=municipio_id)
-            except (ValueError, TypeError):
-                pass
-        elif self.instance.pk and self.instance.municipio:
-            self.fields['localidad'].queryset = self.instance.municipio.localidad_set.all()
 
     def save(self, commit=True):
         usuario = super().save(commit=False)
-        usuario.descripcion = self.cleaned_data.get("bio")  # mapeo bio → descripcion
+        usuario.descripcion = self.cleaned_data.get("bio")
         usuario.nombre = self.cleaned_data.get("nombre")
         usuario.apellido = self.cleaned_data.get("apellido")
+
+        # Procesamos los campos manualmente
+        provincia_nombre = self.cleaned_data.get("provincia")
+        if provincia_nombre:
+            prov_obj, _ = Provincia.objects.get_or_create(nombre=provincia_nombre)
+            usuario.provincia = prov_obj
+
+        departamento_nombre = self.cleaned_data.get("departamento")
+        if departamento_nombre and usuario.provincia:
+            depto_obj, _ = Departamento.objects.get_or_create(
+                nombre=departamento_nombre,
+                provincia=usuario.provincia
+            )
+            usuario.departamento = depto_obj
+
+        municipio_nombre = self.cleaned_data.get("municipio")
+        if municipio_nombre and usuario.departamento:
+            muni_obj, _ = Municipio.objects.get_or_create(
+                nombre=municipio_nombre,
+                departamento=usuario.departamento
+            )
+            usuario.municipio = muni_obj
+
+        localidad_nombre = self.cleaned_data.get("localidad")
+        if localidad_nombre and usuario.municipio:
+            loc_obj, _ = Localidad.objects.get_or_create(
+                nombre=localidad_nombre,
+                municipio=usuario.municipio
+            )
+            usuario.localidad = loc_obj
+
         if commit:
             usuario.save()
         return usuario
+
 
 
 
