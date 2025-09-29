@@ -11,6 +11,8 @@ from .views import editar_perfil_maestro  # Agrega esta importación
 from .views import solicitudes_para_maestro, cambiar_estado_solicitud
 from .views import agenda_maestro
 from .views import perfil_publico_maestro, perfil_maestro_publico
+from .views import mis_solicitudes_alumno, enviar_solicitud_clase
+from .views import lista_conversaciones, ver_conversacion, iniciar_conversacion
 
 
 urlpatterns = [
@@ -62,5 +64,13 @@ urlpatterns = [
     path("maestro/<int:maestro_id>/", perfil_maestro_publico, name="perfil_maestro_publico"),
 
 
+    # Alumno - Solicitudes
+    path("alumno/solicitudes/", mis_solicitudes_alumno, name="mis_solicitudes_alumno"),
+    path("alumno/solicitar-clase/<int:maestro_id>/", enviar_solicitud_clase, name="enviar_solicitud_clase"),
+
+    # Mensajes
+    path("mensajes/", lista_conversaciones, name="lista_conversaciones"),
+    path("mensajes/<int:conversacion_id>/", ver_conversacion, name="ver_conversacion"),
+    path("mensajes/iniciar/<int:usuario_id>/", iniciar_conversacion, name="iniciar_conversacion"),
 
 ]

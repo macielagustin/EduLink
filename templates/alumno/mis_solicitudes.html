@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Mis Solicitudes | EduLink{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>📨 Mis Solicitudes de Clase</h2>
+        <a href="{% url 'buscar_clases' %}" class="btn btn-primary">
+            <i class="fas fa-search me-2"></i>Buscar Más Maestros
+        </a>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex flex-wrap gap-2">
+                <a href="?estado=todas" class="btn {% if estado_filtro == 'todas' %}btn-primary{% else %}btn-outline-primary{% endif %} btn-sm">
+                    Todas <span class="badge bg-secondary">{{ contadores.todas }}</span>
+                </a>
+                <a href="?estado=pendiente" class="btn {% if estado_filtro == 'pendiente' %}btn-warning{% else %}btn-outline-warning{% endif %} btn-sm">
+                    Pendientes <span class="badge bg-secondary">{{ contadores.pendientes }}</span>
+                </a>
+                <a href="?estado=aceptada" class="btn {% if estado_filtro == 'aceptada' %}btn-success{% else %}btn-outline-success{% endif %} btn-sm">
+                    Aceptadas <span class="badge bg-secondary">{{ contadores.aceptadas }}</span>
+                </a>
+                <a href="?estado=rechazada" class="btn {% if estado_filtro == 'rechazada' %}btn-danger{% else %}btn-outline-danger{% endif %} btn-sm">
+                    Rechazadas <span class="badge bg-secondary">{{ contadores.rechazadas }}</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de solicitudes -->
+    {% if solicitudes %}
+        <div class="row">
+            {% for solicitud in solicitudes %}
+            <div class="col-md-6 mb-3">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">{{ solicitud.materia.nombre }}</h6>
+                        <span class="badge {% if solicitud.estado == 'pendiente' %}bg-warning
+                                          {% elif solicitud.estado == 'aceptada' %}bg-success
+                                          {% elif solicitud.estado == 'rechazada' %}bg-danger
+                                          {% else %}bg-secondary{% endif %}">
+                            {{ solicitud.get_estado_display }}
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-2"><strong>Maestro:</strong> {{ solicitud.maestro.usuario.get_full_name }}</p>
+                        <p class="mb-2"><strong>Fecha propuesta:</strong> {{ solicitud.fecha_clase_propuesta|date:"d/m/Y H:i" }}</p>
+                        <p class="mb-2"><strong>Duración:</strong> {{ solicitud.duracion_minutos }} minutos</p>
+                        {% if solicitud.mensaje %}
+                        <p class="mb-2"><strong>Mi mensaje:</strong> {{ solicitud.mensaje }}</p>
+                        {% endif %}
+                        <small class="text-muted">Enviada: {{ solicitud.fecha_solicitud|date:"d/m/Y H:i" }}</small>
+                    </div>
+                    <div class="card-footer">
+                        {% if solicitud.estado == 'aceptada' %}
+                        <a href="{% url 'iniciar_conversacion' solicitud.maestro.usuario.id %}" class="btn btn-success btn-sm">
+                            <i class="fas fa-comments me-1"></i>Contactar
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">No hay solicitudes</h4>
+            <p class="text-muted">Todavía no has enviado ninguna solicitud de clase.</p>
+            <a href="{% url 'buscar_clases' %}" class="btn btn-primary">Buscar Maestros</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

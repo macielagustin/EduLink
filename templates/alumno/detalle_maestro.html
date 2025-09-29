@@ -1,91 +1,83 @@
 {% extends "base.html" %}
-{% load static %}
-{% block title %}Perfil de {{ usuario.first_name }} {{ usuario.last_name }} | EduLink{% endblock %}
+{% block title %}{{ usuario.get_full_name }} | EduLink{% endblock %}
 
 {% block content %}
-<div class="hero-wrap p-4 mb-4">
-  <h3 class="fw-bold">👨‍🏫 Perfil de {{ usuario.first_name }} {{ usuario.last_name }}</h3>
-  <p class="text-muted">Conocé más sobre este maestro antes de enviarle una solicitud.</p>
-</div>
+<div class="container mt-4">
+    <div class="row">
+        <!-- Información del maestro -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-4">
+                        <img src="{{ usuario.foto_perfil.url|default:'/static/images/avatar-default.png' }}" 
+                             alt="{{ usuario.get_full_name }}" 
+                             class="rounded-circle me-4" width="100" height="100">
+                        <div>
+                            <h2 class="mb-1">{{ usuario.get_full_name }}</h2>
+                            <p class="text-muted mb-2">Maestro de {{ maestro.materias.all|join:", " }}</p>
+                            <div class="d-flex gap-2">
+                                <span class="badge bg-primary">{{ maestro.modalidad }}</span>
+                                <span class="badge bg-success">${{ maestro.precio_hora }}/hora</span>
+                            </div>
+                        </div>
+                    </div>
 
-<div class="feature-card p-4">
-  <!-- Foto -->
-  <div class="mb-3 text-center">
-    {% if usuario.foto_perfil %}
-      <img src="{{ usuario.foto_perfil.url }}" class="rounded-circle" width="150" height="150" alt="Foto de perfil">
-    {% else %}
-      <img src="{% static 'img/default-avatar.png' %}" class="rounded-circle" width="150" height="150" alt="Avatar por defecto">
-    {% endif %}
-  </div>
+                    {% if maestro.descripcion %}
+                    <div class="mb-4">
+                        <h5>Sobre mí</h5>
+                        <p class="text-muted">{{ maestro.descripcion }}</p>
+                    </div>
+                    {% endif %}
 
-  <!-- Datos de Usuario -->
-  <h4 class="fw-bold">{{ usuario.first_name }} {{ usuario.last_name }}</h4>
-  <p class="text-muted mb-1">📧 {{ usuario.email }}</p>
-  {% if usuario.telefono %}<p class="text-muted mb-1">📱 {{ usuario.telefono }}</p>{% endif %}
-  {% if usuario.fecha_nacimiento %}<p class="text-muted mb-1">🎂 {{ usuario.fecha_nacimiento }}</p>{% endif %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Materias que enseña</h6>
+                            <ul class="list-unstyled">
+                                {% for materia in maestro.materias.all %}
+                                <li>📚 {{ materia.nombre }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Idiomas</h6>
+                            <ul class="list-unstyled">
+                                {% for idioma in maestro.idiomas.all %}
+                                <li>🌐 {{ idioma.nombre }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-  <!-- Ubicación -->
-  <p class="text-muted mb-1">📍 
-    {% if usuario.localidad %}{{ usuario.localidad.nombre }}, {% endif %}
-    {% if usuario.municipio %}{{ usuario.municipio.nombre }}, {% endif %}
-    {% if usuario.departamento %}{{ usuario.departamento.nombre }}, {% endif %}
-    {% if usuario.provincia %}{{ usuario.provincia.nombre }}{% endif %}
-  </p>
-  {% if usuario.calle %}
-    <p class="text-muted">🏠 {{ usuario.calle }}</p>
-  {% endif %}
-
-  {% if usuario.bio %}
-    <div class="mt-3">
-      <h6 class="fw-bold">Sobre mí</h6>
-      <p>{{ usuario.bio }}</p>
+        <!-- Acciones -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Solicitar Clase</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">¿Te interesa tomar clases con {{ usuario.first_name }}?</p>
+                    
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'enviar_solicitud_clase' maestro.id %}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-calendar-plus me-2"></i>Solicitar Clase
+                        </a>
+                        
+                        {% if tiene_conversacion %}
+                        <a href="{% url 'iniciar_conversacion' usuario.id %}" class="btn btn-outline-primary">
+                            <i class="fas fa-comments me-2"></i>Enviar Mensaje
+                        </a>
+                        {% else %}
+                        <small class="text-muted text-center">
+                            Podrás enviar mensajes después de que el maestro acepte tu solicitud
+                        </small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-  {% endif %}
-
-  <hr>
-
-  <!-- Datos de Maestro -->
-  <h6 class="fw-bold">Modalidad</h6>
-  <p>{{ maestro.get_modalidad_display }}</p>
-
-  <h6 class="fw-bold">Precio por hora</h6>
-  <p>💲 {{ maestro.precio_hora }}</p>
-
-  <h6 class="fw-bold">Materias</h6>
-  <p>
-    {% for m in maestro.materias.all %}
-      <span class="badge-chip">{{ m.nombre }}</span>
-    {% empty %}
-      <span class="text-muted">No especificado</span>
-    {% endfor %}
-  </p>
-
-  <h6 class="fw-bold">Idiomas</h6>
-  <p>
-    {% for i in maestro.idiomas.all %}
-      <span class="badge-chip">{{ i.nombre }}</span>
-    {% empty %}
-      <span class="text-muted">No especificado</span>
-    {% endfor %}
-  </p>
-
-  {% if maestro.descripcion %}
-    <div class="mt-3">
-      <h6 class="fw-bold">Descripción</h6>
-      <p>{{ maestro.descripcion }}</p>
-    </div>
-  {% endif %}
-
-  {% if maestro.cv %}
-    <div class="mt-3">
-      <a href="{{ maestro.cv.url }}" class="btn btn-outline-primary" target="_blank">📄 Ver CV</a>
-    </div>
-  {% endif %}
-
-  <!-- Botones -->
-  <div class="mt-4">
-    <a href="{% url 'buscar_clases' %}" class="btn btn-secondary">⬅️ Volver</a>
-    <a href="#" class="btn btn-acento">📩 Enviar solicitud</a>
-  </div>
 </div>
 {% endblock %}

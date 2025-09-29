@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Solicitar Clase | EduLink{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">📨 Solicitar Clase con {{ maestro.usuario.get_full_name }}</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Materia *</label>
+                            {{ form.materia }}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Fecha y Hora Propuesta *</label>
+                            {{ form.fecha_clase_propuesta }}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Duración (minutos) *</label>
+                            {{ form.duracion_minutos }}
+                            <div class="form-text">Sugerencia: 60, 90 o 120 minutos</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Mensaje para el maestro</label>
+                            {{ form.mensaje }}
+                            <div class="form-text">Explica qué te gustaría aprender o cualquier detalle importante</div>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane me-2"></i>Enviar Solicitud
+                            </button>
+                            <a href="{% url 'detalle_maestro' maestro.id %}" class="btn btn-outline-secondary">
+                                Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -6,7 +6,7 @@
 {% block content %}
 <div class="container mt-4">
     <div class="row justify-content-center">
-        <div class="col-md-10">
+        <div class="col-md-12">
             <div class="card shadow">
                 <div class="card-header bg-primary text-white">
                     <h4 class="mb-0">✏️ Editar Perfil de Maestro</h4>
@@ -28,6 +28,35 @@
                             <!-- Información Personal -->
                             <div class="col-md-6">
                                 <h5 class="text-primary mb-3">👤 Información Personal</h5>
+                                
+                                <!-- Foto de perfil -->
+                                <div class="mb-3">
+                                    <label class="form-label">Foto de Perfil</label>
+                                    <br>
+                                    {% if form.instance.usuario.foto_perfil %}
+                                        <img src="{{ form.instance.usuario.foto_perfil.url }}" 
+                                             class="rounded-circle mb-2" 
+                                             width="100" 
+                                             height="100" 
+                                             alt="Foto de perfil actual">
+                                        <div class="form-check">
+                                            {{ form.eliminar_foto }}
+                                            <label for="{{ form.eliminar_foto.id_for_label }}" class="form-check-label">
+                                                Eliminar foto actual
+                                            </label>
+                                        </div>
+                                    {% else %}
+                                        <img src="{% static 'img/default-avatar.png' %}" 
+                                             class="rounded-circle mb-2" 
+                                             width="100" 
+                                             height="100" 
+                                             alt="Avatar por defecto">
+                                    {% endif %}
+                                    {{ form.foto_perfil }}
+                                    {% if form.foto_perfil.errors %}
+                                        <div class="text-danger small">{{ form.foto_perfil.errors }}</div>
+                                    {% endif %}
+                                </div>
                                 
                                 <div class="mb-3">
                                     <label for="id_first_name" class="form-label">Nombre</label>
@@ -52,10 +81,59 @@
                                         <div class="text-danger small">{{ form.email.errors }}</div>
                                     {% endif %}
                                 </div>
+
+                                <!-- Ubicación -->
+                                <h5 class="text-primary mb-3 mt-4">📍 Ubicación</h5>
+                                
+                                <div class="mb-3">
+                                    <label for="id_provincia" class="form-label">Provincia</label>
+                                    {{ form.provincia }}
+                                    {% if form.provincia.errors %}
+                                        <div class="text-danger small">{{ form.provincia.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="id_departamento" class="form-label">Departamento</label>
+                                    {{ form.departamento }}
+                                    {% if form.departamento.errors %}
+                                        <div class="text-danger small">{{ form.departamento.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="id_municipio" class="form-label">Municipio</label>
+                                    {{ form.municipio }}
+                                    {% if form.municipio.errors %}
+                                        <div class="text-danger small">{{ form.municipio.errors }}</div>
+                                    {% endif %}
+                                </div>
                             </div>
 
-                            <!-- Información Profesional -->
+                            <!-- Columna derecha -->
                             <div class="col-md-6">
+                                <!-- Continuación de Ubicación -->
+                                <div class="mb-3">
+                                    <label for="id_localidad" class="form-label">Localidad</label>
+                                    {{ form.localidad }}
+                                    {% if form.localidad.errors %}
+                                        <div class="text-danger small">{{ form.localidad.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="id_calle" class="form-label">Calle y Número</label>
+                                    {{ form.calle }}
+                                    {% if form.calle.errors %}
+                                        <div class="text-danger small">{{ form.calle.errors }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Campos ocultos para latitud y longitud -->
+                                {{ form.latitud }}
+                                {{ form.longitud }}
+
+                                <!-- Información Profesional -->
                                 <h5 class="text-primary mb-3">💼 Información Profesional</h5>
                                 
                                 <div class="mb-3">
@@ -73,6 +151,27 @@
                                         <div class="text-danger small">{{ form.modalidad.errors }}</div>
                                     {% endif %}
                                 </div>
+
+                                <!-- Especialidades -->
+                                <h5 class="text-primary mb-3 mt-4">📚 Especialidades</h5>
+                                
+                                <div class="mb-3">
+                                    <label for="id_materias" class="form-label">Materias que Enseñas</label>
+                                    {{ form.materias }}
+                                    <div class="form-text">Mantén presionado Ctrl para seleccionar múltiples materias.</div>
+                                    {% if form.materias.errors %}
+                                        <div class="text-danger small">{{ form.materias.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="id_idiomas" class="form-label">Idiomas que Hablas</label>
+                                    {{ form.idiomas }}
+                                    <div class="form-text">Mantén presionado Ctrl para seleccionar múltiples idiomas.</div>
+                                    {% if form.idiomas.errors %}
+                                        <div class="text-danger small">{{ form.idiomas.errors }}</div>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
 
@@ -84,31 +183,6 @@
                             {% if form.descripcion.errors %}
                                 <div class="text-danger small">{{ form.descripcion.errors }}</div>
                             {% endif %}
-                        </div>
-
-                        <!-- Especialidades -->
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="id_materias" class="form-label">Materias que Enseñas</label>
-                                    {{ form.materias }}
-                                    <div class="form-text">Mantén presionado Ctrl para seleccionar múltiples materias.</div>
-                                    {% if form.materias.errors %}
-                                        <div class="text-danger small">{{ form.materias.errors }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="id_idiomas" class="form-label">Idiomas que Hablas</label>
-                                    {{ form.idiomas }}
-                                    <div class="form-text">Mantén presionado Ctrl para seleccionar múltiples idiomas.</div>
-                                    {% if form.idiomas.errors %}
-                                        <div class="text-danger small">{{ form.idiomas.errors }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
                         </div>
 
                         <!-- CV -->
@@ -128,12 +202,15 @@
                         </div>
 
                         <!-- Botones -->
-                        <div class="d-flex gap-2">
+                        <div class="d-flex gap-2 flex-wrap">
                             <button type="submit" class="btn btn-primary">
                                 💾 Guardar Cambios
                             </button>
                             <a href="{% url 'dashboard_maestro' %}" class="btn btn-secondary">
                                 ↩️ Volver al Dashboard
+                            </a>
+                            <a href="{% url 'perfil_publico_maestro' %}" class="btn btn-info text-white">
+                                👁️ Ver Perfil Público
                             </a>
                         </div>
                     </form>
@@ -142,6 +219,75 @@
         </div>
     </div>
 </div>
+
+<!-- Script para selects dependientes de ubicación -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Función para cargar opciones dinámicas
+    function loadOptions(url, targetId, params) {
+        const targetSelect = document.getElementById(targetId);
+        targetSelect.innerHTML = '<option value="">Cargando...</option>';
+        
+        fetch(url + '?' + new URLSearchParams(params))
+            .then(response => response.json())
+            .then(data => {
+                targetSelect.innerHTML = '<option value="">Seleccione una opción</option>';
+                data.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent = item.nombre;
+                    targetSelect.appendChild(option);
+                });
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                targetSelect.innerHTML = '<option value="">Error al cargar</option>';
+            });
+    }
+
+    // Provincia cambia -> actualizar departamentos
+    const provinciaSelect = document.getElementById('id_provincia');
+    if (provinciaSelect) {
+        provinciaSelect.addEventListener('change', function() {
+            const provinciaId = this.value;
+            if (provinciaId) {
+                loadOptions('{% url "departamentos" %}', 'id_departamento', { provincia_id: provinciaId });
+            } else {
+                document.getElementById('id_departamento').innerHTML = '<option value="">Seleccione departamento</option>';
+                document.getElementById('id_municipio').innerHTML = '<option value="">Seleccione municipio</option>';
+                document.getElementById('id_localidad').innerHTML = '<option value="">Seleccione localidad</option>';
+            }
+        });
+    }
+
+    // Departamento cambia -> actualizar municipios
+    const departamentoSelect = document.getElementById('id_departamento');
+    if (departamentoSelect) {
+        departamentoSelect.addEventListener('change', function() {
+            const departamentoId = this.value;
+            if (departamentoId) {
+                loadOptions('{% url "municipios" %}', 'id_municipio', { departamento_id: departamentoId });
+            } else {
+                document.getElementById('id_municipio').innerHTML = '<option value="">Seleccione municipio</option>';
+                document.getElementById('id_localidad').innerHTML = '<option value="">Seleccione localidad</option>';
+            }
+        });
+    }
+
+    // Municipio cambia -> actualizar localidades
+    const municipioSelect = document.getElementById('id_municipio');
+    if (municipioSelect) {
+        municipioSelect.addEventListener('change', function() {
+            const municipioId = this.value;
+            if (municipioId) {
+                loadOptions('{% url "localidades" %}', 'id_localidad', { municipio_id: municipioId });
+            } else {
+                document.getElementById('id_localidad').innerHTML = '<option value="">Seleccione localidad</option>';
+            }
+        });
+    }
+});
+</script>
 
 <style>
 .card {
@@ -167,6 +313,31 @@
 .btn {
     border-radius: 8px;
     padding: 10px 20px;
+}
+
+/* Estilos para los selects múltiples */
+select[multiple] {
+    height: auto;
+    min-height: 120px;
+}
+
+/* Estilos para la imagen de perfil */
+.rounded-circle {
+    object-fit: cover;
+}
+
+/* Estilos para los mensajes de error */
+.text-danger small {
+    font-size: 0.875em;
+    margin-top: 0.25rem;
+    display: block;
+}
+
+/* Estilos para los textos de ayuda */
+.form-text {
+    font-size: 0.875em;
+    color: #6c757d;
+    margin-top: 0.25rem;
 }
 </style>
 {% endblock %}

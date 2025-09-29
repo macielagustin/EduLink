@@ -27,6 +27,7 @@
                 <div class="card-body">
                     <div class="row">
                         <!-- Foto de perfil y info básica -->
+                        <!-- En la sección de foto de perfil, agrega: -->
                         <div class="col-md-4 text-center">
                             {% if usuario.foto_perfil %}
                                 <img src="{{ usuario.foto_perfil.url }}" class="rounded-circle mb-3" width="150" height="150" alt="Foto de perfil">
@@ -70,8 +71,12 @@
                             </div>
 
                             <!-- Ubicación -->
+                            <!-- En la sección de ubicación, agrega el mapa: -->
                             <div class="mb-4">
                                 <h5 class="fw-bold">📍 Ubicación</h5>
+                                {% if usuario.latitud and usuario.longitud %}
+                                    <div id="map-perfil" style="height: 200px; border-radius: 8px; margin-bottom: 10px;"></div>
+                                {% endif %}
                                 <p class="mb-1">
                                     {% if usuario.localidad %}{{ usuario.localidad.nombre }}, {% endif %}
                                     {% if usuario.municipio %}{{ usuario.municipio.nombre }}, {% endif %}

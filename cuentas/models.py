@@ -149,3 +149,30 @@ class SolicitudClase(models.Model):
     
     def __str__(self):
         return f"Solicitud de {self.alumno.usuario.username} a {self.maestro.usuario.username}"
+
+
+
+class Conversacion(models.Model):
+    maestro = models.ForeignKey('Maestro', on_delete=models.CASCADE, related_name='conversaciones')
+    alumno = models.ForeignKey('Alumno', on_delete=models.CASCADE, related_name='conversaciones')
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    ultimo_mensaje = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['maestro', 'alumno']
+    
+    def __str__(self):
+        return f"Conversación: {self.maestro.usuario.username} - {self.alumno.usuario.username}"
+
+class Mensaje(models.Model):
+    conversacion = models.ForeignKey('Conversacion', on_delete=models.CASCADE, related_name='mensajes')
+    remitente = models.ForeignKey('Usuario', on_delete=models.CASCADE)
+    contenido = models.TextField()
+    fecha_envio = models.DateTimeField(auto_now_add=True)
+    leido = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Mensaje de {self.remitente.username} - {self.fecha_envio.strftime('%Y-%m-%d %H:%M')}"
+
+
+

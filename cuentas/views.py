@@ -6,14 +6,16 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
 from django.http import JsonResponse
 from .forms import RegistroPersonaForm, RegistroAlumnoForm, RegistroMaestroForm, LoginForm, UsuarioForm, AlumnoForm
-from .models import Departamento, Municipio, Localidad, Provincia, Maestro, Alumno
+from .models import Departamento, Municipio, Localidad, Provincia, Maestro, Alumno, Usuario
 from catalogo.models import Materia
 import math
 
 from .forms import EditarPerfilMaestroForm  # Asegúrate de importar el formulario
 from .models import SolicitudClase
 from django.db.models import Q  # Para búsquedas complejas
-
+from django.utils import timezone
+from .models import Conversacion, Mensaje
+from .forms import SolicitudClaseForm, MensajeForm
 
 def home_view(request):
     return render(request, "home.html")
@@ -377,4 +379,168 @@ def perfil_maestro_publico(request, maestro_id):
         "maestro": maestro,
         "usuario_maestro": maestro.usuario
     })
+
+
+
+
+# VISTAS PARA ALUMNO - SOLICITUDES
+
+@login_required
+def enviar_solicitud_clase(request, maestro_id):
+    maestro = get_object_or_404(Maestro, id=maestro_id)
+    alumno = get_object_or_404(Alumno, usuario=request.user)
+    
+    if request.method == 'POST':
+        form = SolicitudClaseForm(request.POST)
+        if form.is_valid():
+            solicitud = form.save(commit=False)
+            solicitud.alumno = alumno
+            solicitud.maestro = maestro
+            solicitud.estado = 'pendiente'
+            solicitud.save()
+            
+            messages.success(request, '¡Solicitud enviada correctamente!')
+            return redirect('mis_solicitudes_alumno')
+    else:
+        form = SolicitudClaseForm()
+    
+    return render(request, 'alumno/enviar_solicitud.html', {
+        'form': form,
+        'maestro': maestro
+    })
+
+@login_required
+def mis_solicitudes_alumno(request):
+    try:
+        alumno = Alumno.objects.get(usuario=request.user)
+        solicitudes = SolicitudClase.objects.filter(alumno=alumno).order_by('-fecha_solicitud')
+        
+        # Filtros
+        estado_filtro = request.GET.get('estado', 'todas')
+        if estado_filtro != 'todas':
+            solicitudes = solicitudes.filter(estado=estado_filtro)
+        
+        contadores = {
+            'todas': solicitudes.count(),
+            'pendientes': solicitudes.filter(estado='pendiente').count(),
+            'aceptadas': solicitudes.filter(estado='aceptada').count(),
+            'rechazadas': solicitudes.filter(estado='rechazada').count(),
+        }
+        
+    except Alumno.DoesNotExist:
+        messages.error(request, "No tienes un perfil de alumno.")
+        return redirect("dashboard_alumno")
+    
+    return render(request, "alumno/mis_solicitudes.html", {
+        "solicitudes": solicitudes,
+        "contadores": contadores,
+        "estado_filtro": estado_filtro
+    })
+
+# VISTAS PARA MENSAJES
+
+@login_required
+def lista_conversaciones(request):
+    conversaciones = []
+    
+    if request.user.rol == 'ALUMNO':
+        alumno = get_object_or_404(Alumno, usuario=request.user)
+        conversaciones = Conversacion.objects.filter(alumno=alumno).order_by('-ultimo_mensaje')
+    elif request.user.rol == 'MAESTRO':
+        maestro = get_object_or_404(Maestro, usuario=request.user)
+        conversaciones = Conversacion.objects.filter(maestro=maestro).order_by('-ultimo_mensaje')
+    
+    return render(request, 'mensajes/lista_conversaciones.html', {
+        'conversaciones': conversaciones
+    })
+
+@login_required
+def ver_conversacion(request, conversacion_id):
+    conversacion = get_object_or_404(Conversacion, id=conversacion_id)
+    
+    # Verificar que el usuario tiene permiso para ver esta conversación
+    if request.user.rol == 'ALUMNO':
+        alumno = get_object_or_404(Alumno, usuario=request.user)
+        if conversacion.alumno != alumno:
+            messages.error(request, "No tienes permiso para ver esta conversación.")
+            return redirect('lista_conversaciones')
+    elif request.user.rol == 'MAESTRO':
+        maestro = get_object_or_404(Maestro, usuario=request.user)
+        if conversacion.maestro != maestro:
+            messages.error(request, "No tienes permiso para ver esta conversación.")
+            return redirect('lista_conversaciones')
+    
+    mensajes = conversacion.mensajes.all().order_by('fecha_envio')
+    
+    if request.method == 'POST':
+        form = MensajeForm(request.POST)
+        if form.is_valid():
+            mensaje = form.save(commit=False)
+            mensaje.conversacion = conversacion
+            mensaje.remitente = request.user
+            mensaje.save()
+            
+            # Actualizar último mensaje de la conversación
+            conversacion.ultimo_mensaje = timezone.now()
+            conversacion.save()
+            
+            return redirect('ver_conversacion', conversacion_id=conversacion.id)
+    else:
+        form = MensajeForm()
+    
+    # Marcar mensajes como leídos
+    mensajes.filter(leido=False).exclude(remitente=request.user).update(leido=True)
+    
+    return render(request, 'mensajes/conversacion.html', {
+        'conversacion': conversacion,
+        'mensajes': mensajes,
+        'form': form
+    })
+
+@login_required
+def iniciar_conversacion(request, usuario_id):
+    usuario_destino = get_object_or_404(Usuario, id=usuario_id)
+    
+    if request.user.rol == 'ALUMNO':
+        alumno = get_object_or_404(Alumno, usuario=request.user)
+        maestro = get_object_or_404(Maestro, usuario=usuario_destino)
+        
+        conversacion, created = Conversacion.objects.get_or_create(
+            alumno=alumno,
+            maestro=maestro
+        )
+        
+    elif request.user.rol == 'MAESTRO':
+        maestro = get_object_or_404(Maestro, usuario=request.user)
+        alumno = get_object_or_404(Alumno, usuario=usuario_destino)
+        
+        conversacion, created = Conversacion.objects.get_or_create(
+            maestro=maestro,
+            alumno=alumno
+        )
+    
+    return redirect('ver_conversacion', conversacion_id=conversacion.id)
+
+# Actualizar la vista detalle_maestro para incluir el botón de solicitud
+@login_required
+def detalle_maestro(request, maestro_id):
+    maestro = get_object_or_404(Maestro, id=maestro_id)
+    usuario = maestro.usuario
+    
+    # Verificar si ya existe una conversación
+    tiene_conversacion = False
+    if request.user.rol == 'ALUMNO':
+        alumno = get_object_or_404(Alumno, usuario=request.user)
+        tiene_conversacion = Conversacion.objects.filter(
+            alumno=alumno, 
+            maestro=maestro
+        ).exists()
+    
+    return render(request, "alumno/detalle_maestro.html", {
+        "maestro": maestro, 
+        "usuario": usuario,
+        "tiene_conversacion": tiene_conversacion
+    })
+
+
 

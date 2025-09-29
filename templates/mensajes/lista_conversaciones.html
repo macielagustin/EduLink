@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Mensajes | EduLink{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2>💬 Mis Conversaciones</h2>
+            
+            {% if conversaciones %}
+                <div class="list-group">
+                    {% for conversacion in conversaciones %}
+                    <a href="{% url 'ver_conversacion' conversacion.id %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                {% if request.user.rol == 'ALUMNO' %}
+                                <img src="{{ conversacion.maestro.usuario.foto_perfil.url|default:'/static/images/avatar-default.png' }}" 
+                                     alt="{{ conversacion.maestro.usuario.get_full_name }}" 
+                                     class="rounded-circle me-3" width="50" height="50">
+                                <div>
+                                    <h6 class="mb-1">{{ conversacion.maestro.usuario.get_full_name }}</h6>
+                                    <p class="mb-1 text-muted">Maestro - {{ conversacion.maestro.materias.all|join:", " }}</p>
+                                </div>
+                                {% else %}
+                                <img src="{{ conversacion.alumno.usuario.foto_perfil.url|default:'/static/images/avatar-default.png' }}" 
+                                     alt="{{ conversacion.alumno.usuario.get_full_name }}" 
+                                     class="rounded-circle me-3" width="50" height="50">
+                                <div>
+                                    <h6 class="mb-1">{{ conversacion.alumno.usuario.get_full_name }}</h6>
+                                    <p class="mb-1 text-muted">Alumno</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="text-end">
+                                <small class="text-muted">{{ conversacion.ultimo_mensaje|timesince }}</small>
+                                {% with ultimo_mensaje=conversacion.mensajes.last %}
+                                    {% if ultimo_mensaje and not ultimo_mensaje.leido and ultimo_mensaje.remitente != request.user %}
+                                    <span class="badge bg-primary rounded-pill">Nuevo</span>
+                                    {% endif %}
+                                {% endwith %}
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">No hay conversaciones</h4>
+                    {% if request.user.rol == 'ALUMNO' %}
+                      <p class="text-muted">Todavía no tienes mensajes con ningún maestro.</p>
+                    {% else %}
+                      <p class="text-muted">Todavía no tienes mensajes con ningún alumno.</p>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

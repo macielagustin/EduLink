@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
-from .models import Usuario, Alumno, Maestro, Provincia, Departamento, Municipio, Localidad, Idioma, NivelEducativo, Disponibilidad
+from .models import Usuario, Alumno, Maestro, Provincia, Departamento, Municipio, Localidad, Idioma, NivelEducativo, Disponibilidad, SolicitudClase, Mensaje
 from catalogo.models import Materia
 
 
@@ -183,6 +183,51 @@ class EditarPerfilMaestroForm(forms.ModelForm):
         label="Correo electrónico",
         widget=forms.EmailInput(attrs={'class': 'form-control'})
     )
+    foto_perfil = forms.ImageField(
+        required=False,
+        widget=forms.FileInput(attrs={'class': 'form-control'}),
+        label="Foto de perfil"
+    )
+    eliminar_foto = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        label="Eliminar foto actual"
+    )
+    
+    # Campos de ubicación
+    provincia = forms.ModelChoiceField(
+        queryset=Provincia.objects.all(), 
+        required=False, 
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_provincia'})
+    )
+    departamento = forms.ModelChoiceField(
+        queryset=Departamento.objects.none(), 
+        required=False, 
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_departamento'})
+    )
+    municipio = forms.ModelChoiceField(
+        queryset=Municipio.objects.none(), 
+        required=False, 
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_municipio'})
+    )
+    localidad = forms.ModelChoiceField(
+        queryset=Localidad.objects.none(), 
+        required=False, 
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_localidad'})
+    )
+    calle = forms.CharField(
+        max_length=255, 
+        required=False, 
+        widget=forms.TextInput(attrs={'class': 'form-control', 'id': 'id_calle'})
+    )
+    latitud = forms.FloatField(
+        widget=forms.HiddenInput(attrs={'id': 'id_latitud'}), 
+        required=False
+    )
+    longitud = forms.FloatField(
+        widget=forms.HiddenInput(attrs={'id': 'id_longitud'}), 
+        required=False
+    )
     
     # Campos específicos del maestro
     precio_hora = forms.DecimalField(
@@ -235,9 +280,26 @@ class EditarPerfilMaestroForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Si ya existe una instancia, cargamos los datos del usuario
         if self.instance and self.instance.usuario:
-            self.fields['first_name'].initial = self.instance.usuario.first_name
-            self.fields['last_name'].initial = self.instance.usuario.last_name
-            self.fields['email'].initial = self.instance.usuario.email
+            usuario = self.instance.usuario
+            self.fields['first_name'].initial = usuario.first_name
+            self.fields['last_name'].initial = usuario.last_name
+            self.fields['email'].initial = usuario.email
+            self.fields['foto_perfil'].initial = usuario.foto_perfil
+            self.fields['provincia'].initial = usuario.provincia
+            self.fields['departamento'].initial = usuario.departamento
+            self.fields['municipio'].initial = usuario.municipio
+            self.fields['localidad'].initial = usuario.localidad
+            self.fields['calle'].initial = usuario.calle
+            self.fields['latitud'].initial = usuario.latitud
+            self.fields['longitud'].initial = usuario.longitud
+
+            # Configuramos los querysets para los selects dependientes
+            if usuario.provincia:
+                self.fields['departamento'].queryset = Departamento.objects.filter(provincia=usuario.provincia)
+            if usuario.departamento:
+                self.fields['municipio'].queryset = Municipio.objects.filter(departamento=usuario.departamento)
+            if usuario.municipio:
+                self.fields['localidad'].queryset = Localidad.objects.filter(municipio=usuario.municipio)
 
     def save(self, commit=True):
         maestro = super().save(commit=False)
@@ -247,7 +309,55 @@ class EditarPerfilMaestroForm(forms.ModelForm):
             usuario.first_name = self.cleaned_data['first_name']
             usuario.last_name = self.cleaned_data['last_name']
             usuario.email = self.cleaned_data['email']
+            
+            # Manejo de la foto de perfil
+            if self.cleaned_data.get('eliminar_foto') and usuario.foto_perfil:
+                usuario.foto_perfil.delete(save=False)
+                usuario.foto_perfil = None
+            elif self.cleaned_data.get('foto_perfil'):
+                usuario.foto_perfil = self.cleaned_data['foto_perfil']
+            
+            # Campos de ubicación
+            usuario.provincia = self.cleaned_data['provincia']
+            usuario.departamento = self.cleaned_data['departamento']
+            usuario.municipio = self.cleaned_data['municipio']
+            usuario.localidad = self.cleaned_data['localidad']
+            usuario.calle = self.cleaned_data['calle']
+            usuario.latitud = self.cleaned_data['latitud']
+            usuario.longitud = self.cleaned_data['longitud']
+            
             usuario.save()
             maestro.save()
             self.save_m2m()  # Para guardar las relaciones ManyToMany
         return maestro
+    
+
+
+class SolicitudClaseForm(forms.ModelForm):
+    class Meta:
+        model = SolicitudClase
+        fields = ['materia', 'fecha_clase_propuesta', 'duracion_minutos', 'mensaje']
+        widgets = {
+            'fecha_clase_propuesta': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'duracion_minutos': forms.NumberInput(attrs={'class': 'form-control', 'min': '30', 'step': '30'}),
+            'mensaje': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Explica qué necesitas aprender...'}),
+            'materia': forms.Select(attrs={'class': 'form-select'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['duracion_minutos'].initial = 60
+
+class MensajeForm(forms.ModelForm):
+    class Meta:
+        model = Mensaje
+        fields = ['contenido']
+        widgets = {
+            'contenido': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Escribe tu mensaje...',
+                'id': 'mensaje-contenido'
+            })
+        }
+
