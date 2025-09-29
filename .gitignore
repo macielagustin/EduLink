@@ -1,4 +1,21 @@
+# Archivos de Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+
+# Entornos virtuales
+.venv/
+env/
+venv/
+
+# Archivos de VSCode / PyCharm
+.vscode/
+.idea/
+
+# Archivos de migraciones autogenerados
+*.sqlite3
+db.sqlite3
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
