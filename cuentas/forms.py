@@ -146,12 +146,12 @@ class UsuarioForm(forms.ModelForm):
     class Meta:
         model = Usuario
         fields = [
-            "first_name", "last_name", "email", "telefono",
+            "nombre", "apellido", "email", "telefono",
             "fecha_nacimiento", "bio", "foto_perfil"
         ]
         widgets = {
-            "first_name": forms.TextInput(attrs={"class": "form-control"}),
-            "last_name": forms.TextInput(attrs={"class": "form-control"}),
+            "nombre": forms.TextInput(attrs={"class": "form-control"}),
+            "apellido": forms.TextInput(attrs={"class": "form-control"}),
             "email": forms.EmailInput(attrs={"class": "form-control"}),
             "telefono": forms.TextInput(attrs={"class": "form-control"}),
             "fecha_nacimiento": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
@@ -177,13 +177,13 @@ class AlumnoForm(forms.ModelForm):
 
 class EditarPerfilMaestroForm(forms.ModelForm):
     # Campos del usuario que queremos editar
-    first_name = forms.CharField(
+    nombre = forms.CharField(
         max_length=30, 
         required=True, 
         label="Nombre",
         widget=forms.TextInput(attrs={'class': 'form-control'})
     )
-    last_name = forms.CharField(
+    apellido = forms.CharField(
         max_length=30, 
         required=True, 
         label="Apellido",
@@ -292,8 +292,8 @@ class EditarPerfilMaestroForm(forms.ModelForm):
         # Si ya existe una instancia, cargamos los datos del usuario
         if self.instance and self.instance.usuario:
             usuario = self.instance.usuario
-            self.fields['first_name'].initial = usuario.first_name
-            self.fields['last_name'].initial = usuario.last_name
+            self.fields['nombre'].initial = usuario.nombre
+            self.fields['apellido'].initial = usuario.apellido
             self.fields['email'].initial = usuario.email
             self.fields['foto_perfil'].initial = usuario.foto_perfil
             self.fields['provincia'].initial = usuario.provincia
@@ -317,8 +317,8 @@ class EditarPerfilMaestroForm(forms.ModelForm):
         # Actualizamos también los datos del usuario
         if commit:
             usuario = maestro.usuario
-            usuario.first_name = self.cleaned_data['first_name']
-            usuario.last_name = self.cleaned_data['last_name']
+            usuario.nombre = self.cleaned_data['nombre']
+            usuario.apellido = self.cleaned_data['apellido']
             usuario.email = self.cleaned_data['email']
             
             # Manejo de la foto de perfil
