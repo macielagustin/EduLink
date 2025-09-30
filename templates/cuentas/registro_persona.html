@@ -24,7 +24,6 @@
               {{ form.apellido|add_class:"form-control" }}
               {{ form.apellido.errors }}
             </div>
-
             <div class="mb-3">
               <label class="form-label">Usuario</label>
               {{ form.username|add_class:"form-control" }}
@@ -65,26 +64,29 @@
               {{ form.bio|add_class:"form-control" }}
               {{ form.bio.errors }}
             </div>
+
+            <!-- Campos de ubicación (ahora inputs de texto readonly) -->
             <div class="mb-3">
               <label class="form-label">Provincia</label>
-              {{ form.provincia|add_class:"form-select" }}
+              {{ form.provincia|add_class:"form-control" }}
               {{ form.provincia.errors }}
             </div>
             <div class="mb-3">
               <label class="form-label">Departamento</label>
-              {{ form.departamento|add_class:"form-select" }}
+              {{ form.departamento|add_class:"form-control" }}
               {{ form.departamento.errors }}
             </div>
             <div class="mb-3">
               <label class="form-label">Municipio</label>
-              {{ form.municipio|add_class:"form-select" }}
+              {{ form.municipio|add_class:"form-control" }}
               {{ form.municipio.errors }}
             </div>
             <div class="mb-3">
               <label class="form-label">Localidad</label>
-              {{ form.localidad|add_class:"form-select" }}
+              {{ form.localidad|add_class:"form-control" }}
               {{ form.localidad.errors }}
             </div>
+
             <div class="mb-3">
               <label class="form-label">Calle</label>
               {{ form.calle|add_class:"form-control" }}
@@ -160,14 +162,6 @@
     }).addTo(map);
 
     let marker;
-    map.on('click', function (e) {
-      if (marker) map.removeLayer(marker);
-      marker = L.marker(e.latlng).addTo(map);
-      document.getElementById("id_latitud").value = e.latlng.lat;
-      document.getElementById("id_longitud").value = e.latlng.lng;
-      document.getElementById("geo-msg").textContent = "Ubicación seleccionada correctamente.";
-    });
-
     map.on("click", async function (e) {
       if (marker) map.removeLayer(marker);
       marker = L.marker(e.latlng).addTo(map);
@@ -183,119 +177,24 @@
         console.log("Datos Nominatim:", data);
 
         if (data.address) {
-          // --- Provincia ---
           if (data.address.state) {
-            const provSelect = document.getElementById("id_provincia");
-            const provMatch = [...provSelect.options].find(opt =>
-              opt.text.toLowerCase().includes(data.address.state.toLowerCase())
-            );
-            if (provMatch) {
-              provSelect.value = provMatch.value;
-              provSelect.dispatchEvent(new Event("change"));
-
-              // --- Departamento ---
-              setTimeout(() => {
-                if (data.address.state_district) {
-                  const deptoSelect = document.getElementById("id_departamento");
-                  const deptoMatch = [...deptoSelect.options].find(opt =>
-                    opt.text.toLowerCase().includes(data.address.state_district.toLowerCase())
-                  );
-                  if (deptoMatch) {
-                    deptoSelect.value = deptoMatch.value;
-                    deptoSelect.dispatchEvent(new Event("change"));
-                  }
-                }
-
-                // --- Municipio ---
-                setTimeout(() => {
-                  if (data.address.city) {
-                    const muniSelect = document.getElementById("id_municipio");
-                    const muniMatch = [...muniSelect.options].find(opt =>
-                      opt.text.toLowerCase().includes(data.address.city.toLowerCase())
-                    );
-                    if (muniMatch) {
-                      muniSelect.value = muniMatch.value;
-                      muniSelect.dispatchEvent(new Event("change"));
-                    }
-                  }
-                }, 500); // esperamos a que carguen los municipios
-              }, 500); // esperamos a que carguen los departamentos
-            }
+            document.getElementById("id_provincia").value = data.address.state;
           }
-
-          // --- Calle ---
+          if (data.address.state_district || data.address.municipality) {
+            document.getElementById("id_departamento").value = data.address.state_district || data.address.municipality;
+          }
+          if (data.address.city || data.address.town || data.address.village) {
+            document.getElementById("id_municipio").value = data.address.city || data.address.town || data.address.village;
+          }
+          if (data.address.suburb || data.address.neighbourhood) {
+            document.getElementById("id_localidad").value = data.address.suburb || data.address.neighbourhood;
+          }
           if (data.address.road) {
             document.getElementById("id_calle").value = data.address.road;
           }
         }
       } catch (err) {
         console.error("Error en geocodificación inversa:", err);
-      }
-    });
-
-
-    // --- Selects dependientes ---
-    const provinciaSelect = document.getElementById('id_provincia');
-    const departamentoSelect = document.getElementById('id_departamento');
-    const municipioSelect = document.getElementById('id_municipio');
-    const localidadSelect = document.getElementById('id_localidad');
-
-    function resetSelect(select) {
-      select.innerHTML = '<option value="">--Seleccione--</option>';
-      select.disabled = true;
-    }
-
-    async function cargar(url, select, childReset) {
-      try {
-        const resp = await fetch(url);
-        const data = await resp.json();
-        console.log("Respuesta de", url, data);
-        select.innerHTML = '<option value="">--Seleccione--</option>';
-        data.forEach(obj => {
-          const option = document.createElement("option");
-          option.value = obj.id;
-          option.textContent = obj.nombre;
-          select.appendChild(option);
-        });
-        select.disabled = false;
-        if (childReset) childReset();
-      } catch (err) {
-        console.error("Error cargando datos:", err);
-      }
-    }
-
-    provinciaSelect.addEventListener('change', function () {
-      console.log("Provincia seleccionada:", this.value);
-      if (this.value) {
-        cargar(`/departamentos/?provincia_id=${this.value}`, departamentoSelect, () => {
-          resetSelect(municipioSelect);
-          resetSelect(localidadSelect);
-        });
-      } else {
-        resetSelect(departamentoSelect);
-        resetSelect(municipioSelect);
-        resetSelect(localidadSelect);
-      }
-    });
-
-    departamentoSelect.addEventListener('change', function () {
-      console.log("Departamento seleccionado:", this.value);
-      if (this.value) {
-        cargar(`/municipios/?departamento_id=${this.value}`, municipioSelect, () => {
-          resetSelect(localidadSelect);
-        });
-      } else {
-        resetSelect(municipioSelect);
-        resetSelect(localidadSelect);
-      }
-    });
-
-    municipioSelect.addEventListener('change', function () {
-      console.log("Municipio seleccionado:", this.value);
-      if (this.value) {
-        cargar(`/localidades/?municipio_id=${this.value}`, localidadSelect);
-      } else {
-        resetSelect(localidadSelect);
       }
     });
   });

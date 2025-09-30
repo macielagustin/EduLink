@@ -156,6 +156,7 @@ def buscar_clases(request):
     modalidad = request.GET.get("modalidad")
     provincia_id = request.GET.get("provincia")
     radio = request.GET.get("radio")
+    vista = request.GET.get("view", "list")  # 👈 list o map
 
     # Convertir a enteros los IDs
     if materia_id:
@@ -188,7 +189,10 @@ def buscar_clases(request):
             radio = float(radio)
             for m in resultados:
                 if m.usuario.latitud and m.usuario.longitud:
-                    distancia = haversine(alumno.latitud, alumno.longitud, m.usuario.latitud, m.usuario.longitud)
+                    distancia = haversine(
+                        alumno.latitud, alumno.longitud,
+                        m.usuario.latitud, m.usuario.longitud
+                    )
                     if distancia <= radio:
                         resultados_finales.append((m, round(distancia, 1)))
     else:
@@ -204,7 +208,8 @@ def buscar_clases(request):
             "provincia": provincia_id,
             "radio": radio or "",
         },
-        "resultados": resultados_finales,  # 👈 siempre lista de tuplas
+        "resultados": resultados_finales,  # siempre lista de tuplas
+        "vista": vista,  # 👈 pasamos si es lista o mapa
     }
     return render(request, "alumno/buscar_clases.html", context)
 
