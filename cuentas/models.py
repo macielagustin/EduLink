@@ -176,3 +176,38 @@ class Mensaje(models.Model):
 
 
 
+
+class Notificacion(models.Model):
+    TIPOS = (
+        ('solicitud', 'Nueva Solicitud'),
+        ('mensaje', 'Mensaje Nuevo'),
+        ('clase_aceptada', 'Clase Aceptada'),
+        ('clase_rechazada', 'Clase Rechazada'),
+        ('review', 'Nueva Reseña'),
+    )
+    
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+    tipo = models.CharField(max_length=20, choices=TIPOS)
+    mensaje = models.TextField()
+    enlace = models.CharField(max_length=255, blank=True)
+    leida = models.BooleanField(default=False)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Notificación para {self.usuario.username}: {self.mensaje}"
+
+class Resena(models.Model):
+    clase = models.ForeignKey(SolicitudClase, on_delete=models.CASCADE, related_name='resenas')
+    autor = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='resenas_escritas')
+    destinatario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='resenas_recibidas')
+    calificacion = models.PositiveSmallIntegerField(choices=[(1,1), (2,2), (3,3), (4,4), (5,5)])
+    comentario = models.TextField()
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['clase', 'autor']  # Una reseña por clase por autor
+
+    def __str__(self):
+        return f"Reseña de {self.autor.username} para {self.destinatario.username} - {self.calificacion} estrellas"
+
+

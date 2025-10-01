@@ -14,6 +14,7 @@ from .views import perfil_publico_maestro, perfil_maestro_publico
 from .views import mis_solicitudes_alumno, enviar_solicitud_clase
 from .views import lista_conversaciones, ver_conversacion, iniciar_conversacion
 
+from . import views  # Para las notificaciones y otras vistas generales
 
 urlpatterns = [
     path("", home_view, name="home"),
@@ -72,5 +73,21 @@ urlpatterns = [
     path("mensajes/", lista_conversaciones, name="lista_conversaciones"),
     path("mensajes/<int:conversacion_id>/", ver_conversacion, name="ver_conversacion"),
     path("mensajes/iniciar/<int:usuario_id>/", iniciar_conversacion, name="iniciar_conversacion"),
+
+
+    # Notificaciones
+    path('notificaciones/', views.obtener_notificaciones, name='obtener_notificaciones'),
+    path('notificaciones/<int:notificacion_id>/leida/', views.marcar_notificacion_leida, name='marcar_notificacion_leida'),
+    
+    # Calendario
+    path('maestro/calendario/', views.calendario_maestro, name='calendario_maestro'),
+    
+    # Reseñas
+    path('resenas/agregar/<int:clase_id>/', views.agregar_resena, name='agregar_resena'),
+    path('resenas/usuario/<int:usuario_id>/', views.ver_resenas_usuario, name='ver_resenas_usuario'),
+
+
+
+
 
 ]

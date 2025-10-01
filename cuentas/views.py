@@ -17,6 +17,209 @@ from django.utils import timezone
 from .models import Conversacion, Mensaje
 from .forms import SolicitudClaseForm, MensajeForm
 
+from django.http import JsonResponse
+from django.db.models import Count, Avg, Q
+from .models import Notificacion, Resena
+from .forms import ResenaForm
+import json
+from datetime import datetime, timedelta
+
+
+
+# Agregar estas funciones utilitarias al inicio de views.py
+def crear_notificacion(usuario, tipo, mensaje, enlace=''):
+    Notificacion.objects.create(
+        usuario=usuario,
+        tipo=tipo,
+        mensaje=mensaje,
+        enlace=enlace
+    )
+
+def verificar_disponibilidad_maestro(maestro, fecha_propuesta, duracion_minutos):
+    """Verifica si el maestro tiene disponibilidad en la fecha propuesta"""
+    fecha_fin = fecha_propuesta + timedelta(minutes=duracion_minutos)
+    
+    # Buscar clases aceptadas que se solapen con el horario propuesto
+    clases_conflictivas = SolicitudClase.objects.filter(
+        maestro=maestro,
+        estado='aceptada',
+        fecha_clase_propuesta__lt=fecha_fin,
+        fecha_clase_propuesta__gte=fecha_propuesta - timedelta(hours=2)  # Buffer de 2 horas
+    ).exists()
+    
+    return not clases_conflictivas
+
+# Actualizar la vista enviar_solicitud_clase
+@login_required
+def enviar_solicitud_clase(request, maestro_id):
+    maestro = get_object_or_404(Maestro, id=maestro_id)
+    alumno = get_object_or_404(Alumno, usuario=request.user)
+    
+    if request.method == 'POST':
+        form = SolicitudClaseForm(request.POST)
+        if form.is_valid():
+            solicitud = form.save(commit=False)
+            solicitud.alumno = alumno
+            solicitud.maestro = maestro
+            
+            # Verificar disponibilidad del maestro
+            if not verificar_disponibilidad_maestro(maestro, solicitud.fecha_clase_propuesta, solicitud.duracion_minutos):
+                return JsonResponse({
+                    'success': False,
+                    'message': 'El maestro no está disponible en ese horario. Por favor, elige otra fecha u hora.'
+                })
+            
+            solicitud.estado = 'pendiente'
+            solicitud.save()
+            
+            # Crear notificación para el maestro
+            crear_notificacion(
+                usuario=maestro.usuario,
+                tipo='solicitud',
+                mensaje=f'Tienes una nueva solicitud de clase de {alumno.usuario.get_full_name()}',
+                enlace=f'/maestro/solicitudes/'
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'message': '¡Solicitud enviada correctamente!'
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': 'Por favor, corrige los errores en el formulario.'
+            })
+    else:
+        form = SolicitudClaseForm()
+    
+    return render(request, 'alumno/enviar_solicitud.html', {
+        'form': form,
+        'maestro': maestro
+    })
+
+# Vista para obtener notificaciones
+@login_required
+def obtener_notificaciones(request):
+    notificaciones = Notificacion.objects.filter(
+        usuario=request.user, 
+        leida=False
+    ).order_by('-fecha_creacion')[:10]
+    
+    data = [{
+        'id': n.id,
+        'tipo': n.tipo,
+        'mensaje': n.mensaje,
+        'enlace': n.enlace,
+        'fecha_creacion': n.fecha_creacion.strftime("%d/%m/%Y %H:%M"),
+    } for n in notificaciones]
+    
+    return JsonResponse(data, safe=False)
+
+# Vista para marcar notificación como leída
+@login_required
+def marcar_notificacion_leida(request, notificacion_id):
+    try:
+        notificacion = Notificacion.objects.get(id=notificacion_id, usuario=request.user)
+        notificacion.leida = True
+        notificacion.save()
+        return JsonResponse({'success': True})
+    except Notificacion.DoesNotExist:
+        return JsonResponse({'success': False})
+
+# Vista para calendario del maestro
+@login_required
+def calendario_maestro(request):
+    try:
+        perfil_maestro = Maestro.objects.get(usuario=request.user)
+        
+        # Obtener clases aceptadas para el calendario
+        clases = SolicitudClase.objects.filter(
+            maestro=perfil_maestro,
+            estado='aceptada'
+        )
+        
+        eventos = []
+        for clase in clases:
+            eventos.append({
+                'title': f'Clase: {clase.materia.nombre} con {clase.alumno.usuario.get_full_name()}',
+                'start': clase.fecha_clase_propuesta.isoformat(),
+                'end': (clase.fecha_clase_propuesta + timedelta(minutes=clase.duracion_minutos)).isoformat(),
+                'color': '#28a745',
+                'textColor': 'white',
+                'url': f'/maestro/solicitudes/'
+            })
+        
+    except Maestro.DoesNotExist:
+        messages.error(request, "No tienes un perfil de maestro.")
+        return redirect("dashboard_maestro")
+    
+    return render(request, "maestro/calendario_maestro.html", {
+        "eventos": json.dumps(eventos)
+    })
+
+# Vista para agregar reseña
+@login_required
+def agregar_resena(request, clase_id):
+    clase = get_object_or_404(SolicitudClase, id=clase_id)
+    
+    # Verificar que el usuario puede reseñar esta clase
+    if request.user.rol == 'ALUMNO' and clase.alumno.usuario != request.user:
+        messages.error(request, "No puedes reseñar esta clase.")
+        return redirect('mis_solicitudes_alumno')
+    
+    if request.user.rol == 'MAESTRO' and clase.maestro.usuario != request.user:
+        messages.error(request, "No puedes reseñar esta clase.")
+        return redirect('solicitudes_para_maestro')
+    
+    # Determinar el destinatario de la reseña
+    if request.user.rol == 'ALUMNO':
+        destinatario = clase.maestro.usuario
+    else:
+        destinatario = clase.alumno.usuario
+    
+    if request.method == 'POST':
+        form = ResenaForm(request.POST)
+        if form.is_valid():
+            resena = form.save(commit=False)
+            resena.clase = clase
+            resena.autor = request.user
+            resena.destinatario = destinatario
+            resena.save()
+            
+            messages.success(request, "¡Reseña publicada correctamente!")
+            
+            if request.user.rol == 'ALUMNO':
+                return redirect('mis_solicitudes_alumno')
+            else:
+                return redirect('solicitudes_para_maestro')
+    else:
+        form = ResenaForm()
+    
+    return render(request, 'resenas/agregar_resena.html', {
+        'form': form,
+        'clase': clase,
+        'destinatario': destinatario
+    })
+
+# Vista para ver reseñas de un usuario
+def ver_resenas_usuario(request, usuario_id):
+    usuario = get_object_or_404(Usuario, id=usuario_id)
+    resenas = Resena.objects.filter(destinatario=usuario).order_by('-fecha_creacion')
+    
+    # Calcular promedio
+    promedio = resenas.aggregate(Avg('calificacion'))['calificacion__avg'] or 0
+    
+    return render(request, 'resenas/ver_resenas.html', {
+        'usuario': usuario,
+        'resenas': resenas,
+        'promedio': round(promedio, 1),
+        'total_resenas': resenas.count()
+    })
+
+
+
+
+""" ####################   COMO ANTES   ###########3# """
 def home_view(request):
     return render(request, "home.html")
 
@@ -134,7 +337,33 @@ def logout_view(request):
 
 @login_required
 def dashboard_alumno(request):
-    return render(request, "cuentas/dashboard_alumno.html")
+    alumno = get_object_or_404(Alumno, usuario=request.user)
+
+    # Solicitudes de clases recientes
+    solicitudes = SolicitudClase.objects.filter(alumno=alumno).order_by('-fecha_solicitud')[:5]
+
+    # Próximas clases aceptadas
+    proximas_clases = SolicitudClase.objects.filter(
+        alumno=alumno,
+        estado='aceptada',
+        fecha_clase_propuesta__gte=timezone.now()
+    ).order_by('fecha_clase_propuesta')[:5]
+
+    # Últimas conversaciones
+    conversaciones = Conversacion.objects.filter(alumno=alumno).order_by('-ultimo_mensaje')[:5]
+
+    # Reseñas que recibió el alumno
+    resenas = Resena.objects.filter(destinatario=request.user).order_by('-fecha_creacion')[:5]
+
+    context = {
+        'solicitudes': solicitudes,
+        'proximas_clases': proximas_clases,
+        'conversaciones': conversaciones,
+        'resenas': resenas,
+    }
+
+    return render(request, "cuentas/dashboard_alumno.html", context)
+
 
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371  # Radio de la Tierra en km
