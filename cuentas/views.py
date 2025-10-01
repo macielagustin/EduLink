@@ -335,33 +335,65 @@ def logout_view(request):
 ######### ALUMNO #####################
 ######################################
 
+from django.utils import timezone
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from .models import SolicitudClase, Conversacion, Mensaje  # ajusta el import según tu app
+
 @login_required
 def dashboard_alumno(request):
-    alumno = get_object_or_404(Alumno, usuario=request.user)
+    usuario = request.user
+    alumno = usuario.alumno  # suponiendo que Usuario tiene relación OneToOne con Alumno
 
-    # Solicitudes de clases recientes
-    solicitudes = SolicitudClase.objects.filter(alumno=alumno).order_by('-fecha_solicitud')[:5]
+    ahora = timezone.now()
 
-    # Próximas clases aceptadas
+    # Solicitudes pendientes
+    solicitudes_pendientes = SolicitudClase.objects.filter(
+        alumno=alumno,
+        estado="pendiente"
+    ).count()
+
+    # Clases esta semana (aceptadas con fecha en los próximos 7 días)
+    fin_semana = ahora + timezone.timedelta(days=7)
+    clases_esta_semana = SolicitudClase.objects.filter(
+        alumno=alumno,
+        estado="aceptada",
+        fecha_clase_propuesta__gte=ahora,
+        fecha_clase_propuesta__lte=fin_semana
+    ).count()
+
+    # Materias activas (materias distintas con clases aceptadas)
+    materias_activas = SolicitudClase.objects.filter(
+        alumno=alumno,
+        estado="aceptada"
+    ).values("materia").distinct().count()
+
+    # Próximas clases (las 5 más cercanas, aceptadas)
     proximas_clases = SolicitudClase.objects.filter(
         alumno=alumno,
-        estado='aceptada',
-        fecha_clase_propuesta__gte=timezone.now()
-    ).order_by('fecha_clase_propuesta')[:5]
+        estado="aceptada",
+        fecha_clase_propuesta__gte=ahora
+    ).order_by("fecha_clase_propuesta")[:5]
 
-    # Últimas conversaciones
-    conversaciones = Conversacion.objects.filter(alumno=alumno).order_by('-ultimo_mensaje')[:5]
-
-    # Reseñas que recibió el alumno
-    resenas = Resena.objects.filter(destinatario=request.user).order_by('-fecha_creacion')[:5]
+    # Conversaciones y mensajes recientes
+    conversaciones = Conversacion.objects.filter(alumno=alumno).prefetch_related("mensajes")
+    mensajes_recientes = []
+    mensajes_nuevos = 0
+    for conv in conversaciones:
+        ultimo = conv.mensajes.order_by("-fecha_envio").first()
+        if ultimo:
+            if not ultimo.leido and ultimo.remitente != usuario:
+                mensajes_nuevos += 1
+            mensajes_recientes.append((conv, ultimo))
 
     context = {
-        'solicitudes': solicitudes,
-        'proximas_clases': proximas_clases,
-        'conversaciones': conversaciones,
-        'resenas': resenas,
+        "solicitudes_pendientes": solicitudes_pendientes,
+        "clases_esta_semana": clases_esta_semana,
+        "materias_activas": materias_activas,
+        "proximas_clases": proximas_clases,
+        "mensajes_recientes": mensajes_recientes,
+        "mensajes_nuevos": mensajes_nuevos,
     }
-
     return render(request, "cuentas/dashboard_alumno.html", context)
 
 
@@ -382,23 +414,26 @@ def buscar_clases(request):
 
     # Capturar parámetros de búsqueda
     materia_id = request.GET.get("materia")
-    modalidad = request.GET.get("modalidad")
+    modalidad = request.GET.get("modalidad", "").strip()
     provincia_id = request.GET.get("provincia")
     radio = request.GET.get("radio")
     vista = request.GET.get("view", "list")  # 👈 list o map
 
-    # Convertir a enteros los IDs
-    if materia_id:
-        try:
-            materia_id = int(materia_id)
-        except ValueError:
-            materia_id = None
+    # Normalizar valores
+    try:
+        materia_id = int(materia_id) if materia_id else None
+    except ValueError:
+        materia_id = None
 
-    if provincia_id:
-        try:
-            provincia_id = int(provincia_id)
-        except ValueError:
-            provincia_id = None
+    try:
+        provincia_id = int(provincia_id) if provincia_id else None
+    except ValueError:
+        provincia_id = None
+
+    try:
+        radio = float(str(radio).replace(",", ".")) if radio else None
+    except ValueError:
+        radio = None
 
     resultados = Maestro.objects.all()
 
@@ -410,12 +445,12 @@ def buscar_clases(request):
     if provincia_id:
         resultados = resultados.filter(usuario__provincia__id=provincia_id)
 
-    # Filtro por radio solo si es presencial
+    # Filtro por radio (solo presencial)
+    alumno = request.user
     resultados_finales = []
+
     if modalidad == "Presencial" and radio:
-        alumno = request.user
         if alumno.latitud and alumno.longitud:
-            radio = float(radio)
             for m in resultados:
                 if m.usuario.latitud and m.usuario.longitud:
                     distancia = haversine(
@@ -424,6 +459,9 @@ def buscar_clases(request):
                     )
                     if distancia <= radio:
                         resultados_finales.append((m, round(distancia, 1)))
+        else:
+            # Alumno sin ubicación → no aplicar filtro de radio
+            resultados_finales = [(m, None) for m in resultados]
     else:
         # Si no aplica filtro de radio → devolvemos todos con distancia = None
         resultados_finales = [(m, None) for m in resultados]
@@ -432,15 +470,17 @@ def buscar_clases(request):
         "materias": materias,
         "provincias": provincias,
         "q": {
-            "materia": materia_id,
-            "modalidad": modalidad or "",
-            "provincia": provincia_id,
+            "materia": materia_id or "",
+            "modalidad": modalidad,
+            "provincia": provincia_id or "",
             "radio": radio or "",
         },
-        "resultados": resultados_finales,  # siempre lista de tuplas
-        "vista": vista,  # 👈 pasamos si es lista o mapa
+        "resultados": resultados_finales,
+        "vista": vista,
     }
     return render(request, "alumno/buscar_clases.html", context)
+
+
 
 
 

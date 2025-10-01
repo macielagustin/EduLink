@@ -13,8 +13,12 @@
     <!-- Header de bienvenida -->
     <div class="row align-items-center mb-4">
         <div class="col-md-8">
-            <h1 class="h2 fw-bold text-primary">👋 ¡Hola, {{ request.user.get_full_name|default:request.user.username }}!</h1>
-            <p class="text-muted mb-0">Bienvenido a tu panel de aprendizaje. Encuentra maestros y gestiona tus clases.</p>
+            <h1 class="h2 fw-bold text-primary">
+                👋 ¡Hola, {{ request.user.get_full_name|default:request.user.username }}!
+            </h1>
+            <p class="text-muted mb-0">
+                Bienvenido a tu panel de aprendizaje. Encuentra maestros y gestiona tus clases.
+            </p>
         </div>
         <div class="col-md-4 text-end">
             <span class="badge bg-success fs-6">{{ request.user.rol }}</span>
@@ -48,7 +52,7 @@
                         </div>
                         <div class="flex-grow-1 ms-3">
                             <h6 class="card-title text-muted mb-1">Clases Esta Semana</h6>
-                            <h4 class="mb-0 fw-bold">{{ clases_semana }}</h4>
+                            <h4 class="mb-0 fw-bold">{{ clases_esta_semana }}</h4>
                         </div>
                     </div>
                 </div>
@@ -100,15 +104,32 @@
                 <div class="card-body">
                     {% if proximas_clases %}
                     <div class="list-group list-group-flush">
-                        {% for clase in proximas_clases %}
-                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
-                            <div>
-                                <h6 class="mb-1">{{ clase.materia.nombre }}</h6>
-                                <small class="text-muted">Prof. {{ clase.maestro.usuario.get_full_name }} - {{ clase.fecha_clase_propuesta|date:"D d M H:i" }}</small>
+                        {% if proximas_clases %}
+                            {% for clase in proximas_clases %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                    <div>
+                                        <h6 class="mb-1">{{ clase.materia.nombre }}</h6>
+                                        <small class="text-muted">
+                                            Prof. {{ clase.maestro.usuario.get_full_name }} - 
+                                            {{ clase.fecha_clase_propuesta|date:"l d/m H:i" }}
+                                        </small>
+                                    </div>
+                                    {% if clase.estado == "aceptada" %}
+                                        <span class="badge bg-success">Aceptada</span>
+                                    {% elif clase.estado == "pendiente" %}
+                                        <span class="badge bg-warning text-dark">Pendiente</span>
+                                    {% elif clase.estado == "rechazada" %}
+                                        <span class="badge bg-danger">Rechazada</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Cancelada</span>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="list-group-item text-muted">
+                                No tienes clases programadas.
                             </div>
-                            <span class="badge bg-success">{{ clase.estado|title }}</span>
-                        </div>
-                        {% endfor %}
+                        {% endif %}
                     </div>
                     {% else %}
                     <p class="text-muted text-center py-3">No tienes clases programadas.</p>
@@ -124,26 +145,25 @@
                 <div class="card-body">
                     {% if conversaciones_recientes %}
                     <div class="list-group list-group-flush">
-                        {% for conversacion in conversaciones_recientes %}
-                        <a href="{% url 'ver_conversacion' conversacion.id %}" class="list-group-item list-group-item-action d-flex align-items-center px-0">
-                            <div class="flex-shrink-0">
-                                <img src="{% if conversacion.maestro.usuario.foto_perfil %}{{ conversacion.maestro.usuario.foto_perfil.url }}{% else %}{% static 'images/avatar-default.png' %}{% endif %}" 
-                                     alt="Avatar" class="rounded-circle" width="40" height="40">
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-1">Prof. {{ conversacion.maestro.usuario.get_full_name }}</h6>
-                                <p class="mb-1 text-muted small">
-                                    {% with ultimo_mensaje=conversacion.mensajes.last %}
-                                        {{ ultimo_mensaje.contenido|truncatewords:10 }}
-                                    {% endwith %}
-                                </p>
-                                <small class="text-muted">{{ conversacion.ultimo_mensaje|timesince }} ago</small>
-                            </div>
-                            {% if conversacion.mensajes_no_leidos > 0 %}
-                            <span class="badge bg-primary rounded-pill">{{ conversacion.mensajes_no_leidos }}</span>
-                            {% endif %}
-                        </a>
-                        {% endfor %}
+                        {% if mensajes_recientes %}
+                            {% for conv, ultimo in mensajes_recientes %}
+                                <a href="{% url 'ver_conversacion' conv.id %}" class="list-group-item list-group-item-action d-flex align-items-center px-0">
+                                    <div class="flex-shrink-0">
+                                        <img src="{{ conv.maestro.usuario.foto_url }}" alt="Avatar" class="rounded-circle" width="40" height="40">
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <h6 class="mb-1">{{ conv.maestro.usuario.get_full_name }}</h6>
+                                        <p class="mb-1 text-muted small">{{ ultimo.contenido|truncatechars:80 }}</p>
+                                        <small class="text-muted">{{ ultimo.fecha_envio|timesince }} atrás</small>
+                                    </div>
+                                    {% if not ultimo.leido and ultimo.remitente != request.user %}
+                                        <span class="badge bg-primary rounded-pill">Nuevo</span>
+                                    {% endif %}
+                                </a>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted">No tienes mensajes recientes.</p>
+                        {% endif %}
                     </div>
                     {% else %}
                     <p class="text-muted text-center py-3">No tienes conversaciones activas.</p>
@@ -172,14 +192,14 @@
                             <i class="fas fa-list me-2"></i>
                             Mis Solicitudes
                             {% if solicitudes_pendientes > 0 %}
-                            <span class="badge bg-primary text-white ms-auto">{{ solicitudes_pendientes }}</span>
+                                <span class="badge bg-primary text-white ms-auto">{{ solicitudes_pendientes }}</span>
                             {% endif %}
                         </a>
                         <a href="{% url 'lista_conversaciones' %}" class="btn btn-outline-secondary btn-lg d-flex align-items-center justify-content-start">
                             <i class="fas fa-comments me-2"></i>
                             Mensajes
                             {% if mensajes_nuevos > 0 %}
-                            <span class="badge bg-primary text-white ms-auto">{{ mensajes_nuevos }}</span>
+                                <span class="badge bg-primary text-white ms-auto">{{ mensajes_nuevos }}</span>
                             {% endif %}
                         </a>
                         <a href="{% url 'perfil_alumno' %}" class="btn btn-outline-secondary btn-lg d-flex align-items-center justify-content-start">
