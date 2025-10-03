@@ -71,6 +71,9 @@ class Maestro(models.Model):
     cv = models.FileField(upload_to="cv_maestros/", blank=True, null=True)
     materias = models.ManyToManyField('catalogo.Materia', blank=True, related_name='maestros')
     idiomas = models.ManyToManyField('Idioma', blank=True, related_name='maestros')
+    # Nuevo campo para datos de pago
+    cbu_cvu_alias = models.CharField(max_length=100, blank=True, null=True, verbose_name="CBU/CVU o Alias")
+
 
     def __str__(self):
         return f"Maestro: {self.usuario.username}"
@@ -98,6 +101,31 @@ class Disponibilidad(models.Model):
 
     def __str__(self):
         return self.nombre
+
+
+
+# Nuevo modelo para disponibilidad de usuarios
+class DisponibilidadUsuario(models.Model):
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='disponibilidades')
+    fecha_inicio = models.DateTimeField()
+    fecha_fin = models.DateTimeField()
+    titulo = models.CharField(max_length=200)
+    tipo = models.CharField(
+        max_length=20,
+        choices=[
+            ('clase', 'Clase'),
+            ('ocupacion', 'Ocupación Personal'),
+            ('disponible', 'Disponible'),
+        ],
+        default='ocupacion'
+    )
+    descripcion = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        ordering = ['fecha_inicio']
+    
+    def __str__(self):
+        return f"{self.titulo} - {self.usuario.username}"
 
 
 
@@ -136,16 +164,31 @@ class SolicitudClase(models.Model):
         ('aceptada', 'Aceptada'),
         ('rechazada', 'Rechazada'),
         ('cancelada', 'Cancelada'),
+        ('completada', 'Completada'),
     ]
     
     alumno = models.ForeignKey('Alumno', on_delete=models.CASCADE)
     maestro = models.ForeignKey('Maestro', on_delete=models.CASCADE)
     materia = models.ForeignKey('catalogo.Materia', on_delete=models.CASCADE)
     fecha_solicitud = models.DateTimeField(auto_now_add=True)
-    fecha_clase_propuesta = models.DateTimeField()
+    fecha_clase_propuesta = models.DateTimeField(null=True, blank=True)  # Ahora nullable
+    fecha_clase_confirmada = models.DateTimeField(null=True, blank=True)  # Nueva fecha confirmada
     duracion_minutos = models.PositiveIntegerField(default=60)
     mensaje = models.TextField(blank=True, null=True)
     estado = models.CharField(max_length=20, choices=ESTADOS, default='pendiente')
+    # Campos para pago
+    monto_acordado = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    metodo_pago = models.CharField(
+        max_length=20,
+        choices=[
+            ('efectivo', 'Efectivo'),
+            ('transferencia', 'Transferencia'),
+            ('mercadopago', 'Mercado Pago'),
+        ],
+        default='efectivo'
+    )
+    pago_realizado = models.BooleanField(default=False)
+    codigo_pago = models.CharField(max_length=255, blank=True, null=True)  # Para QR de pago
     
     def __str__(self):
         return f"Solicitud de {self.alumno.usuario.username} a {self.maestro.usuario.username}"

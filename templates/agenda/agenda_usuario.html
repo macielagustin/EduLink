@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">📅 Mi Agenda</h2>
+            <p class="text-muted">Gestiona tu disponibilidad y eventos</p>
+        </div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#agregarEventoModal">
+            ➕ Agregar Evento
+        </button>
+    </div>
+
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h6>Leyenda</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="color-indicator bg-success me-2" style="width: 20px; height: 20px;"></div>
+                        <span>Disponible</span>
+                    </div>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="color-indicator bg-primary me-2" style="width: 20px; height: 20px;"></div>
+                        <span>Clase</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <div class="color-indicator bg-danger me-2" style="width: 20px; height: 20px;"></div>
+                        <span>Ocupado</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6>Próximos Eventos</h6>
+                </div>
+                <div class="card-body">
+                    {% for evento in eventos|slice:":5" %}
+                    <div class="border-bottom pb-2 mb-2">
+                        <strong>{{ evento.titulo }}</strong>
+                        <br>
+                        <small class="text-muted">{{ evento.fecha_inicio|date:"d/m H:i" }} - {{ evento.fecha_fin|date:"H:i" }}</small>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">No hay eventos próximos</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-9">
+            <div id="calendario"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para agregar evento -->
+<div class="modal fade" id="agregarEventoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Agregar Evento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <div class="modal-body">
+                    {{ form.as_p }}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+#calendario {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.color-indicator {
+    border-radius: 3px;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendario');
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        events: JSON.parse(document.getElementById('eventos-calendario-data').textContent),
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        locale: 'es',
+        buttonText: {
+            today: 'Hoy',
+            month: 'Mes',
+            week: 'Semana',
+            day: 'Día'
+        }
+    });
+    calendar.render();
+});
+</script>
+{% endblock %}

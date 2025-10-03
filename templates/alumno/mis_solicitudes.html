@@ -47,19 +47,49 @@
                     </div>
                     <div class="card-body">
                         <p class="mb-2"><strong>Maestro:</strong> {{ solicitud.maestro.usuario.get_full_name }}</p>
+                        {% if solicitud.fecha_clase_propuesta %}
                         <p class="mb-2"><strong>Fecha propuesta:</strong> {{ solicitud.fecha_clase_propuesta|date:"d/m/Y H:i" }}</p>
+                        {% endif %}
+                        {% if solicitud.monto_acordado %}
+                        <p class="mb-2"><strong>Monto acordado:</strong> ${{ solicitud.monto_acordado }}</p>
+                        {% endif %}
+                        {% if solicitud.metodo_pago %}
+                        <p class="mb-2"><strong>Método de pago:</strong> {{ solicitud.get_metodo_pago_display }}</p>
+                        {% endif %}
                         <p class="mb-2"><strong>Duración:</strong> {{ solicitud.duracion_minutos }} minutos</p>
                         {% if solicitud.mensaje %}
-                        <p class="mb-2"><strong>Mi mensaje:</strong> {{ solicitud.mensaje }}</p>
+                        <p class="mb-2"><strong>Mi mensaje:</strong> {{ solicitud.mensaje|truncatewords:10 }}</p>
                         {% endif %}
                         <small class="text-muted">Enviada: {{ solicitud.fecha_solicitud|date:"d/m/Y H:i" }}</small>
                     </div>
                     <div class="card-footer">
-                        {% if solicitud.estado == 'aceptada' %}
-                        <a href="{% url 'iniciar_conversacion' solicitud.maestro.usuario.id %}" class="btn btn-success btn-sm">
-                            <i class="fas fa-comments me-1"></i>Contactar
-                        </a>
+                        {% if solicitud.estado == 'aceptada' and not solicitud.fecha_clase_confirmada %}
+                        <div class="d-flex gap-2 mb-2">
+                            <a href="{% url 'confirmar_fecha_solicitud' solicitud.id %}" class="btn btn-success btn-sm">
+                                ✅ Confirmar Fecha
+                            </a>
+                            {% if solicitud.metodo_pago == 'mercadopago' or solicitud.metodo_pago == 'transferencia' %}
+                            <a href="{% url 'generar_qr_pago' solicitud.id %}" class="btn btn-primary btn-sm">
+                                💳 Generar Pago
+                            </a>
+                            {% endif %}
+                        </div>
+                        {% elif solicitud.estado == 'aceptada' and solicitud.fecha_clase_confirmada %}
+                        <div class="alert alert-success py-2 mb-2">
+                            <small>✅ Clase confirmada para el {{ solicitud.fecha_clase_confirmada|date:"d/m/Y H:i" }}</small>
+                        </div>
                         {% endif %}
+                        
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'iniciar_conversacion' solicitud.maestro.usuario.id %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-comments me-1"></i>Contactar
+                            </a>
+                            {% if solicitud.estado == 'pendiente' %}
+                            <a href="#" class="btn btn-outline-warning btn-sm">
+                                ⏳ Esperando respuesta
+                            </a>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>

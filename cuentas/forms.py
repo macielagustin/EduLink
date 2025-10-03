@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
-from .models import Usuario, Alumno, Maestro, Provincia, Departamento, Municipio, Localidad, Idioma, NivelEducativo, Disponibilidad, SolicitudClase, Mensaje, Resena
+from .models import Usuario, Alumno, Maestro, Provincia, Departamento, Municipio, Localidad, Idioma, NivelEducativo, Disponibilidad, SolicitudClase, Mensaje, Resena, DisponibilidadUsuario
 from catalogo.models import Materia
 
 
@@ -126,16 +126,23 @@ class RegistroMaestroForm(forms.ModelForm):
         required=False,
         widget=forms.SelectMultiple(attrs={"class": "form-select", "size": "4"})
     )
+    cbu_cvu_alias = forms.CharField(
+        max_length=100,
+        required=False,
+        label="CBU/CVU o Alias",
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Para recibir pagos por transferencia'})
+    )
 
     class Meta:
         model = Maestro
         fields = (
             "precio_hora",
-            "modalidad",   # ✅ reemplaza online/presencial
+            "modalidad",
             "descripcion",
             "cv",
             "materias",
             "idiomas",
+            "cbu_cvu_alias",  # Nuevo campo
         )
 
 
@@ -347,9 +354,8 @@ class EditarPerfilMaestroForm(forms.ModelForm):
 class SolicitudClaseForm(forms.ModelForm):
     class Meta:
         model = SolicitudClase
-        fields = ['materia', 'fecha_clase_propuesta', 'duracion_minutos', 'mensaje']
+        fields = ['materia', 'duracion_minutos', 'mensaje']  # Quitamos fecha_clase_propuesta
         widgets = {
-            'fecha_clase_propuesta': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
             'duracion_minutos': forms.NumberInput(attrs={'class': 'form-control', 'min': '30', 'step': '30'}),
             'mensaje': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Explica qué necesitas aprender...'}),
             'materia': forms.Select(attrs={'class': 'form-select'}),
@@ -383,4 +389,45 @@ class ResenaForm(forms.ModelForm):
             'calificacion': forms.RadioSelect(choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5')]),
             'comentario': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Comparte tu experiencia...'}),
         }
+
+
+
+# Nuevo formulario para que el maestro proponga fecha
+class ProponerFechaForm(forms.ModelForm):
+    class Meta:
+        model = SolicitudClase
+        fields = ['fecha_clase_propuesta', 'monto_acordado', 'metodo_pago']
+        widgets = {
+            'fecha_clase_propuesta': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'monto_acordado': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'metodo_pago': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+
+
+# Formulario para que el alumno confirme la fecha
+class ConfirmarFechaForm(forms.ModelForm):
+    class Meta:
+        model = SolicitudClase
+        fields = ['fecha_clase_confirmada']
+        widgets = {
+            'fecha_clase_confirmada': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+        }
+
+
+
+
+# Formulario para disponibilidad
+class DisponibilidadForm(forms.ModelForm):
+    class Meta:
+        model = DisponibilidadUsuario
+        fields = ['titulo', 'fecha_inicio', 'fecha_fin', 'tipo', 'descripcion']
+        widgets = {
+            'titulo': forms.TextInput(attrs={'class': 'form-control'}),
+            'fecha_inicio': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'fecha_fin': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'tipo': forms.Select(attrs={'class': 'form-select'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+
 

@@ -5,8 +5,8 @@ from django.contrib.auth.views import LoginView
 from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
 from django.http import JsonResponse
-from .forms import RegistroPersonaForm, RegistroAlumnoForm, RegistroMaestroForm, LoginForm, UsuarioForm, AlumnoForm
-from .models import Departamento, Municipio, Localidad, Provincia, Maestro, Alumno, Usuario
+from .forms import RegistroPersonaForm, RegistroAlumnoForm, RegistroMaestroForm, LoginForm, UsuarioForm, AlumnoForm, ConfirmarFechaForm, DisponibilidadForm
+from .models import Departamento, Municipio, Localidad, Provincia, Maestro, Alumno, Usuario, DisponibilidadUsuario
 from catalogo.models import Materia
 import math
 
@@ -15,10 +15,10 @@ from .models import SolicitudClase
 from django.db.models import Q  # Para búsquedas complejas
 from django.utils import timezone
 from .models import Conversacion, Mensaje
-from .forms import SolicitudClaseForm, MensajeForm
+from .forms import SolicitudClaseForm, MensajeForm, ProponerFechaForm
 
 from django.http import JsonResponse
-from django.db.models import Count, Avg, Q
+from django.db.models import Count, Avg, Q, Sum
 from .models import Notificacion, Resena
 from .forms import ResenaForm
 import json
@@ -622,6 +622,18 @@ def agenda_maestro(request):
         proximas_clases = clases_aceptadas.filter(fecha_clase_propuesta__gte=ahora)
         clases_pasadas = clases_aceptadas.filter(fecha_clase_propuesta__lt=ahora)
         
+        # Estadísticas adicionales
+        solicitudes_pendientes = SolicitudClase.objects.filter(
+            maestro=perfil_maestro, 
+            estado='pendiente'
+        ).count()
+        
+        # Calcular ingresos del mes (simplificado)
+        ingresos_mes = clases_aceptadas.filter(
+            fecha_clase_propuesta__month=ahora.month,
+            fecha_clase_propuesta__year=ahora.year
+        ).aggregate(Sum('monto_acordado'))['monto_acordado__sum'] or 0
+        
     except Maestro.DoesNotExist:
         messages.error(request, "No tienes un perfil de maestro.")
         return redirect("dashboard_maestro")
@@ -629,6 +641,8 @@ def agenda_maestro(request):
     return render(request, "maestro/agenda_maestro.html", {
         "proximas_clases": proximas_clases,
         "clases_pasadas": clases_pasadas,
+        "solicitudes_pendientes": solicitudes_pendientes,
+        "ingresos_mes": ingresos_mes,
     })
 
 
@@ -814,6 +828,138 @@ def detalle_maestro(request, maestro_id):
         "maestro": maestro, 
         "usuario": usuario,
         "tiene_conversacion": tiene_conversacion
+    })
+
+
+
+
+# Vista para que el maestro proponga fecha y monto
+@login_required
+def proponer_fecha_solicitud(request, solicitud_id):
+    solicitud = get_object_or_404(SolicitudClase, id=solicitud_id)
+    
+    # Verificar que el maestro es el dueño de la solicitud
+    if solicitud.maestro.usuario != request.user:
+        messages.error(request, "No tienes permiso para esta acción.")
+        return redirect('solicitudes_para_maestro')
+    
+    if request.method == 'POST':
+        form = ProponerFechaForm(request.POST, instance=solicitud)
+        if form.is_valid():
+            solicitud = form.save(commit=False)
+            solicitud.estado = 'aceptada'  # Cambiar estado a aceptada cuando se propone fecha
+            solicitud.save()
+            
+            # Crear notificación para el alumno
+            crear_notificacion(
+                usuario=solicitud.alumno.usuario,
+                tipo='solicitud',
+                mensaje=f'El maestro {solicitud.maestro.usuario.get_full_name()} te ha propuesto una fecha para la clase',
+                enlace=f'/alumno/solicitudes/'
+            )
+            
+            messages.success(request, 'Fecha y monto propuestos correctamente.')
+            return redirect('solicitudes_para_maestro')
+    else:
+        form = ProponerFechaForm(instance=solicitud)
+    
+    return render(request, 'maestro/proponer_fecha.html', {
+        'form': form,
+        'solicitud': solicitud
+    })
+
+# Vista para que el alumno confirme la fecha
+@login_required
+def confirmar_fecha_solicitud(request, solicitud_id):
+    solicitud = get_object_or_404(SolicitudClase, id=solicitud_id)
+    
+    # Verificar que el alumno es el dueño de la solicitud
+    if solicitud.alumno.usuario != request.user:
+        messages.error(request, "No tienes permiso para esta acción.")
+        return redirect('mis_solicitudes_alumno')
+    
+    if request.method == 'POST':
+        form = ConfirmarFechaForm(request.POST, instance=solicitud)
+        if form.is_valid():
+            solicitud = form.save(commit=False)
+            solicitud.estado = 'completada'  # Cambiar estado cuando se confirma
+            solicitud.save()
+            
+            messages.success(request, '¡Fecha confirmada! La clase ha sido agendada.')
+            return redirect('mis_solicitudes_alumno')
+    else:
+        form = ConfirmarFechaForm(instance=solicitud)
+    
+    return render(request, 'alumno/confirmar_fecha.html', {
+        'form': form,
+        'solicitud': solicitud
+    })
+
+# Vista para generar código QR de pago
+@login_required
+def generar_qr_pago(request, solicitud_id):
+    solicitud = get_object_or_404(SolicitudClase, id=solicitud_id)
+    
+    # Verificar permisos
+    if solicitud.alumno.usuario != request.user and solicitud.maestro.usuario != request.user:
+        messages.error(request, "No tienes permiso para ver esta información.")
+        return redirect('home')
+    
+    # Aquí integrarías con Mercado Pago
+    # Por ahora simulamos un código
+    import qrcode
+    from io import BytesIO
+    import base64
+    
+    # Datos para el pago
+    pago_data = f"maestro:{solicitud.maestro.usuario.id}:monto:{solicitud.monto_acordado}:clase:{solicitud.id}"
+    
+    # Generar QR
+    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+    qr.add_data(pago_data)
+    qr.make(fit=True)
+    
+    img = qr.make_image(fill_color="black", back_color="white")
+    buffer = BytesIO()
+    img.save(buffer, format='PNG')
+    img_str = base64.b64encode(buffer.getvalue()).decode()
+    
+    return render(request, 'pagos/generar_qr.html', {
+        'solicitud': solicitud,
+        'qr_image': img_str
+    })
+
+# Vistas para disponibilidad/agenda
+@login_required
+def agenda_usuario(request):
+    eventos = DisponibilidadUsuario.objects.filter(usuario=request.user).order_by('fecha_inicio')
+    
+    if request.method == 'POST':
+        form = DisponibilidadForm(request.POST)
+        if form.is_valid():
+            evento = form.save(commit=False)
+            evento.usuario = request.user
+            evento.save()
+            messages.success(request, 'Evento agregado a tu agenda.')
+            return redirect('agenda_usuario')
+    else:
+        form = DisponibilidadForm()
+    
+    # Convertir eventos a formato calendario
+    eventos_calendario = []
+    for evento in eventos:
+        eventos_calendario.append({
+            'title': evento.titulo,
+            'start': evento.fecha_inicio.isoformat(),
+            'end': evento.fecha_fin.isoformat(),
+            'color': '#28a745' if evento.tipo == 'disponible' else '#dc3545' if evento.tipo == 'ocupacion' else '#007bff',
+            'textColor': 'white',
+        })
+    
+    return render(request, 'agenda/agenda_usuario.html', {
+        'form': form,
+        'eventos': eventos,
+        'eventos_calendario': json.dumps(eventos_calendario)
     })
 
 

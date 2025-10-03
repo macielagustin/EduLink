@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4>📅 Proponer Fecha y Monto</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <h6>Detalles de la solicitud:</h6>
+                        <p><strong>Alumno:</strong> {{ solicitud.alumno.usuario.get_full_name }}</p>
+                        <p><strong>Materia:</strong> {{ solicitud.materia.nombre }}</p>
+                        <p><strong>Duración solicitada:</strong> {{ solicitud.duracion_minutos }} minutos</p>
+                        {% if solicitud.mensaje %}
+                        <p><strong>Mensaje del alumno:</strong> {{ solicitud.mensaje }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Fecha y Hora Propuesta *</label>
+                                    {{ form.fecha_clase_propuesta }}
+                                    {% if form.fecha_clase_propuesta.errors %}
+                                    <div class="text-danger">
+                                        {{ form.fecha_clase_propuesta.errors }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Monto Acordado ($) *</label>
+                                    {{ form.monto_acordado }}
+                                    {% if form.monto_acordado.errors %}
+                                    <div class="text-danger">
+                                        {{ form.monto_acordado.errors }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Método de Pago *</label>
+                            {{ form.metodo_pago }}
+                            {% if form.metodo_pago.errors %}
+                            <div class="text-danger">
+                                {{ form.metodo_pago.errors }}
+                            </div>
+                            {% endif %}
+                            
+                            {% if solicitud.maestro.cbu_cvu_alias and form.metodo_pago.value == 'transferencia' %}
+                            <div class="alert alert-info mt-2">
+                                <small>
+                                    <strong>Tu dato de transferencia:</strong> {{ solicitud.maestro.cbu_cvu_alias }}
+                                </small>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% url 'solicitudes_para_maestro' %}" class="btn btn-secondary me-md-2">Cancelar</a>
+                            <button type="submit" class="btn btn-primary">Proponer Fecha y Monto</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-control:focus, .form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+</style>
+{% endblock %}

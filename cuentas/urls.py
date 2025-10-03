@@ -13,6 +13,7 @@ from .views import agenda_maestro
 from .views import perfil_publico_maestro, perfil_maestro_publico
 from .views import mis_solicitudes_alumno, enviar_solicitud_clase
 from .views import lista_conversaciones, ver_conversacion, iniciar_conversacion
+from .views import proponer_fecha_solicitud, confirmar_fecha_solicitud, generar_qr_pago, agenda_usuario
 
 from . import views  # Para las notificaciones y otras vistas generales
 
@@ -87,6 +88,14 @@ urlpatterns = [
     path('resenas/usuario/<int:usuario_id>/', views.ver_resenas_usuario, name='ver_resenas_usuario'),
 
 
+
+
+
+    # Agregar estas rutas a urlpatterns
+    path("maestro/solicitud/<int:solicitud_id>/proponer-fecha/", proponer_fecha_solicitud, name="proponer_fecha_solicitud"),
+    path("alumno/solicitud/<int:solicitud_id>/confirmar-fecha/", confirmar_fecha_solicitud, name="confirmar_fecha_solicitud"),
+    path("solicitud/<int:solicitud_id>/qr-pago/", generar_qr_pago, name="generar_qr_pago"),
+    path("agenda/", agenda_usuario, name="agenda_usuario"),
 
 
 
