@@ -12,16 +12,22 @@
                     <div class="alert alert-info text-start">
                         <p><strong>Maestro:</strong> {{ solicitud.maestro.usuario.get_full_name }}</p>
                         <p><strong>Materia:</strong> {{ solicitud.materia.nombre }}</p>
-                        <p><strong>Monto:</strong> ${{ solicitud.monto_acordado }}</p>
+                        <p><strong>Monto:</strong> ${{ solicitud.monto_acordado|default:"0.00" }}</p>
                         <p><strong>Método de pago:</strong> {{ solicitud.get_metodo_pago_display }}</p>
                     </div>
 
                     {% if solicitud.metodo_pago == 'mercadopago' %}
                     <div class="mb-4">
                         <p class="fw-bold">Escanea el código QR con la app de Mercado Pago</p>
+                        {% if qr_image %}
                         <img src="data:image/png;base64,{{ qr_image }}" alt="Código QR para pago" class="img-fluid border rounded" style="max-width: 300px;">
+                        {% endif %}
                         <div class="mt-3">
-                            <a href="#" class="btn btn-success">Pagar con Mercado Pago</a>
+                            {% if enlace_pago %}
+                            <a href="{{ enlace_pago }}" class="btn btn-success" target="_blank">
+                                🌐 Pagar en Mercado Pago
+                            </a>
+                            {% endif %}
                         </div>
                     </div>
                     
@@ -32,20 +38,22 @@
                             <p class="mb-1"><strong>CBU/CVU/Alias:</strong></p>
                             <p class="fw-bold fs-5">{{ solicitud.maestro.cbu_cvu_alias }}</p>
                             <p class="mb-1"><strong>Monto a transferir:</strong></p>
-                            <p class="fw-bold fs-5">${{ solicitud.monto_acordado }}</p>
+                            <p class="fw-bold fs-5">${{ solicitud.monto_acordado|default:"0.00" }}</p>
                             <p class="mb-1"><strong>Concepto:</strong></p>
                             <p>Clase de {{ solicitud.materia.nombre }}</p>
                         </div>
                         
                         <p class="fw-bold">O escanea el código QR para transferencia:</p>
+                        {% if qr_image %}
                         <img src="data:image/png;base64,{{ qr_image }}" alt="Código QR para transferencia" class="img-fluid border rounded" style="max-width: 300px;">
+                        {% endif %}
                     </div>
                     
                     {% else %}
                     <div class="alert alert-warning">
                         <h6>Pago en efectivo</h6>
                         <p>Acuerda el pago en efectivo con el maestro al momento de la clase.</p>
-                        <p class="fw-bold">Monto: ${{ solicitud.monto_acordado }}</p>
+                        <p class="fw-bold">Monto: ${{ solicitud.monto_acordado|default:"0.00" }}</p>
                     </div>
                     {% endif %}
 

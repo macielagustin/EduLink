@@ -431,3 +431,24 @@ class DisponibilidadForm(forms.ModelForm):
         }
 
 
+
+
+# Agregar este formulario después de los existentes
+class MetodoPagoForm(forms.ModelForm):
+    class Meta:
+        model = SolicitudClase
+        fields = ['metodo_pago']
+        widgets = {
+            'metodo_pago': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+class ConfirmarFechaForm(forms.ModelForm):
+    class Meta:
+        model = SolicitudClase
+        fields = ['fecha_clase_confirmada', 'metodo_pago']  # Agregar metodo_pago
+        widgets = {
+            'fecha_clase_confirmada': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'metodo_pago': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+

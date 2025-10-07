@@ -847,7 +847,7 @@ def proponer_fecha_solicitud(request, solicitud_id):
         form = ProponerFechaForm(request.POST, instance=solicitud)
         if form.is_valid():
             solicitud = form.save(commit=False)
-            solicitud.estado = 'aceptada'  # Cambiar estado a aceptada cuando se propone fecha
+            # NO cambiar el estado aquí, solo guardar los datos propuestos
             solicitud.save()
             
             # Crear notificación para el alumno
@@ -895,7 +895,7 @@ def confirmar_fecha_solicitud(request, solicitud_id):
         'solicitud': solicitud
     })
 
-# Vista para generar código QR de pago
+# Vista para generar código QR de Mercado Pago
 @login_required
 def generar_qr_pago(request, solicitud_id):
     solicitud = get_object_or_404(SolicitudClase, id=solicitud_id)
@@ -905,34 +905,77 @@ def generar_qr_pago(request, solicitud_id):
         messages.error(request, "No tienes permiso para ver esta información.")
         return redirect('home')
     
-    # Aquí integrarías con Mercado Pago
-    # Por ahora simulamos un código
-    import qrcode
-    from io import BytesIO
-    import base64
-    
-    # Datos para el pago
-    pago_data = f"maestro:{solicitud.maestro.usuario.id}:monto:{solicitud.monto_acordado}:clase:{solicitud.id}"
-    
-    # Generar QR
-    qr = qrcode.QRCode(version=1, box_size=10, border=5)
-    qr.add_data(pago_data)
-    qr.make(fit=True)
-    
-    img = qr.make_image(fill_color="black", back_color="white")
-    buffer = BytesIO()
-    img.save(buffer, format='PNG')
-    img_str = base64.b64encode(buffer.getvalue()).decode()
+    # Generar enlace de Mercado Pago (simulado - necesitarías la integración real)
+    if solicitud.metodo_pago == 'mercadopago':
+        # En una implementación real, aquí crearías la preferencia de pago en Mercado Pago
+        monto = float(solicitud.monto_acordado) if solicitud.monto_acordado else 0
+        descripcion = f"Clase de {solicitud.materia.nombre} con {solicitud.maestro.usuario.get_full_name()}"
+        
+        # Datos para el pago (simulados)
+        pago_data = f"mercadopago://payment?amount={monto}&description={descripcion}&recipient={solicitud.maestro.usuario.email}"
+        
+        # Generar QR
+        import qrcode
+        from io import BytesIO
+        import base64
+        
+        qr = qrcode.QRCode(version=1, box_size=10, border=5)
+        qr.add_data(pago_data)
+        qr.make(fit=True)
+        
+        img = qr.make_image(fill_color="black", back_color="white")
+        buffer = BytesIO()
+        img.save(buffer, format='PNG')
+        img_str = base64.b64encode(buffer.getvalue()).decode()
+        
+        enlace_pago = f"https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=simulado_{solicitud.id}"
+        
+    elif solicitud.metodo_pago == 'transferencia':
+        # Para transferencia, generamos QR con datos bancarios
+        pago_data = f"transferencia://cbu={solicitud.maestro.cbu_cvu_alias}&amount={solicitud.monto_acordado}&name={solicitud.maestro.usuario.get_full_name()}"
+        
+        import qrcode
+        from io import BytesIO
+        import base64
+        
+        qr = qrcode.QRCode(version=1, box_size=10, border=5)
+        qr.add_data(pago_data)
+        qr.make(fit=True)
+        
+        img = qr.make_image(fill_color="black", back_color="white")
+        buffer = BytesIO()
+        img.save(buffer, format='PNG')
+        img_str = base64.b64encode(buffer.getvalue()).decode()
+        
+        enlace_pago = None
+    else:
+        img_str = None
+        enlace_pago = None
     
     return render(request, 'pagos/generar_qr.html', {
         'solicitud': solicitud,
-        'qr_image': img_str
+        'qr_image': img_str,
+        'enlace_pago': enlace_pago
     })
 
 # Vistas para disponibilidad/agenda
 @login_required
 def agenda_usuario(request):
     eventos = DisponibilidadUsuario.objects.filter(usuario=request.user).order_by('fecha_inicio')
+    
+    # Obtener clases para el calendario
+    if request.user.rol == 'ALUMNO':
+        clases = SolicitudClase.objects.filter(
+            alumno__usuario=request.user, 
+            estado__in=['aceptada', 'completada'],
+            fecha_clase_confirmada__isnull=False
+        )
+    else:  # MAESTRO
+        clases = SolicitudClase.objects.filter(
+            maestro__usuario=request.user,
+            estado__in=['aceptada', 'completada'], 
+            fecha_clase_confirmada__isnull=False
+        )
     
     if request.method == 'POST':
         form = DisponibilidadForm(request.POST)
@@ -947,6 +990,8 @@ def agenda_usuario(request):
     
     # Convertir eventos a formato calendario
     eventos_calendario = []
+    
+    # Agregar eventos de disponibilidad
     for evento in eventos:
         eventos_calendario.append({
             'title': evento.titulo,
@@ -954,11 +999,37 @@ def agenda_usuario(request):
             'end': evento.fecha_fin.isoformat(),
             'color': '#28a745' if evento.tipo == 'disponible' else '#dc3545' if evento.tipo == 'ocupacion' else '#007bff',
             'textColor': 'white',
+            'extendedProps': {
+                'tipo': 'evento',
+                'descripcion': evento.descripcion or ''
+            }
+        })
+    
+    # Agregar clases al calendario
+    for clase in clases:
+        if request.user.rol == 'ALUMNO':
+            titulo = f'Clase: {clase.materia.nombre} con {clase.maestro.usuario.get_full_name()}'
+        else:
+            titulo = f'Clase: {clase.materia.nombre} con {clase.alumno.usuario.get_full_name()}'
+        
+        eventos_calendario.append({
+            'title': titulo,
+            'start': clase.fecha_clase_confirmada.isoformat(),
+            'end': (clase.fecha_clase_confirmada + timedelta(minutes=clase.duracion_minutos)).isoformat(),
+            'color': '#ffc107',
+            'textColor': 'black',
+            'extendedProps': {
+                'tipo': 'clase',
+                'materia': clase.materia.nombre,
+                'duracion': clase.duracion_minutos,
+                'monto': float(clase.monto_acordado) if clase.monto_acordado else 0
+            }
         })
     
     return render(request, 'agenda/agenda_usuario.html', {
         'form': form,
         'eventos': eventos,
+        'clases': clases,
         'eventos_calendario': json.dumps(eventos_calendario)
     })
 

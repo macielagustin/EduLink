@@ -13,36 +13,48 @@
 
     <div class="row">
         <div class="col-md-3">
-            <div class="card">
+            <div class="card mb-3">
                 <div class="card-header">
-                    <h6>Leyenda</h6>
+                    <h6 class="mb-0">Leyenda</h6>
                 </div>
                 <div class="card-body">
                     <div class="d-flex align-items-center mb-2">
-                        <div class="color-indicator bg-success me-2" style="width: 20px; height: 20px;"></div>
+                        <div class="color-indicator bg-success me-2" style="width: 20px; height: 20px; border-radius: 3px;"></div>
                         <span>Disponible</span>
                     </div>
                     <div class="d-flex align-items-center mb-2">
-                        <div class="color-indicator bg-primary me-2" style="width: 20px; height: 20px;"></div>
+                        <div class="color-indicator bg-primary me-2" style="width: 20px; height: 20px; border-radius: 3px;"></div>
                         <span>Clase</span>
                     </div>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="color-indicator bg-warning me-2" style="width: 20px; height: 20px; border-radius: 3px;"></div>
+                        <span>Clase Confirmada</span>
+                    </div>
                     <div class="d-flex align-items-center">
-                        <div class="color-indicator bg-danger me-2" style="width: 20px; height: 20px;"></div>
+                        <div class="color-indicator bg-danger me-2" style="width: 20px; height: 20px; border-radius: 3px;"></div>
                         <span>Ocupado</span>
                     </div>
                 </div>
             </div>
 
-            <div class="card mt-3">
+            <div class="card">
                 <div class="card-header">
-                    <h6>Próximos Eventos</h6>
+                    <h6 class="mb-0">Próximos Eventos</h6>
                 </div>
                 <div class="card-body">
                     {% for evento in eventos|slice:":5" %}
                     <div class="border-bottom pb-2 mb-2">
-                        <strong>{{ evento.titulo }}</strong>
+                        <strong class="d-block">{{ evento.titulo }}</strong>
+                        <small class="text-muted">
+                            {{ evento.fecha_inicio|date:"d/m H:i" }} - {{ evento.fecha_fin|date:"H:i" }}
+                        </small>
                         <br>
-                        <small class="text-muted">{{ evento.fecha_inicio|date:"d/m H:i" }} - {{ evento.fecha_fin|date:"H:i" }}</small>
+                        <span class="badge 
+                            {% if evento.tipo == 'disponible' %}bg-success
+                            {% elif evento.tipo == 'clase' %}bg-primary
+                            {% else %}bg-danger{% endif %}">
+                            {{ evento.get_tipo_display }}
+                        </span>
                     </div>
                     {% empty %}
                     <p class="text-muted">No hay eventos próximos</p>
@@ -52,7 +64,11 @@
         </div>
 
         <div class="col-md-9">
-            <div id="calendario"></div>
+            <div class="card">
+                <div class="card-body">
+                    <div id="calendario"></div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -68,27 +84,58 @@
             <form method="post">
                 {% csrf_token %}
                 <div class="modal-body">
-                    {{ form.as_p }}
+                    <div class="mb-3">
+                        <label class="form-label">Título del evento</label>
+                        {{ form.titulo }}
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Fecha y hora de inicio</label>
+                                {{ form.fecha_inicio }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Fecha y hora de fin</label>
+                                {{ form.fecha_fin }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de evento</label>
+                        {{ form.tipo }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción (opcional)</label>
+                        {{ form.descripcion }}
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Evento</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
+<!-- Incluir FullCalendar -->
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/es.min.js'></script>
+
 <style>
 #calendario {
-    background: white;
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    min-height: 600px;
 }
 
 .color-indicator {
     border-radius: 3px;
+}
+
+.fc-event {
+    cursor: pointer;
 }
 </style>
 
@@ -109,9 +156,35 @@ document.addEventListener('DOMContentLoaded', function() {
             month: 'Mes',
             week: 'Semana',
             day: 'Día'
+        },
+        eventClick: function(info) {
+            var evento = info.event;
+            var titulo = evento.title;
+            var inicio = evento.start ? evento.start.toLocaleString() : 'No definido';
+            var fin = evento.end ? evento.end.toLocaleString() : 'No definido';
+            
+            var mensaje = `Evento: ${titulo}\nInicio: ${inicio}\nFin: ${fin}`;
+            
+            // Mostrar detalles extendidos si están disponibles
+            if (evento.extendedProps) {
+                if (evento.extendedProps.descripcion) {
+                    mensaje += `\nDescripción: ${evento.extendedProps.descripcion}`;
+                }
+                if (evento.extendedProps.materia) {
+                    mensaje += `\nMateria: ${evento.extendedProps.materia}`;
+                }
+                if (evento.extendedProps.monto) {
+                    mensaje += `\nMonto: $${evento.extendedProps.monto}`;
+                }
+            }
+            
+            alert(mensaje);
         }
     });
     calendar.render();
 });
 </script>
+
+<!-- Datos del calendario en formato JSON -->
+{{ eventos_calendario|json_script:"eventos-calendario-data" }}
 {% endblock %}

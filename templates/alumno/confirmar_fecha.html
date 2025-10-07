@@ -14,8 +14,8 @@
                         <p><strong>Materia:</strong> {{ solicitud.materia.nombre }}</p>
                         <p><strong>Fecha propuesta:</strong> {{ solicitud.fecha_clase_propuesta|date:"d/m/Y H:i" }}</p>
                         <p><strong>Duración:</strong> {{ solicitud.duracion_minutos }} minutos</p>
-                        <p><strong>Monto:</strong> ${{ solicitud.monto_acordado }}</p>
-                        <p><strong>Método de pago:</strong> {{ solicitud.get_metodo_pago_display }}</p>
+                        <p><strong>Monto:</strong> ${{ solicitud.monto_acordado|default:"0.00" }}</p>
+                        <p><strong>Método de pago propuesto:</strong> {{ solicitud.get_metodo_pago_display }}</p>
                         
                         {% if solicitud.metodo_pago == 'transferencia' and solicitud.maestro.cbu_cvu_alias %}
                         <p><strong>Dato para transferencia:</strong> {{ solicitud.maestro.cbu_cvu_alias }}</p>
@@ -36,6 +36,16 @@
                             <div class="form-text">
                                 Puedes ajustar ligeramente la hora si es necesario.
                             </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Método de pago:</label>
+                            {{ form.metodo_pago }}
+                            {% if form.metodo_pago.errors %}
+                            <div class="text-danger">
+                                {{ form.metodo_pago.errors }}
+                            </div>
+                            {% endif %}
                         </div>
                         
                         <div class="d-grid gap-2">
