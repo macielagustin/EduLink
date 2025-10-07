@@ -10,6 +10,9 @@ from .models import Departamento, Municipio, Localidad, Provincia, Maestro, Alum
 from catalogo.models import Materia
 import math
 
+from .utils import enviar_email
+from django.contrib.auth.forms import PasswordResetForm
+
 from .forms import EditarPerfilMaestroForm  # Asegúrate de importar el formulario
 from .models import SolicitudClase
 from django.db.models import Q  # Para búsquedas complejas
@@ -49,7 +52,7 @@ def verificar_disponibilidad_maestro(maestro, fecha_propuesta, duracion_minutos)
     
     return not clases_conflictivas
 
-# Actualizar la vista enviar_solicitud_clase
+
 @login_required
 def enviar_solicitud_clase(request, maestro_id):
     maestro = get_object_or_404(Maestro, id=maestro_id)
@@ -61,7 +64,7 @@ def enviar_solicitud_clase(request, maestro_id):
             solicitud = form.save(commit=False)
             solicitud.alumno = alumno
             solicitud.maestro = maestro
-            
+
             # Verificar disponibilidad del maestro
             if not verificar_disponibilidad_maestro(maestro, solicitud.fecha_clase_propuesta, solicitud.duracion_minutos):
                 return JsonResponse({
@@ -71,15 +74,93 @@ def enviar_solicitud_clase(request, maestro_id):
             
             solicitud.estado = 'pendiente'
             solicitud.save()
-            
-            # Crear notificación para el maestro
+
+            # Crear notificación interna
             crear_notificacion(
                 usuario=maestro.usuario,
                 tipo='solicitud',
                 mensaje=f'Tienes una nueva solicitud de clase de {alumno.usuario.get_full_name()}',
                 enlace=f'/maestro/solicitudes/'
             )
-            
+
+            # ✅ Enviar correo al maestro
+            mensaje_texto_maestro = (
+                f"Hola {maestro.usuario.first_name or maestro.usuario.username},\n\n"
+                f"El alumno {alumno.usuario.get_full_name() or alumno.usuario.username} ha solicitado una clase contigo.\n"
+                "Ingresá a tu panel de EduLink para aceptar o rechazar la solicitud.\n\n"
+                "Equipo de EduLink 💙"
+            )
+
+            mensaje_html_maestro = f"""
+            <html>
+              <body style="font-family:'Segoe UI',Roboto,sans-serif;background-color:#eaf2ff;margin:0;padding:0;">
+                <div style="max-width:600px;margin:30px auto;background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+                  <div style="background:linear-gradient(180deg,#eaf2ff 0%,#fff 60%);padding:25px;text-align:center;">
+                    <h2 style="color:#0d47a1;margin:0;">📩 Nueva solicitud de clase</h2>
+                  </div>
+                  <div style="padding:30px;color:#333;">
+                    <p>Hola <strong>{maestro.usuario.first_name or maestro.usuario.username}</strong>,</p>
+                    <p>El alumno <strong>{alumno.usuario.get_full_name() or alumno.usuario.username}</strong> ha solicitado una clase contigo.</p>
+                    <p>Ingresá a tu panel para revisar los detalles y responder.</p>
+                    <div style="text-align:center;margin:30px 0;">
+                      <a href="http://127.0.0.1:8000/dashboard_maestro"
+                         style="background-color:#0d6efd;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">
+                        Ver solicitud
+                      </a>
+                    </div>
+                    <p style="color:#6b7280;">— El equipo de EduLink</p>
+                  </div>
+                </div>
+              </body>
+            </html>
+            """
+
+            enviar_email(
+                destinatario=maestro.usuario.email,
+                asunto="📩 Nueva solicitud de clase en EduLink",
+                mensaje_texto=mensaje_texto_maestro,
+                mensaje_html=mensaje_html_maestro,
+            )
+
+            # ✅ Enviar correo al alumno
+            mensaje_texto_alumno = (
+                f"Hola {alumno.usuario.first_name or alumno.usuario.username},\n\n"
+                f"Tu solicitud de clase al maestro {maestro.usuario.get_full_name() or maestro.usuario.username} fue enviada correctamente.\n"
+                "Recibirás una notificación cuando el maestro acepte o rechace la clase.\n\n"
+                "Equipo de EduLink 💙"
+            )
+
+            mensaje_html_alumno = f"""
+            <html>
+              <body style="font-family:'Segoe UI',Roboto,sans-serif;background-color:#eaf2ff;margin:0;padding:0;">
+                <div style="max-width:600px;margin:30px auto;background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+                  <div style="background:linear-gradient(180deg,#eaf2ff 0%,#fff 60%);padding:25px;text-align:center;">
+                    <h2 style="color:#0d47a1;margin:0;">✅ Solicitud enviada correctamente</h2>
+                  </div>
+                  <div style="padding:30px;color:#333;">
+                    <p>Hola <strong>{alumno.usuario.first_name or alumno.usuario.username}</strong>,</p>
+                    <p>Tu solicitud de clase al maestro <strong>{maestro.usuario.get_full_name() or maestro.usuario.username}</strong> fue enviada correctamente.</p>
+                    <p>Recibirás un correo cuando el maestro acepte o rechace la clase.</p>
+                    <div style="text-align:center;margin:30px 0;">
+                      <a href="http://127.0.0.1:8000/dashboard_alumno"
+                         style="background-color:#0d6efd;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">
+                        Ir a mi panel
+                      </a>
+                    </div>
+                    <p style="color:#6b7280;">— El equipo de EduLink</p>
+                  </div>
+                </div>
+              </body>
+            </html>
+            """
+
+            enviar_email(
+                destinatario=alumno.usuario.email,
+                asunto="✅ Tu solicitud fue enviada correctamente",
+                mensaje_texto=mensaje_texto_alumno,
+                mensaje_html=mensaje_html_alumno,
+            )
+
             return JsonResponse({
                 'success': True,
                 'message': '¡Solicitud enviada correctamente!'
@@ -96,6 +177,7 @@ def enviar_solicitud_clase(request, maestro_id):
         'form': form,
         'maestro': maestro
     })
+
 
 # Vista para obtener notificaciones
 @login_required
@@ -286,13 +368,65 @@ def registro_alumno(request):
             perfil = form.save(commit=False)
             perfil.usuario = request.user
             perfil.save()
-            request.user.rol = "ALUMNO"  # mantenemos tu nomenclatura
+            request.user.rol = "ALUMNO"
             request.user.save(update_fields=["rol"])
+
+            # Correo de bienvenida
+            mensaje_texto = (
+                f"Hola {request.user.first_name or request.user.username},\n\n"
+                "Tu registro como alumno se completó exitosamente.\n"
+                "Ya podés acceder a tu panel, buscar maestros y solicitar clases.\n\n"
+                "Equipo de EduLink 💙"
+            )
+
+            mensaje_html = f"""
+            <html>
+              <body style="font-family: 'Segoe UI', Roboto, sans-serif; background-color: #eaf2ff; margin: 0; padding: 0;">
+                <div style="max-width: 600px; margin: 30px auto; background-color: #ffffff; border-radius: 16px; border: 1px solid #e5e7eb; overflow: hidden;">
+                  
+                  <div style="background: linear-gradient(180deg, #eaf2ff 0%, #ffffff 60%); padding: 25px; text-align: center;">
+                    <h2 style="color: #0d47a1; margin: 0;">¡Bienvenido a EduLink!</h2>
+                    <p style="color: #6b7280; margin-top: 5px;">Tu conexión al aprendizaje personalizado 🎓</p>
+                  </div>
+
+                  <div style="padding: 30px; color: #333;">
+                    <p>Hola <strong>{request.user.first_name or request.user.username}</strong>,</p>
+                    <p>Tu registro como <strong>alumno</strong> se completó exitosamente ✅</p>
+                    <p>Ahora podés acceder a tu panel, buscar maestros y solicitar clases personalizadas.</p>
+
+                    <div style="text-align: center; margin: 30px 0;">
+                      <a href="https://edulink.com/dashboard_alumno" 
+                         style="background-color: #0d6efd; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600;">
+                        Ir al Panel
+                      </a>
+                    </div>
+
+                    <p style="color: #6b7280;">Gracias por ser parte de nuestra comunidad educativa 💙</p>
+                    <p style="color: #0d47a1; font-weight: 600;">— El equipo de EduLink</p>
+                  </div>
+
+                  <div style="border-top: 1px solid #e5e7eb; background: #f2f6ff; text-align: center; padding: 10px; color: #6b7280; font-size: 0.9rem;">
+                    © 2025 EduLink | Plataforma de clases particulares
+                  </div>
+                </div>
+              </body>
+            </html>
+            """
+
+            from .utils import enviar_email
+            enviar_email(
+                destinatario=request.user.email,
+                asunto="🎓 Bienvenido a EduLink",
+                mensaje_texto=mensaje_texto,
+                mensaje_html=mensaje_html,
+            )
+
             messages.success(request, "¡Registro como Alumno completado!")
             return redirect("dashboard_alumno")
     else:
         form = RegistroAlumnoForm()
     return render(request, "cuentas/registro_alumno.html", {"form": form})
+
 
 
 @login_required
@@ -304,14 +438,90 @@ def registro_maestro(request):
             perfil.usuario = request.user
             perfil.save()
             form.save_m2m()
-            request.user.rol = "MAESTRO"  # mantenemos tu nomenclatura
+            request.user.rol = "MAESTRO"
             request.user.save(update_fields=["rol"])
+
+            # Versión texto (por compatibilidad)
+            mensaje_texto = (
+                f"Hola {request.user.first_name or request.user.username},\n\n"
+                "Tu registro como maestro se completó exitosamente.\n"
+                "Ya podés acceder a tu panel y comenzar a recibir solicitudes de alumnos.\n\n"
+                "Equipo de EduLink 💙"
+            )
+
+            # Versión HTML (estilo EduLink)
+            mensaje_html = f"""
+            <html>
+              <body style="font-family: 'Segoe UI', Roboto, sans-serif; background-color: #eaf2ff; margin: 0; padding: 0;">
+                <div style="max-width: 600px; margin: 30px auto; background-color: #ffffff; border-radius: 16px; border: 1px solid #e5e7eb; overflow: hidden;">
+                  
+                  <!-- Encabezado -->
+                  <div style="background: linear-gradient(180deg, #eaf2ff 0%, #ffffff 60%); padding: 25px; text-align: center;">
+                    <h2 style="color: #0d47a1; margin: 0;">¡Bienvenido a EduLink!</h2>
+                    <p style="color: #6b7280; margin-top: 5px;">Tu conexión al aprendizaje personalizado 🎓</p>
+                  </div>
+
+                  <!-- Cuerpo -->
+                  <div style="padding: 30px; color: #333;">
+                    <p>Hola <strong>{request.user.first_name or request.user.username}</strong>,</p>
+                    <p>Tu registro como <strong>maestro</strong> se completó exitosamente 👨‍🏫</p>
+                    <p>Ya podés acceder a tu panel y comenzar a recibir solicitudes de alumnos interesados en tus clases.</p>
+
+                    <div style="text-align: center; margin: 30px 0;">
+                      <a href="http://127.0.0.1:8000/dashboard_maestro"
+                         style="background-color: #0d6efd; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600;">
+                        Ir al Panel
+                      </a>
+                    </div>
+
+                    <p style="color: #6b7280;">Gracias por unirte a nuestra comunidad educativa 💙</p>
+                    <p style="color: #0d47a1; font-weight: 600;">— El equipo de EduLink</p>
+                  </div>
+
+                  <!-- Pie -->
+                  <div style="border-top: 1px solid #e5e7eb; background: #f2f6ff; text-align: center; padding: 10px; color: #6b7280; font-size: 0.9rem;">
+                    © 2025 EduLink | Plataforma de clases particulares
+                  </div>
+                </div>
+              </body>
+            </html>
+            """
+
+            # Enviar correo
+            enviar_email(
+                destinatario=request.user.email,
+                asunto="🎓 Bienvenido a EduLink",
+                mensaje_texto=mensaje_texto,
+                mensaje_html=mensaje_html,
+            )
+
             messages.success(request, "¡Registro como Maestro completado!")
             return redirect("dashboard_maestro")
+
     else:
         form = RegistroMaestroForm()
+
     return render(request, "cuentas/registro_maestro.html", {"form": form})
 
+
+#RECUPERAR CONTRASEÑA MAIL
+
+def custom_password_reset(request):
+    if request.method == "POST":
+        form = PasswordResetForm(request.POST)
+        if form.is_valid():
+            form.save(
+                request=request,
+                use_https=request.is_secure(),
+                email_template_name='registration/password_reset_email.html',
+                html_email_template_name='registration/password_reset_email.html',
+                subject_template_name='registration/password_reset_subject.txt',
+            )
+            messages.success(request, "Te enviamos un correo para restablecer tu contraseña.")
+            return redirect('password_reset_done')
+    else:
+        form = PasswordResetForm()
+    return render(request, "registration/password_reset_form.html", {"form": form})
 
 class CustomLoginView(LoginView):
     template_name = "cuentas/login.html"
@@ -581,17 +791,100 @@ def solicitudes_para_maestro(request):
         "estado_filtro": estado_filtro
     })
 
-# Vista para cambiar el estado de una solicitud
 @login_required
 def cambiar_estado_solicitud(request, solicitud_id, nuevo_estado):
     try:
         perfil_maestro = Maestro.objects.get(usuario=request.user)
         solicitud = SolicitudClase.objects.get(id=solicitud_id, maestro=perfil_maestro)
-        
+
         if nuevo_estado in ['aceptada', 'rechazada']:
             solicitud.estado = nuevo_estado
             solicitud.save()
             messages.success(request, f"Solicitud {nuevo_estado} correctamente.")
+
+            alumno = solicitud.alumno
+            maestro = solicitud.maestro
+
+            # 🧩 Si la solicitud fue aceptada
+            if nuevo_estado == 'aceptada':
+                asunto_alumno = "✅ Tu clase fue aceptada | EduLink"
+                texto_alumno = (
+                    f"Hola {alumno.usuario.first_name or alumno.usuario.username},\n\n"
+                    f"El maestro {maestro.usuario.get_full_name() or maestro.usuario.username} aceptó tu solicitud de clase.\n\n"
+                    "Podés ingresar a tu panel para coordinar los detalles.\n\n"
+                    "Equipo de EduLink 💙"
+                )
+                html_alumno = f"""
+                <html>
+                  <body style="font-family:'Segoe UI',Roboto,sans-serif;background-color:#eaf2ff;margin:0;padding:0;">
+                    <div style="max-width:600px;margin:30px auto;background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+                      <div style="background:linear-gradient(180deg,#eaf2ff 0%,#fff 60%);padding:25px;text-align:center;">
+                        <h2 style="color:#0d47a1;margin:0;">✅ ¡Tu clase fue aceptada!</h2>
+                      </div>
+                      <div style="padding:30px;color:#333;">
+                        <p>Hola <strong>{alumno.usuario.first_name or alumno.usuario.username}</strong>,</p>
+                        <p>El maestro <strong>{maestro.usuario.get_full_name() or maestro.usuario.username}</strong> aceptó tu solicitud de clase.</p>
+                        <p>Podés ingresar a tu panel para coordinar los detalles.</p>
+                        <div style="text-align:center;margin:30px 0;">
+                          <a href="http://127.0.0.1:8000/dashboard_alumno"
+                             style="background-color:#0d6efd;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">
+                            Ir a mi panel
+                          </a>
+                        </div>
+                        <p style="color:#6b7280;">— El equipo de EduLink</p>
+                      </div>
+                    </div>
+                  </body>
+                </html>
+                """
+
+                enviar_email(
+                    destinatario=alumno.usuario.email,
+                    asunto=asunto_alumno,
+                    mensaje_texto=texto_alumno,
+                    mensaje_html=html_alumno,
+                )
+
+            # 🧩 Si la solicitud fue rechazada
+            elif nuevo_estado == 'rechazada':
+                asunto_alumno = "❌ Tu solicitud fue rechazada | EduLink"
+                texto_alumno = (
+                    f"Hola {alumno.usuario.first_name or alumno.usuario.username},\n\n"
+                    f"El maestro {maestro.usuario.get_full_name() or maestro.usuario.username} rechazó tu solicitud de clase.\n\n"
+                    "Podés solicitar otra fecha o elegir otro maestro desde tu panel.\n\n"
+                    "Equipo de EduLink 💙"
+                )
+                html_alumno = f"""
+                <html>
+                  <body style="font-family:'Segoe UI',Roboto,sans-serif;background-color:#eaf2ff;margin:0;padding:0;">
+                    <div style="max-width:600px;margin:30px auto;background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+                      <div style="background:linear-gradient(180deg,#eaf2ff 0%,#fff 60%);padding:25px;text-align:center;">
+                        <h2 style="color:#0d47a1;margin:0;">❌ Solicitud rechazada</h2>
+                      </div>
+                      <div style="padding:30px;color:#333;">
+                        <p>Hola <strong>{alumno.usuario.first_name or alumno.usuario.username}</strong>,</p>
+                        <p>El maestro <strong>{maestro.usuario.get_full_name() or maestro.usuario.username}</strong> rechazó tu solicitud de clase.</p>
+                        <p>Podés solicitar otra clase o elegir otro maestro desde tu panel.</p>
+                        <div style="text-align:center;margin:30px 0;">
+                          <a href="http://127.0.0.1:8000/dashboard_alumno"
+                             style="background-color:#0d6efd;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">
+                            Volver a mi panel
+                          </a>
+                        </div>
+                        <p style="color:#6b7280;">— El equipo de EduLink</p>
+                      </div>
+                    </div>
+                  </body>
+                </html>
+                """
+
+                enviar_email(
+                    destinatario=alumno.usuario.email,
+                    asunto=asunto_alumno,
+                    mensaje_texto=texto_alumno,
+                    mensaje_html=html_alumno,
+                )
+
         else:
             messages.error(request, "Estado no válido.")
             

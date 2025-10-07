@@ -150,3 +150,13 @@ AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend", # fallback estándar
 ]
 
+# CONFIGURACIÓN DE EMAIL
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+
+EMAIL_HOST_USER = 'edulink.adm1n@gmail.com'  # la cuenta que creaste para EduLink
+EMAIL_HOST_PASSWORD = 'dgqb ffsr ltav ayuc'
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+

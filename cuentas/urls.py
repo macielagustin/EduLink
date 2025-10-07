@@ -15,6 +15,8 @@ from .views import mis_solicitudes_alumno, enviar_solicitud_clase
 from .views import lista_conversaciones, ver_conversacion, iniciar_conversacion
 from .views import proponer_fecha_solicitud, confirmar_fecha_solicitud, generar_qr_pago, agenda_usuario
 
+from django.contrib.auth import views as auth_views
+
 from . import views  # Para las notificaciones y otras vistas generales
 
 urlpatterns = [
@@ -88,8 +90,12 @@ urlpatterns = [
     path('resenas/usuario/<int:usuario_id>/', views.ver_resenas_usuario, name='ver_resenas_usuario'),
 
 
+    # Recuperar Contraseña
 
-
+    path('password_reset/', views.custom_password_reset, name='password_reset'),
+    path('password_reset_done/', auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'),
+    path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
+    path('reset/done/', auth_views.PasswordResetCompleteView.as_view(), name='password_reset_complete'),
 
     # Agregar estas rutas a urlpatterns
     path("maestro/solicitud/<int:solicitud_id>/proponer-fecha/", proponer_fecha_solicitud, name="proponer_fecha_solicitud"),
