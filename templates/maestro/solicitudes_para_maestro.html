@@ -113,7 +113,6 @@
                     <!-- Acciones -->
                     <div class="card-footer">
                         {% if solicitud.estado == 'pendiente' %}
-                        <div class="d-flex gap-2">
                             <a href="{% url 'proponer_fecha_solicitud' solicitud.id %}" 
                                class="btn btn-primary btn-sm flex-fill">
                                 📅 Proponer Fecha

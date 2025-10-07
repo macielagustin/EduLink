@@ -63,8 +63,7 @@
                         <small class="text-muted">Enviada: {{ solicitud.fecha_solicitud|date:"d/m/Y H:i" }}</small>
                     </div>
                     <div class="card-footer">
-                        {% if solicitud.estado == 'aceptada' and not solicitud.fecha_clase_confirmada %}
-                        <div class="d-flex gap-2 mb-2">
+                            {% if solicitud.estado == 'propuesta' %}
                             <a href="{% url 'confirmar_fecha_solicitud' solicitud.id %}" class="btn btn-success btn-sm">
                                 ✅ Confirmar Fecha
                             </a>
