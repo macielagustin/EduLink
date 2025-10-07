@@ -6,16 +6,32 @@
             <h2 class="fw-bold mb-1">📅 Mi Agenda</h2>
             <p class="text-muted">Gestiona tu disponibilidad y eventos</p>
         </div>
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#agregarEventoModal">
-            ➕ Agregar Evento
-        </button>
+        <div>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#agregarEventoModal">
+                <i class="fas fa-plus me-2"></i>Agregar Evento
+            </button>
+            <a href="{% if request.user.rol == 'ALUMNO' %}{% url 'dashboard_alumno' %}{% else %}{% url 'dashboard_maestro' %}{% endif %}" 
+               class="btn btn-outline-secondary ms-2">
+                <i class="fas fa-arrow-left me-2"></i>Volver al Dashboard
+            </a>
+        </div>
     </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
 
     <div class="row">
         <div class="col-md-3">
+            <!-- Leyenda -->
             <div class="card mb-3">
                 <div class="card-header">
-                    <h6 class="mb-0">Leyenda</h6>
+                    <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Leyenda</h6>
                 </div>
                 <div class="card-body">
                     <div class="d-flex align-items-center mb-2">
@@ -24,11 +40,11 @@
                     </div>
                     <div class="d-flex align-items-center mb-2">
                         <div class="color-indicator bg-primary me-2" style="width: 20px; height: 20px; border-radius: 3px;"></div>
-                        <span>Clase</span>
+                        <span>Evento Personal</span>
                     </div>
                     <div class="d-flex align-items-center mb-2">
                         <div class="color-indicator bg-warning me-2" style="width: 20px; height: 20px; border-radius: 3px;"></div>
-                        <span>Clase Confirmada</span>
+                        <span>Clase</span>
                     </div>
                     <div class="d-flex align-items-center">
                         <div class="color-indicator bg-danger me-2" style="width: 20px; height: 20px; border-radius: 3px;"></div>
@@ -37,33 +53,38 @@
                 </div>
             </div>
 
+            <!-- Próximos Eventos -->
             <div class="card">
                 <div class="card-header">
-                    <h6 class="mb-0">Próximos Eventos</h6>
+                    <h6 class="mb-0"><i class="fas fa-list me-2"></i>Próximos Eventos</h6>
                 </div>
                 <div class="card-body">
                     {% for evento in eventos|slice:":5" %}
                     <div class="border-bottom pb-2 mb-2">
                         <strong class="d-block">{{ evento.titulo }}</strong>
                         <small class="text-muted">
-                            {{ evento.fecha_inicio|date:"d/m H:i" }} - {{ evento.fecha_fin|date:"H:i" }}
+                            <i class="fas fa-calendar me-1"></i>{{ evento.fecha_inicio|date:"d/m H:i" }} - {{ evento.fecha_fin|date:"H:i" }}
                         </small>
                         <br>
                         <span class="badge 
                             {% if evento.tipo == 'disponible' %}bg-success
-                            {% elif evento.tipo == 'clase' %}bg-primary
+                            {% elif evento.tipo == 'clase' %}bg-warning
                             {% else %}bg-danger{% endif %}">
                             {{ evento.get_tipo_display }}
                         </span>
                     </div>
                     {% empty %}
-                    <p class="text-muted">No hay eventos próximos</p>
+                    <p class="text-muted text-center">
+                        <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                        No hay eventos próximos
+                    </p>
                     {% endfor %}
                 </div>
             </div>
         </div>
 
         <div class="col-md-9">
+            <!-- Calendario -->
             <div class="card">
                 <div class="card-body">
                     <div id="calendario"></div>
@@ -75,45 +96,55 @@
 
 <!-- Modal para agregar evento -->
 <div class="modal fade" id="agregarEventoModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Agregar Evento</h5>
+                <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Agregar Evento</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="post">
+            <form method="post" id="eventoForm">
                 {% csrf_token %}
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Título del evento</label>
-                        {{ form.titulo }}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Título del evento *</label>
+                                {{ form.titulo }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Tipo de evento *</label>
+                                {{ form.tipo }}
+                            </div>
+                        </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Fecha y hora de inicio</label>
+                                <label class="form-label">Fecha y hora de inicio *</label>
                                 {{ form.fecha_inicio }}
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Fecha y hora de fin</label>
+                                <label class="form-label">Fecha y hora de fin *</label>
                                 {{ form.fecha_fin }}
                             </div>
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Tipo de evento</label>
-                        {{ form.tipo }}
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Descripción (opcional)</label>
+                        <label class="form-label">Descripción</label>
                         {{ form.descripcion }}
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar Evento</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Guardar Evento
+                    </button>
                 </div>
             </form>
         </div>
@@ -128,6 +159,7 @@
 <style>
 #calendario {
     min-height: 600px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .color-indicator {
@@ -136,15 +168,34 @@
 
 .fc-event {
     cursor: pointer;
+    border: none;
+    font-size: 0.85em;
+    padding: 2px 4px;
+}
+
+.fc-daygrid-event-dot {
+    display: none;
+}
+
+.fc-toolbar {
+    flex-wrap: wrap;
+}
+
+.fc-header-toolbar {
+    margin-bottom: 1.5em !important;
 }
 </style>
+
+{{ eventos_calendario|json_script:"eventos-data" }}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var calendarEl = document.getElementById('calendario');
+    var eventos = JSON.parse(document.getElementById('eventos-data').textContent);
+
     var calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
-        events: JSON.parse(document.getElementById('eventos-calendario-data').textContent),
+        events: eventos,
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
@@ -157,34 +208,83 @@ document.addEventListener('DOMContentLoaded', function() {
             week: 'Semana',
             day: 'Día'
         },
+        navLinks: true,
+        dayMaxEvents: true,
+        selectable: true,
+        select: function(info) {
+            var startDate = new Date(info.start);
+            var endDate = new Date(info.end);
+            if (info.allDay) {
+                startDate.setHours(9, 0, 0, 0);
+                endDate.setHours(10, 0, 0, 0);
+            }
+            function formatDateForInput(date) {
+                return date.toISOString().slice(0, 16);
+            }
+            document.getElementById('id_fecha_inicio').value = formatDateForInput(startDate);
+            document.getElementById('id_fecha_fin').value = formatDateForInput(endDate);
+            var modal = new bootstrap.Modal(document.getElementById('agregarEventoModal'));
+            modal.show();
+            calendar.unselect();
+        },
         eventClick: function(info) {
             var evento = info.event;
-            var titulo = evento.title;
-            var inicio = evento.start ? evento.start.toLocaleString() : 'No definido';
-            var fin = evento.end ? evento.end.toLocaleString() : 'No definido';
-            
-            var mensaje = `Evento: ${titulo}\nInicio: ${inicio}\nFin: ${fin}`;
-            
-            // Mostrar detalles extendidos si están disponibles
-            if (evento.extendedProps) {
-                if (evento.extendedProps.descripcion) {
-                    mensaje += `\nDescripción: ${evento.extendedProps.descripcion}`;
-                }
-                if (evento.extendedProps.materia) {
-                    mensaje += `\nMateria: ${evento.extendedProps.materia}`;
-                }
-                if (evento.extendedProps.monto) {
-                    mensaje += `\nMonto: $${evento.extendedProps.monto}`;
-                }
-            }
-            
-            alert(mensaje);
+            var mensaje = `<strong>${evento.title}</strong><br>
+                          <i class="fas fa-clock me-1"></i> ${evento.start?.toLocaleString('es-ES')} - ${evento.end?.toLocaleString('es-ES')}`;
+            var props = evento.extendedProps;
+            if (props.descripcion) mensaje += `<br><i class="fas fa-align-left me-1"></i> ${props.descripcion}`;
+            if (props.materia) mensaje += `<br><i class="fas fa-book me-1"></i> Materia: ${props.materia}`;
+            if (props.monto) mensaje += `<br><i class="fas fa-dollar-sign me-1"></i> Monto: $${props.monto}`;
+            if (props.duracion) mensaje += `<br><i class="fas fa-hourglass-half me-1"></i> Duración: ${props.duracion} min`;
+            if (props.tipo_display) mensaje += `<br><i class="fas fa-tag me-1"></i> Tipo: ${props.tipo_display}`;
+            Swal.fire({
+                title: 'Detalles del Evento',
+                html: mensaje,
+                icon: 'info',
+                confirmButtonText: 'Cerrar',
+                width: '500px'
+            });
         }
     });
     calendar.render();
 });
+
+// Mejorar la experiencia del formulario
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('eventoForm');
+    form.addEventListener('submit', function(e) {
+        const titulo = document.getElementById('id_titulo').value;
+        const fechaInicio = document.getElementById('id_fecha_inicio').value;
+        const fechaFin = document.getElementById('id_fecha_fin').value;
+        
+        if (!titulo || !fechaInicio || !fechaFin) {
+            e.preventDefault();
+            Swal.fire({
+                title: 'Error',
+                text: 'Por favor, completa todos los campos obligatorios.',
+                icon: 'error',
+                confirmButtonText: 'Entendido'
+            });
+            return false;
+        }
+        
+        // Validar que la fecha de fin sea posterior a la de inicio
+        if (new Date(fechaFin) <= new Date(fechaInicio)) {
+            e.preventDefault();
+            Swal.fire({
+                title: 'Error',
+                text: 'La fecha de fin debe ser posterior a la fecha de inicio.',
+                icon: 'error',
+                confirmButtonText: 'Entendido'
+            });
+            return false;
+        }
+        
+        return true;
+    });
+});
 </script>
 
-<!-- Datos del calendario en formato JSON -->
-{{ eventos_calendario|json_script:"eventos-calendario-data" }}
+<!-- Incluir SweetAlert para mejores alertas -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 {% endblock %}

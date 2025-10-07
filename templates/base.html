@@ -17,6 +17,12 @@
     body { 
       background: var(--c1); 
       color: #212529; /* texto oscuro para contraste */
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .main-content {
+      flex: 1;
     }
     a { color: var(--c2); }
     .card { background:#f8f9fa; border:1px solid #dee2e6; color:#212529; }
@@ -25,6 +31,31 @@
     .navbar-custom .navbar-brand, 
     .navbar-custom .nav-link, 
     .navbar-custom .btn { color: #000000; }
+    
+    /* Estilos para notificaciones */
+    .notification-badge {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background: #dc3545;
+      color: white;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      font-size: 0.7rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .notification-item {
+      border-left: 3px solid #0d6efd;
+      margin-bottom: 5px;
+    }
+    
+    .notification-item.unread {
+      background-color: #f8f9fa;
+    }
   </style>
 </head>
 <body>
@@ -78,20 +109,52 @@
         {% endif %}
       </ul>
       
-      <div class="navbar-nav">
+      <div class="navbar-nav align-items-center">
         {% if request.user.is_authenticated %}
+          <!-- Notificaciones -->
+          <li class="nav-item dropdown me-3">
+            <a class="nav-link position-relative" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="fas fa-bell"></i>
+              {% if total_notificaciones > 0 %}
+                <span class="notification-badge">{{ total_notificaciones }}</span>
+              {% endif %}
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end" style="min-width: 300px;">
+              <li><h6 class="dropdown-header">Notificaciones</h6></li>
+              {% if notificaciones_globales %}
+                {% for notificacion in notificaciones_globales %}
+                <li>
+                  <a class="dropdown-item notification-item {% if not notificacion.leida %}unread{% endif %}" 
+                     href="{{ notificacion.enlace|default:'#' }}">
+                    <div class="d-flex w-100 justify-content-between">
+                      <small>{{ notificacion.mensaje|truncatechars:50 }}</small>
+                    </div>
+                    <small class="text-muted">{{ notificacion.fecha_creacion|timesince }} atrás</small>
+                  </a>
+                </li>
+                {% endfor %}
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-center" href="#">Ver todas las notificaciones</a></li>
+              {% else %}
+                <li><a class="dropdown-item text-muted text-center" href="#">No hay notificaciones</a></li>
+              {% endif %}
+            </ul>
+          </li>
+
+          <!-- Perfil de usuario -->
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
               <i class="fas fa-user me-1"></i>{{ request.user.username }} ({{ request.user.rol }})
             </a>
-            <ul class="dropdown-menu">
+            <ul class="dropdown-menu dropdown-menu-end">
               {% if request.user.rol == 'ALUMNO' %}
-                <li><a class="dropdown-item" href="{% url 'perfil_alumno' %}">Mi Perfil</a></li>
+                <li><a class="dropdown-item" href="{% url 'perfil_alumno' %}"><i class="fas fa-edit me-2"></i>Mi Perfil</a></li>
               {% elif request.user.rol == 'MAESTRO' %}
-                <li><a class="dropdown-item" href="{% url 'editar_perfil_maestro' %}">Mi Perfil</a></li>
+                <li><a class="dropdown-item" href="{% url 'editar_perfil_maestro' %}"><i class="fas fa-edit me-2"></i>Mi Perfil</a></li>
               {% endif %}
+              <li><a class="dropdown-item" href="{% url 'agenda_usuario' %}"><i class="fas fa-calendar me-2"></i>Mi Agenda</a></li>
               <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item" href="{% url 'logout' %}">Cerrar Sesión</a></li>
+              <li><a class="dropdown-item" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión</a></li>
             </ul>
           </li>
         {% else %}
@@ -103,16 +166,105 @@
   </div>
 </nav>
 
-<div class="container py-4">
-  {% for m in messages %}
-    <div class="alert alert-{{ m.tags }} alert-dismissible fade show" role="alert">
-      {{ m }}
-      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-  {% endfor %}
-  {% block content %}{% endblock %}
+<div class="main-content">
+  <div class="container py-4">
+    {% for m in messages %}
+      <div class="alert alert-{{ m.tags }} alert-dismissible fade show" role="alert">
+        {{ m }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+    {% block content %}{% endblock %}
+  </div>
 </div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 {% block extra_js %} {% endblock %}
+
+<!-- Footer -->
+<footer class="bg-dark text-white mt-auto">
+    <div class="container py-5">
+        <div class="row">
+            <div class="col-md-4">
+                <h5 class="fw-bold">EduLink</h5>
+                <p class="text-white-50">Conectando estudiantes con los mejores profesores para un aprendizaje personalizado y efectivo.</p>
+                <div class="social-links">
+                    <a href="#" class="text-white me-3"><i class="fab fa-facebook fa-lg"></i></a>
+                    <a href="#" class="text-white me-3"><i class="fab fa-twitter fa-lg"></i></a>
+                    <a href="#" class="text-white me-3"><i class="fab fa-instagram fa-lg"></i></a>
+                    <a href="#" class="text-white"><i class="fab fa-linkedin fa-lg"></i></a>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <h6 class="fw-bold">Para Alumnos</h6>
+                <ul class="list-unstyled">
+                    <li><a href="{% url 'buscar_clases' %}" class="text-white-50 text-decoration-none">Buscar Clases</a></li>
+                    <li><a href="#" class="text-white-50 text-decoration-none">Cómo Funciona</a></li>
+                    <li><a href="#" class="text-white-50 text-decoration-none">Preguntas Frecuentes</a></li>
+                </ul>
+            </div>
+            <div class="col-md-2">
+                <h6 class="fw-bold">Para Profesores</h6>
+                <ul class="list-unstyled">
+                    <li><a href="#" class="text-white-50 text-decoration-none">Ser Profesor</a></li>
+                    <li><a href="#" class="text-white-50 text-decoration-none">Recursos</a></li>
+                    <li><a href="#" class="text-white-50 text-decoration-none">Comunidad</a></li>
+                </ul>
+            </div>
+            <div class="col-md-2">
+                <h6 class="fw-bold">Compañía</h6>
+                <ul class="list-unstyled">
+                    <li><a href="#" class="text-white-50 text-decoration-none">Acerca de</a></li>
+                    <li><a href="#" class="text-white-50 text-decoration-none">Contacto</a></li>
+                    <li><a href="#" class="text-white-50 text-decoration-none">Blog</a></li>
+                </ul>
+            </div>
+            <div class="col-md-2">
+                <h6 class="fw-bold">Legal</h6>
+                <ul class="list-unstyled">
+                    <li><a href="#" class="text-white-50 text-decoration-none">Términos</a></li>
+                    <li><a href="#" class="text-white-50 text-decoration-none">Privacidad</a></li>
+                    <li><a href="#" class="text-white-50 text-decoration-none">Cookies</a></li>
+                </ul>
+            </div>
+        </div>
+        <hr class="my-4 bg-white-50">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <p class="mb-0 text-white-50">&copy; 2024 EduLink. Todos los derechos reservados.</p>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <p class="mb-0 text-white-50">Hecho con ❤️ para la educación</p>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<script>
+// Script para manejar notificaciones
+document.addEventListener('DOMContentLoaded', function() {
+    // Actualizar notificaciones cada 30 segundos
+    setInterval(function() {
+        // Aquí podrías agregar lógica para actualizar el contador de notificaciones
+        console.log('Actualizando notificaciones...');
+    }, 30000);
+});
+
+// Función para marcar notificación como leída
+function marcarNotificacionLeida(notificacionId) {
+    fetch(`/notificaciones/${notificacionId}/leida/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+    }).then(response => {
+        if (response.ok) {
+            // Recargar la página para actualizar las notificaciones
+            location.reload();
+        }
+    });
+}
+</script>
 </body>
 </html>

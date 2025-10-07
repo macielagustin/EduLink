@@ -161,11 +161,14 @@ class Localidad(models.Model):
 class SolicitudClase(models.Model):
     ESTADOS = [
         ('pendiente', 'Pendiente'),
+        ('propuesta', 'Propuesta'),  # Nuevo estado
         ('aceptada', 'Aceptada'),
         ('rechazada', 'Rechazada'),
         ('cancelada', 'Cancelada'),
         ('completada', 'Completada'),
     ]
+    
+    # ... resto de campos permanecen igual
     
     alumno = models.ForeignKey('Alumno', on_delete=models.CASCADE)
     maestro = models.ForeignKey('Maestro', on_delete=models.CASCADE)

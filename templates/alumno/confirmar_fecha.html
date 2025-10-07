@@ -5,16 +5,16 @@
         <div class="col-md-8">
             <div class="card">
                 <div class="card-header bg-success text-white">
-                    <h4>✅ Confirmar Clase</h4>
+                    <h4><i class="fas fa-check-circle me-2"></i>Confirmar Clase</h4>
                 </div>
                 <div class="card-body">
                     <div class="alert alert-info">
-                        <h5>Detalles de la clase propuesta:</h5>
+                        <h5>Detalles de la propuesta:</h5>
                         <p><strong>Maestro:</strong> {{ solicitud.maestro.usuario.get_full_name }}</p>
                         <p><strong>Materia:</strong> {{ solicitud.materia.nombre }}</p>
                         <p><strong>Fecha propuesta:</strong> {{ solicitud.fecha_clase_propuesta|date:"d/m/Y H:i" }}</p>
                         <p><strong>Duración:</strong> {{ solicitud.duracion_minutos }} minutos</p>
-                        <p><strong>Monto:</strong> ${{ solicitud.monto_acordado|default:"0.00" }}</p>
+                        <p><strong>Monto acordado:</strong> ${{ solicitud.monto_acordado|default:"0.00" }}</p>
                         <p><strong>Método de pago propuesto:</strong> {{ solicitud.get_metodo_pago_display }}</p>
                         
                         {% if solicitud.metodo_pago == 'transferencia' and solicitud.maestro.cbu_cvu_alias %}
@@ -38,7 +38,7 @@
                             </div>
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-4">
                             <label class="form-label">Método de pago:</label>
                             {{ form.metodo_pago }}
                             {% if form.metodo_pago.errors %}
@@ -46,20 +46,22 @@
                                 {{ form.metodo_pago.errors }}
                             </div>
                             {% endif %}
+                            <div class="form-text">
+                                {% if solicitud.maestro.cbu_cvu_alias %}
+                                <i class="fas fa-info-circle text-info"></i> 
+                                El maestro acepta transferencias: {{ solicitud.maestro.cbu_cvu_alias }}
+                                {% endif %}
+                            </div>
                         </div>
                         
                         <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-success btn-lg">
-                                ✅ Confirmar Clase
+                                <i class="fas fa-check me-2"></i>Confirmar Clase
                             </button>
                             
-                            {% if solicitud.metodo_pago == 'mercadopago' or solicitud.metodo_pago == 'transferencia' %}
-                            <a href="{% url 'generar_qr_pago' solicitud.id %}" class="btn btn-primary">
-                                💳 Generar Código de Pago
+                            <a href="{% url 'mis_solicitudes_alumno' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Volver a Mis Solicitudes
                             </a>
-                            {% endif %}
-                            
-                            <a href="{% url 'mis_solicitudes_alumno' %}" class="btn btn-secondary">Volver a Mis Solicitudes</a>
                         </div>
                     </form>
                 </div>
@@ -67,4 +69,11 @@
         </div>
     </div>
 </div>
+
+<style>
+.form-control:focus, .form-select:focus {
+    border-color: #198754;
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+}
+</style>
 {% endblock %}
