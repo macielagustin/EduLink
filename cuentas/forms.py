@@ -179,9 +179,6 @@ class AlumnoForm(forms.ModelForm):
         }
 
 
-
-
-
 class EditarPerfilMaestroForm(forms.ModelForm):
     # Campos del usuario que queremos editar
     nombre = forms.CharField(
@@ -211,50 +208,49 @@ class EditarPerfilMaestroForm(forms.ModelForm):
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         label="Eliminar foto actual"
     )
-    
+
     # Campos de ubicación
     provincia = forms.ModelChoiceField(
-        queryset=Provincia.objects.all(), 
-        required=False, 
+        queryset=Provincia.objects.all(),
+        required=False,
         widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_provincia'})
     )
     departamento = forms.ModelChoiceField(
-        queryset=Departamento.objects.none(), 
-        required=False, 
+        queryset=Departamento.objects.none(),
+        required=False,
         widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_departamento'})
     )
     municipio = forms.ModelChoiceField(
-        queryset=Municipio.objects.none(), 
-        required=False, 
+        queryset=Municipio.objects.none(),
+        required=False,
         widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_municipio'})
     )
     localidad = forms.ModelChoiceField(
-        queryset=Localidad.objects.none(), 
-        required=False, 
+        queryset=Localidad.objects.none(),
+        required=False,
         widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_localidad'})
     )
     calle = forms.CharField(
-        max_length=255, 
-        required=False, 
+        max_length=255,
+        required=False,
         widget=forms.TextInput(attrs={'class': 'form-control', 'id': 'id_calle'})
     )
     latitud = forms.FloatField(
-        widget=forms.HiddenInput(attrs={'id': 'id_latitud'}), 
+        widget=forms.HiddenInput(attrs={'id': 'id_latitud'}),
         required=False
     )
     longitud = forms.FloatField(
-        widget=forms.HiddenInput(attrs={'id': 'id_longitud'}), 
+        widget=forms.HiddenInput(attrs={'id': 'id_longitud'}),
         required=False
     )
-    
+
     # Campos específicos del maestro
     precio_hora = forms.DecimalField(
-        max_digits=10, 
+        max_digits=10,
         decimal_places=2,
         label="Precio por hora ($)",
         widget=forms.NumberInput(attrs={'class': 'form-control'})
     )
-    
     modalidad = forms.ChoiceField(
         choices=[
             ("Online", "Online"),
@@ -263,26 +259,22 @@ class EditarPerfilMaestroForm(forms.ModelForm):
         ],
         widget=forms.Select(attrs={'class': 'form-control'})
     )
-    
     descripcion = forms.CharField(
         required=False,
         widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
         label="Descripción sobre ti"
     )
-    
     cv = forms.FileField(
         required=False,
         widget=forms.FileInput(attrs={'class': 'form-control'}),
         label="Curriculum Vitae (PDF)"
     )
-    
     materias = forms.ModelMultipleChoiceField(
         queryset=Materia.objects.all(),
         widget=forms.SelectMultiple(attrs={'class': 'form-control'}),
         required=False,
         label="Materias que enseñas"
     )
-    
     idiomas = forms.ModelMultipleChoiceField(
         queryset=Idioma.objects.all(),
         widget=forms.SelectMultiple(attrs={'class': 'form-control'}),
@@ -290,13 +282,27 @@ class EditarPerfilMaestroForm(forms.ModelForm):
         label="Idiomas que hablas"
     )
 
+    # ✅ Campo nuevo correctamente declarado
+    cbu_cvu_alias = forms.CharField(
+        required=False,
+        max_length=50,
+        label="CBU / CVU / Alias",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ej: ALIAS.MP o número de CBU'
+        })
+    )
+
     class Meta:
         model = Maestro
-        fields = ['precio_hora', 'modalidad', 'descripcion', 'cv', 'materias', 'idiomas']
+        fields = [
+            'precio_hora', 'modalidad', 'descripcion', 'cv',
+            'materias', 'idiomas', 'cbu_cvu_alias'
+        ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Si ya existe una instancia, cargamos los datos del usuario
+        # Resto de tu inicialización (queda igual)...
         if self.instance and self.instance.usuario:
             usuario = self.instance.usuario
             self.fields['nombre'].initial = usuario.nombre
@@ -311,7 +317,6 @@ class EditarPerfilMaestroForm(forms.ModelForm):
             self.fields['latitud'].initial = usuario.latitud
             self.fields['longitud'].initial = usuario.longitud
 
-            # Configuramos los querysets para los selects dependientes
             if usuario.provincia:
                 self.fields['departamento'].queryset = Departamento.objects.filter(provincia=usuario.provincia)
             if usuario.departamento:
@@ -321,21 +326,18 @@ class EditarPerfilMaestroForm(forms.ModelForm):
 
     def save(self, commit=True):
         maestro = super().save(commit=False)
-        # Actualizamos también los datos del usuario
         if commit:
             usuario = maestro.usuario
             usuario.nombre = self.cleaned_data['nombre']
             usuario.apellido = self.cleaned_data['apellido']
             usuario.email = self.cleaned_data['email']
-            
-            # Manejo de la foto de perfil
+
             if self.cleaned_data.get('eliminar_foto') and usuario.foto_perfil:
                 usuario.foto_perfil.delete(save=False)
                 usuario.foto_perfil = None
             elif self.cleaned_data.get('foto_perfil'):
                 usuario.foto_perfil = self.cleaned_data['foto_perfil']
-            
-            # Campos de ubicación
+
             usuario.provincia = self.cleaned_data['provincia']
             usuario.departamento = self.cleaned_data['departamento']
             usuario.municipio = self.cleaned_data['municipio']
@@ -343,27 +345,37 @@ class EditarPerfilMaestroForm(forms.ModelForm):
             usuario.calle = self.cleaned_data['calle']
             usuario.latitud = self.cleaned_data['latitud']
             usuario.longitud = self.cleaned_data['longitud']
-            
+
             usuario.save()
             maestro.save()
-            self.save_m2m()  # Para guardar las relaciones ManyToMany
+            self.save_m2m()
         return maestro
+
     
 
 
 class SolicitudClaseForm(forms.ModelForm):
     class Meta:
         model = SolicitudClase
-        fields = ['materia', 'duracion_minutos', 'mensaje']  # Quitamos fecha_clase_propuesta
+        fields = ['materia', 'duracion_minutos', 'mensaje']
         widgets = {
             'duracion_minutos': forms.NumberInput(attrs={'class': 'form-control', 'min': '30', 'step': '30'}),
             'mensaje': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Explica qué necesitas aprender...'}),
             'materia': forms.Select(attrs={'class': 'form-select'}),
         }
-    
+
     def __init__(self, *args, **kwargs):
+        # Extraemos el maestro pasado desde la vista
+        maestro = kwargs.pop('maestro', None)
         super().__init__(*args, **kwargs)
+
+        # Valor inicial de duración
         self.fields['duracion_minutos'].initial = 60
+
+        # Si hay maestro, filtramos las materias que enseña
+        if maestro:
+            self.fields['materia'].queryset = maestro.materias.all()
+
 
 class MensajeForm(forms.ModelForm):
     class Meta:
@@ -392,16 +404,31 @@ class ResenaForm(forms.ModelForm):
 
 
 
-# Nuevo formulario para que el maestro proponga fecha
 class ProponerFechaForm(forms.ModelForm):
     class Meta:
         model = SolicitudClase
         fields = ['fecha_clase_propuesta', 'monto_acordado', 'metodo_pago']
         widgets = {
-            'fecha_clase_propuesta': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'fecha_clase_propuesta': forms.DateTimeInput(
+                attrs={
+                    'type': 'datetime-local',
+                    'class': 'form-control'
+                },
+                format='%Y-%m-%dT%H:%M'
+            ),
             'monto_acordado': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'metodo_pago': forms.Select(attrs={'class': 'form-select'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Agregar formato aceptado para datetime-local
+        self.fields['fecha_clase_propuesta'].input_formats = ['%Y-%m-%dT%H:%M']
+
+        # Si ya hay una fecha cargada, convertirla al formato HTML5 correcto
+        if self.instance and self.instance.fecha_clase_propuesta:
+            self.initial['fecha_clase_propuesta'] = self.instance.fecha_clase_propuesta.strftime('%Y-%m-%dT%H:%M')
+
 
 
 

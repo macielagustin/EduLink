@@ -20,7 +20,8 @@
                     <div class="mb-4">
                         <p class="fw-bold">Escanea el código QR con la app de Mercado Pago</p>
                         {% if qr_image %}
-                        <img src="data:image/png;base64,{{ qr_image }}" alt="Código QR para pago" class="img-fluid border rounded" style="max-width: 300px;">
+                        <img src="data:image/png;base64,{{ qr_image }}" alt="Código QR para pago"
+                            class="img-fluid border rounded" style="max-width: 300px;">
                         {% endif %}
                         <div class="mt-3">
                             {% if enlace_pago %}
@@ -30,7 +31,7 @@
                             {% endif %}
                         </div>
                     </div>
-                    
+
                     {% elif solicitud.metodo_pago == 'transferencia' %}
                     <div class="mb-4">
                         <div class="alert alert-warning">
@@ -42,13 +43,14 @@
                             <p class="mb-1"><strong>Concepto:</strong></p>
                             <p>Clase de {{ solicitud.materia.nombre }}</p>
                         </div>
-                        
+
                         <p class="fw-bold">O escanea el código QR para transferencia:</p>
                         {% if qr_image %}
-                        <img src="data:image/png;base64,{{ qr_image }}" alt="Código QR para transferencia" class="img-fluid border rounded" style="max-width: 300px;">
+                        <img src="data:image/png;base64,{{ qr_image }}" alt="Código QR para transferencia"
+                            class="img-fluid border rounded" style="max-width: 300px;">
                         {% endif %}
                     </div>
-                    
+
                     {% else %}
                     <div class="alert alert-warning">
                         <h6>Pago en efectivo</h6>
@@ -58,10 +60,18 @@
                     {% endif %}
 
                     <div class="mt-4">
-                        <a href="{% url 'mis_solicitudes_alumno' %}" class="btn btn-secondary">Volver a Mis Solicitudes</a>
+                        <a href="{% url 'mis_solicitudes_alumno' %}" class="btn btn-secondary">Volver a Mis
+                            Solicitudes</a>
                     </div>
                 </div>
             </div>
+            {% if not qr_image and not enlace_pago %}
+            <div class="alert alert-warning mt-3">
+                No fue posible generar el código QR. Verifica que el maestro tenga un CBU/Alias configurado o que el
+                método de pago sea válido.
+            </div>
+            {% endif %}
+
         </div>
     </div>
 </div>

@@ -1047,21 +1047,20 @@ def perfil_maestro_publico(request, maestro_id):
 def enviar_solicitud_clase(request, maestro_id):
     maestro = get_object_or_404(Maestro, id=maestro_id)
     alumno = get_object_or_404(Alumno, usuario=request.user)
-    
+
     if request.method == 'POST':
-        form = SolicitudClaseForm(request.POST)
+        form = SolicitudClaseForm(request.POST, maestro=maestro)
         if form.is_valid():
             solicitud = form.save(commit=False)
             solicitud.alumno = alumno
             solicitud.maestro = maestro
             solicitud.estado = 'pendiente'
             solicitud.save()
-            
             messages.success(request, '¡Solicitud enviada correctamente!')
             return redirect('mis_solicitudes_alumno')
     else:
-        form = SolicitudClaseForm()
-    
+        form = SolicitudClaseForm(maestro=maestro)
+
     return render(request, 'alumno/enviar_solicitud.html', {
         'form': form,
         'maestro': maestro
@@ -1202,46 +1201,40 @@ def detalle_maestro(request, maestro_id):
 
 
 
-
-# Vista para que el maestro proponga fecha y monto
 @login_required
 def proponer_fecha_solicitud(request, solicitud_id):
+    print("🧭 ENTRÓ A LA VISTA proponer_fecha_solicitud()")
     solicitud = get_object_or_404(SolicitudClase, id=solicitud_id)
-    
-    # Verificar que el maestro es el dueño de la solicitud
-    if solicitud.maestro.usuario != request.user:
+    print("🧩 Solicitud encontrada:", solicitud.id, solicitud.estado)
+
+    print("DEBUG → Maestro:", solicitud.maestro.usuario.id, solicitud.maestro.usuario.username)
+    print("DEBUG → Usuario logueado:", request.user.id, request.user.username)
+
+
+    # Verificar correctamente que el maestro sea el dueño de la solicitud
+    if solicitud.maestro.usuario.id != request.user.id:
         messages.error(request, "No tienes permiso para esta acción.")
         return redirect('solicitudes_para_maestro')
-    
+
     if request.method == 'POST':
         form = ProponerFechaForm(request.POST, instance=solicitud)
         if form.is_valid():
-            try:
-                solicitud = form.save(commit=False)
-                # Cambiar estado a 'propuesta' en lugar de 'aceptada'
-                solicitud.estado = 'propuesta'
-                solicitud.save()
-                
-                # Crear notificación para el alumno
-                crear_notificacion(
-                    usuario=solicitud.alumno.usuario,
-                    tipo='solicitud',
-                    mensaje=f'El maestro {solicitud.maestro.usuario.get_full_name()} te ha propuesto una fecha para la clase de {solicitud.materia.nombre}',
-                    enlace=f'/alumno/solicitudes/'
-                )
-                
-                messages.success(request, '✅ Fecha y monto propuestos correctamente. El alumno recibió una notificación.')
-                return redirect('solicitudes_para_maestro')
-                
-            except Exception as e:
-                messages.error(request, f'❌ Error al guardar la propuesta: {str(e)}')
+            solicitud = form.save(commit=False)
+            solicitud.estado = 'propuesta'
+            solicitud.save()
+            messages.success(request, "✅ Fecha y monto propuestos correctamente.")
+            print("⚠️ Ejecutando redirect a 'solicitudes_para_maestro'")
+            return redirect('solicitudes_para_maestro')
     else:
         form = ProponerFechaForm(instance=solicitud)
-    
+
     return render(request, 'maestro/proponer_fecha.html', {
         'form': form,
         'solicitud': solicitud
     })
+
+
+
 
 # Vista para que el alumno confirme la fecha
 @login_required
@@ -1320,11 +1313,15 @@ def generar_qr_pago(request, solicitud_id):
             qr_data = f"MP:{solicitud.maestro.usuario.id}:{monto}:{solicitud.id}"
             
         elif solicitud.metodo_pago == 'transferencia':
-            # Datos para transferencia
+            # Verificamos que el maestro tenga CBU/Alias
+            if not solicitud.maestro.cbu_cvu_alias:
+                messages.error(request, "El maestro no tiene configurado su CBU o alias, no se puede generar el QR.")
+                return redirect('mis_solicitudes_alumno')
+            
             monto = float(solicitud.monto_acordado) if solicitud.monto_acordado else 0
             qr_data = f"TRANSFER:{solicitud.maestro.cbu_cvu_alias}:{monto}:{solicitud.maestro.usuario.get_full_name()}"
             enlace_pago = None
-            
+     
         else:  # efectivo
             qr_data = None
             enlace_pago = None

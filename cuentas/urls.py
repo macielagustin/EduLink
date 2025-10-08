@@ -56,8 +56,10 @@ urlpatterns = [
 
 
      # Solicitudes para maestros
-    path("maestro/solicitudes/", solicitudes_para_maestro, name="solicitudes_para_maestro"),
+    path("maestro/solicitudes/", views.solicitudes_para_maestro, name="solicitudes_para_maestro"),
+    path("maestro/solicitud/<int:solicitud_id>/proponer-fecha/", proponer_fecha_solicitud, name="proponer_fecha_solicitud"),
     path("maestro/solicitud/<int:solicitud_id>/<str:nuevo_estado>/", cambiar_estado_solicitud, name="cambiar_estado_solicitud"),
+    
 
 
     path("maestro/agenda/", agenda_maestro, name="agenda_maestro"),
@@ -98,7 +100,6 @@ urlpatterns = [
     path('reset/done/', auth_views.PasswordResetCompleteView.as_view(), name='password_reset_complete'),
 
     # Agregar estas rutas a urlpatterns
-    path("maestro/solicitud/<int:solicitud_id>/proponer-fecha/", proponer_fecha_solicitud, name="proponer_fecha_solicitud"),
     path("alumno/solicitud/<int:solicitud_id>/confirmar-fecha/", confirmar_fecha_solicitud, name="confirmar_fecha_solicitud"),
     path("solicitud/<int:solicitud_id>/qr-pago/", generar_qr_pago, name="generar_qr_pago"),
     path("agenda/", agenda_usuario, name="agenda_usuario"),
