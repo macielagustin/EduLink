@@ -93,6 +93,21 @@
                         <a href="#" class="btn btn-outline-warning btn-sm">
                             ⏳ Esperando respuesta
                         </a>
+                    <div class="card-footer">
+                            {% if solicitud.estado == 'propuesta' %}
+                            <a href="{% url 'confirmar_fecha_solicitud' solicitud.id %}" class="btn btn-success btn-sm">
+                                ✅ Confirmar Fecha
+                            </a>
+                            {% if solicitud.metodo_pago == 'mercadopago' or solicitud.metodo_pago == 'transferencia' %}
+                            <a href="{% url 'generar_qr_pago' solicitud.id %}" class="btn btn-primary btn-sm">
+                                💳 Generar Pago
+                            </a>
+                            {% endif %}
+                        </div>
+                        {% elif solicitud.estado == 'aceptada' and solicitud.fecha_clase_confirmada %}
+                        <div class="alert alert-success py-2 mb-2">
+                            <small>✅ Clase confirmada para el {{ solicitud.fecha_clase_confirmada|date:"d/m/Y H:i" }}</small>
+                        </div>
                         {% endif %}
                     </div>
                 </div>

@@ -2,66 +2,75 @@
 {% block content %}
 <div class="container mt-4">
     <div class="row justify-content-center">
-        <div class="col-md-6">
+        <div class="col-md-8">
             <div class="card">
                 <div class="card-header bg-primary text-white">
-                    <h4>💳 Pago de Clase</h4>
+                    <h4><i class="fas fa-qrcode me-2"></i>Pago de Clase</h4>
                 </div>
-                <div class="card-body text-center">
-                    <h5>Detalles del pago</h5>
-                    <div class="alert alert-info text-start">
+                <div class="card-body">
+                    <!-- Información de la clase -->
+                    <div class="alert alert-info">
+                        <h5>Detalles de la clase:</h5>
                         <p><strong>Maestro:</strong> {{ solicitud.maestro.usuario.get_full_name }}</p>
                         <p><strong>Materia:</strong> {{ solicitud.materia.nombre }}</p>
+                        <p><strong>Fecha:</strong> {{ solicitud.fecha_clase_confirmada|date:"d/m/Y H:i" }}</p>
+                        <p><strong>Duración:</strong> {{ solicitud.duracion_minutos }} minutos</p>
                         <p><strong>Monto:</strong> ${{ solicitud.monto_acordado|default:"0.00" }}</p>
                         <p><strong>Método de pago:</strong> {{ solicitud.get_metodo_pago_display }}</p>
                     </div>
 
-                    {% if solicitud.metodo_pago == 'mercadopago' %}
-                    <div class="mb-4">
-                        <p class="fw-bold">Escanea el código QR con la app de Mercado Pago</p>
+                    {% if datos_pago.tipo == 'mercadopago' %}
+                    <div class="text-center">
+                        <h5>Pago con Mercado Pago</h5>
                         {% if qr_image %}
-                        <img src="data:image/png;base64,{{ qr_image }}" alt="Código QR para pago"
-                            class="img-fluid border rounded" style="max-width: 300px;">
+                        <div class="mb-3">
+                            <img src="data:image/png;base64,{{ qr_image }}" alt="QR Code" class="img-fluid" style="max-width: 300px;">
+                        </div>
+                        <p>Escanea el código QR con la app de Mercado Pago</p>
                         {% endif %}
-                        <div class="mt-3">
-                            {% if enlace_pago %}
-                            <a href="{{ enlace_pago }}" class="btn btn-success" target="_blank">
-                                🌐 Pagar en Mercado Pago
-                            </a>
-                            {% endif %}
+                        <div class="alert alert-warning">
+                            <small>
+                                <strong>Instrucciones:</strong><br>
+                                1. Abre la app de Mercado Pago<br>
+                                2. Toca "Pagar"<br>
+                                3. Escanea el código QR<br>
+                                4. Confirma el pago de ${{ datos_pago.monto }}
+                            </small>
                         </div>
                     </div>
 
-                    {% elif solicitud.metodo_pago == 'transferencia' %}
-                    <div class="mb-4">
-                        <div class="alert alert-warning">
-                            <h6>Datos para transferencia:</h6>
-                            <p class="mb-1"><strong>CBU/CVU/Alias:</strong></p>
-                            <p class="fw-bold fs-5">{{ solicitud.maestro.cbu_cvu_alias }}</p>
-                            <p class="mb-1"><strong>Monto a transferir:</strong></p>
-                            <p class="fw-bold fs-5">${{ solicitud.monto_acordado|default:"0.00" }}</p>
-                            <p class="mb-1"><strong>Concepto:</strong></p>
-                            <p>Clase de {{ solicitud.materia.nombre }}</p>
-                        </div>
-
-                        <p class="fw-bold">O escanea el código QR para transferencia:</p>
+                    {% elif datos_pago.tipo == 'transferencia' %}
+                    <div class="text-center">
+                        <h5>Transferencia Bancaria</h5>
                         {% if qr_image %}
-                        <img src="data:image/png;base64,{{ qr_image }}" alt="Código QR para transferencia"
-                            class="img-fluid border rounded" style="max-width: 300px;">
+                        <div class="mb-3">
+                            <img src="data:image/png;base64,{{ qr_image }}" alt="QR Code" class="img-fluid" style="max-width: 300px;">
+                        </div>
+                        <p>Escanea el código QR para transferir</p>
                         {% endif %}
+                        <div class="alert alert-info">
+                            <h6>Datos para transferencia:</h6>
+                            <p><strong>Beneficiario:</strong> {{ datos_pago.beneficiario }}</p>
+                            <p><strong>CBU/CVU:</strong> {{ datos_pago.cbu_cvu }}</p>
+                            <p><strong>Monto:</strong> ${{ datos_pago.monto }}</p>
+                            <p><strong>Concepto:</strong> {{ datos_pago.concepto }}</p>
+                        </div>
                     </div>
 
                     {% else %}
-                    <div class="alert alert-warning">
-                        <h6>Pago en efectivo</h6>
-                        <p>Acuerda el pago en efectivo con el maestro al momento de la clase.</p>
-                        <p class="fw-bold">Monto: ${{ solicitud.monto_acordado|default:"0.00" }}</p>
+                    <div class="text-center">
+                        <h5>Pago en Efectivo</h5>
+                        <div class="alert alert-success">
+                            <p>{{ datos_pago.instrucciones }}</p>
+                            <p><strong>Monto a pagar: ${{ datos_pago.monto }}</strong></p>
+                        </div>
                     </div>
                     {% endif %}
 
-                    <div class="mt-4">
-                        <a href="{% url 'mis_solicitudes_alumno' %}" class="btn btn-secondary">Volver a Mis
-                            Solicitudes</a>
+                    <div class="d-grid gap-2 mt-4">
+                        <a href="{% url 'mis_solicitudes_alumno' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Volver a Mis Solicitudes
+                        </a>
                     </div>
                 </div>
             </div>
