@@ -93,6 +93,9 @@
                         <a href="#" class="btn btn-outline-warning btn-sm">
                             ⏳ Esperando respuesta
                         </a>
+                        {% endif %}
+                    </div>
+
                     <div class="card-footer">
                             {% if solicitud.estado == 'propuesta' %}
                             <a href="{% url 'confirmar_fecha_solicitud' solicitud.id %}" class="btn btn-success btn-sm">

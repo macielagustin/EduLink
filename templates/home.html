@@ -1,127 +1,476 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}EduLink · Inicio{% endblock %}
+{% block title %}EduLink · Tu plataforma de clases particulares{% endblock %}
 
 {% block content %}
 
-<!-- HERO -->
-<section class="hero-wrap p-4 p-md-5 mb-4">
-  <div class="hero-blob d-none d-md-block"></div>
-  <div class="row align-items-center g-4">
-    <div class="col-lg-7">
-      <h1 class="display-5 fw-bold text-dark mb-3">Aprendé lo que quieras, con el profe ideal</h1>
-      <p class="lead text-muted mb-4">
-        Conectamos <strong>alumnos</strong> y <strong>maestros particulares</strong> por materia, modalidad y ciudad.
-      </p>
-      <!-- Buscador (a futuro podés apuntarlo a /maestros/) -->
-      <div class="search-card p-3 p-md-4">
-        <form method="get" action="{% url 'maestros_list' %}" class="row g-2 g-md-3">
-          <div class="col-md-4">
-            <label class="form-label mb-1">Materia</label>
-            <input name="materia" class="form-control" placeholder="Ej: Matemática, Inglés, Programación">
+<!-- HERO MEJORADO -->
+<section class="hero-section bg-gradient-primary text-white py-5 mb-5">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-lg-6">
+        <h1 class="display-4 fw-bold mb-4">Aprendé con los mejores profesores</h1>
+        <p class="lead mb-4">Encontrá tu profesor ideal entre {{ total_profesores }} profesionales. Clases online y presenciales.</p>
+        
+        <div class="hero-stats row mb-4">
+          <div class="col-4">
+            <div class="text-center">
+              <h3 class="fw-bold mb-1">{{ total_profesores }}</h3>
+              <small>Profesores</small>
+            </div>
           </div>
-          <div class="col-md-4">
-            <label class="form-label mb-1">Ciudad</label>
-            <input name="ciudad" class="form-control" placeholder="Ej: Catamarca, Córdoba, Online">
+          <div class="col-4">
+            <div class="text-center">
+              <h3 class="fw-bold mb-1">{{ total_materias }}</h3>
+              <small>Materias</small>
+            </div>
           </div>
-          <div class="col-md-3">
-            <label class="form-label mb-1">Modalidad</label>
-            <select name="modalidad" class="form-select">
-              <option value="">Cualquiera</option>
-              <option value="online">Online</option>
-              <option value="presencial">Presencial</option>
-            </select>
+          <div class="col-4">
+            <div class="text-center">
+              <h3 class="fw-bold mb-1">{{ total_clases }}</h3>
+              <small>Clases</small>
+            </div>
           </div>
-          <div class="col-md-1 d-grid">
-            <label class="form-label mb-1 invisible">Buscar</label>
-            <button class="btn btn-primary">Buscar</button>
+        </div>
+
+        <!-- Buscador Mejorado -->
+        <div class="search-card bg-white rounded-3 p-4 shadow">
+          <form method="get" action="{% url 'buscar_clases' %}" class="row g-2">
+            <div class="col-md-4">
+              <label class="form-label text-dark mb-1 fw-semibold">¿Qué querés aprender?</label>
+              <select name="materia" class="form-select">
+                <option value="">Todas las materias</option>
+                {% for materia_data in materias_populares %}
+                <option value="{{ materia_data.materia.id }}">{{ materia_data.materia.nombre }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label text-dark mb-1 fw-semibold">Modalidad</label>
+              <select name="modalidad" class="form-select">
+                <option value="">Todas</option>
+                <option value="Online">Online</option>
+                <option value="Presencial">Presencial</option>
+                <option value="Ambos">Ambas</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label text-dark mb-1 fw-semibold">Ubicación</label>
+              <input name="ciudad" class="form-control" placeholder="Tu ciudad">
+            </div>
+            <div class="col-md-2 d-grid">
+              <label class="form-label text-dark mb-1 invisible">Buscar</label>
+              <button class="btn btn-primary btn-lg">Buscar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      
+      <div class="col-lg-6 text-center">
+        <img src="{% static 'images/hero-education.svg' %}" alt="Aprendizaje online" class="img-fluid" style="max-height: 400px;" onerror="this.src='https://via.placeholder.com/500x400?text=EduLink'">
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container">
+  
+  <!-- PROMOCIONES DESTACADAS -->
+  <section class="promo-banner mb-5">
+    <div class="row g-3">
+      <div class="col-md-4">
+        <div class="promo-card bg-warning text-dark rounded-3 p-3 h-100">
+          <div class="d-flex align-items-center">
+            <i class="fas fa-star fa-2x me-3"></i>
+            <div>
+              <h6 class="fw-bold mb-1">Profesor Verificado</h6>
+              <small>{{ profesores_verificados|length }} profesores verificados disponibles</small>
+            </div>
           </div>
-        </form>
+        </div>
       </div>
-      <div class="mt-3">
-        <small class="text-muted">Tip: dejá “Ciudad” vacío para ver maestros en todo el país o modalidad Online.</small>
+      <div class="col-md-4">
+        <div class="promo-card bg-info text-white rounded-3 p-3 h-100">
+          <div class="d-flex align-items-center">
+            <i class="fas fa-users fa-2x me-3"></i>
+            <div>
+              <h6 class="fw-bold mb-1">Nuevos Profesores</h6>
+              <small>{{ profesores_ultima_semana }} nuevos esta semana</small>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="promo-card bg-success text-white rounded-3 p-3 h-100">
+          <div class="d-flex align-items-center">
+            <i class="fas fa-bolt fa-2x me-3"></i>
+            <div>
+              <h6 class="fw-bold mb-1">Clase de Prueba</h6>
+              <small>20% descuento en primera clase</small>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
+  </section>
 
-    <!-- Ilustración SVG liviana -->
-    <div class="col-lg-5 text-center">
-      <svg viewBox="0 0 400 300" width="100%" height="auto" role="img" aria-label="Ilustración educativa">
-        <defs>
-          <linearGradient id="g1" x1="0" x2="1">
-            <stop offset="0%" stop-color="#0d6efd"/>
-            <stop offset="100%" stop-color="#74b0ff"/>
-          </linearGradient>
-        </defs>
-        <rect x="20" y="30" width="360" height="220" rx="14" fill="#ffffff" stroke="#dbe7ff"/>
-        <rect x="40" y="55" width="140" height="16" rx="8" fill="url(#g1)"/>
-        <rect x="40" y="85" width="320" height="10" rx="5" fill="#eaf2ff"/>
-        <rect x="40" y="105" width="320" height="10" rx="5" fill="#eaf2ff"/>
-        <rect x="40" y="125" width="220" height="10" rx="5" fill="#eaf2ff"/>
-        <circle cx="330" cy="200" r="46" fill="url(#g1)" opacity=".25"/>
-        <circle cx="320" cy="195" r="36" fill="url(#g1)" opacity=".4"/>
-        <circle cx="310" cy="190" r="24" fill="url(#g1)"/>
-      </svg>
+  <!-- PROFESOR DESTACADO (MEJOR CALIFICADO) -->
+  {% if profesor_destacado %}
+  <section class="featured-teacher mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h3 class="fw-bold">🌟 Profesor Destacado</h3>
+      <a href="{% url 'buscar_clases' %}" class="btn btn-outline-primary btn-sm">Ver todos los profesores</a>
+    </div>
+    
+    <div class="card border-0 shadow-lg">
+      <div class="row g-0">
+        <div class="col-md-3">
+          {% if profesor_destacado.usuario.foto_perfil %}
+            <img src="{{ profesor_destacado.usuario.foto_perfil.url }}" class="img-fluid rounded-start h-100 object-fit-cover" alt="{{ profesor_destacado.usuario.get_full_name }}" style="height: 250px; object-fit: cover;">
+          {% else %}
+            <div class="bg-light d-flex align-items-center justify-content-center h-100 rounded-start">
+              <i class="fas fa-user-graduate fa-5x text-muted"></i>
+            </div>
+          {% endif %}
+        </div>
+        <div class="col-md-9">
+          <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <span class="badge bg-warning text-dark mb-2">
+                  ⭐ {{ profesor_destacado.avg_rating|floatformat:1 }}/5.0
+                  ({{ profesor_destacado.review_count }} reseña{{ profesor_destacado.review_count|pluralize }})
+                </span>
+                <h4 class="card-title fw-bold">{{ profesor_destacado.usuario.get_full_name|default:profesor_destacado.usuario.username }}</h4>
+                <p class="text-muted mb-3">
+                  {% with profesor_destacado.materias.all|first as primera_materia %}
+                    {% if primera_materia %}
+                      Especialista en {{ primera_materia.nombre }}
+                    {% else %}
+                      Profesor particular
+                    {% endif %}
+                  {% endwith %}
+                </p>
+              </div>
+              <div class="text-end">
+                <div class="h4 text-primary fw-bold">${{ profesor_destacado.precio_hora }}<span class="h6 text-muted">/hora</span></div>
+                <small class="text-success">
+                  {{ profesor_destacado.total_clases }} clase{{ profesor_destacado.total_clases|pluralize }} impartida{{ profesor_destacado.total_clases|pluralize }}
+                </small>
+              </div>
+            </div>
+            
+            <p class="card-text mb-3">
+              {% if profesor_destacado.descripcion %}
+                {{ profesor_destacado.descripcion|truncatewords:30 }}
+              {% else %}
+                Profesor con amplia experiencia y excelentes reseñas de sus estudiantes.
+              {% endif %}
+            </p>
+            
+            <div class="d-flex flex-wrap gap-2 mb-3">
+              {% for materia in profesor_destacado.materias.all|slice:":4" %}
+                <span class="badge bg-light text-dark">📚 {{ materia.nombre }}</span>
+              {% endfor %}
+              {% if profesor_destacado.materias.count > 4 %}
+                <span class="badge bg-light text-dark">+{{ profesor_destacado.materias.count|add:"-4" }} más</span>
+              {% endif %}
+              <span class="badge bg-light text-dark">📍 {{ profesor_destacado.modalidad }}</span>
+            </div>
+            
+            <div class="d-flex gap-2">
+              <a href="{% url 'enviar_solicitud_clase' profesor_destacado.id %}" class="btn btn-primary">Solicitar clase</a>
+              <a href="{% url 'perfil_maestro_publico' profesor_destacado.id %}" class="btn btn-outline-primary">Ver perfil completo</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- PROFESOR POPULAR (MÁS ALUMNOS) -->
+  {% if profesor_popular and profesor_popular != profesor_destacado %}
+  <section class="popular-teacher mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h3 class="fw-bold">👑 Profesor Más Solicitado</h3>
+    </div>
+    
+    <div class="card border-0 shadow">
+      <div class="card-body">
+        <div class="row align-items-center">
+          <div class="col-md-2 text-center">
+            {% if profesor_popular.usuario.foto_perfil %}
+              <img src="{{ profesor_popular.usuario.foto_perfil.url }}" class="rounded-circle" width="80" height="80" alt="{{ profesor_popular.usuario.get_full_name }}" style="object-fit: cover;">
+            {% else %}
+              <div class="bg-light rounded-circle d-flex align-items-center justify-content-center mx-auto" style="width: 80px; height: 80px;">
+                <i class="fas fa-user fa-2x text-muted"></i>
+              </div>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <h5 class="fw-bold">{{ profesor_popular.usuario.get_full_name|default:profesor_popular.usuario.username }}</h5>
+            <p class="text-muted mb-1">
+              {% with profesor_popular.materias.all|first as primera_materia %}
+                {% if primera_materia %}
+                  {{ primera_materia.nombre }}
+                {% else %}
+                  Profesor particular
+                {% endif %}
+              {% endwith %}
+            </p>
+            <div class="d-flex gap-2">
+              <span class="badge bg-success">${{ profesor_popular.precio_hora }}/h</span>
+              <span class="badge bg-info">{{ profesor_popular.modalidad }}</span>
+            </div>
+          </div>
+          <div class="col-md-4 text-end">
+            <div class="h5 text-primary">{{ profesor_popular.total_alumnos }} alumno{{ profesor_popular.total_alumnos|pluralize }}</div>
+            <small class="text-muted">Han tomado clases con él</small>
+            <div class="mt-2">
+              <a href="{% url 'perfil_maestro_publico' profesor_popular.id %}" class="btn btn-sm btn-outline-primary">Ver perfil</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- NUEVOS PROFESORES -->
+  <section class="new-teachers mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h3 class="fw-bold">🚀 Nuevos en la Plataforma</h3>
+      <a href="{% url 'buscar_clases' %}" class="btn btn-outline-primary btn-sm">Ver todos</a>
+    </div>
+    
+    <div class="row g-4">
+      {% for maestro_data in nuevos_profesores %}
+        {% with maestro=maestro_data.maestro %}
+        <div class="col-md-3">
+          <div class="card h-100 border-0 shadow-sm teacher-card">
+            <div class="position-relative">
+              {% if maestro.usuario.foto_perfil %}
+                <img src="{{ maestro.usuario.foto_perfil.url }}" class="card-img-top" alt="{{ maestro.usuario.get_full_name }}" style="height: 200px; object-fit: cover;">
+              {% else %}
+                <div class="bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                  <i class="fas fa-user-graduate fa-3x text-muted"></i>
+                </div>
+              {% endif %}
+              <span class="position-absolute top-0 start-0 bg-success text-white px-2 py-1 small">Nuevo</span>
+              {% if maestro.usuario.verificado %}
+              <span class="position-absolute top-0 end-0 bg-primary text-white px-2 py-1 small">
+                <i class="fas fa-check-circle"></i>
+              </span>
+              {% endif %}
+            </div>
+            <div class="card-body">
+              <h6 class="card-title fw-bold">{{ maestro.usuario.get_full_name|default:maestro.usuario.username }}</h6>
+              <p class="card-text small text-muted">
+                {% with maestro.materias.all|first as primera_materia %}
+                  {% if primera_materia %}
+                    {{ primera_materia.nombre }}
+                  {% else %}
+                    Sin materias asignadas
+                  {% endif %}
+                {% endwith %}
+              </p>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="h6 text-primary mb-0">${{ maestro.precio_hora }}/h</span>
+                <span class="badge bg-light text-dark">{{ maestro.modalidad }}</span>
+              </div>
+              <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted">
+                  {% if maestro_data.avg_rating %}
+                    ⭐ {{ maestro_data.avg_rating|floatformat:1 }} ({{ maestro_data.review_count }})
+                  {% else %}
+                    Sin calificaciones
+                  {% endif %}
+                </small>
+              </div>
+            </div>
+            <div class="card-footer bg-transparent border-0 pt-0">
+              <a href="{% url 'perfil_maestro_publico' maestro.id %}" class="btn btn-outline-primary btn-sm w-100">Ver perfil</a>
+            </div>
+          </div>
+        </div>
+        {% endwith %}
+      {% empty %}
+      <div class="col-12">
+        <div class="text-center py-4">
+          <i class="fas fa-users fa-3x text-muted mb-3"></i>
+          <p class="text-muted">Aún no hay nuevos profesores registrados.</p>
+          <a href="{% url 'registro_maestro' %}" class="btn btn-primary">¡Sé el primero!</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- MATERIAS POPULARES -->
+  <section class="popular-subjects mb-5">
+    <h3 class="fw-bold mb-4">📚 Materias Más Populares</h3>
+    <div class="row g-3">
+      {% for materia_data in materias_populares %}
+      <div class="col-md-2 col-4">
+        <a href="{% url 'buscar_clases' %}?materia={{ materia_data.materia.id }}" class="subject-card card text-center border-0 shadow-sm h-100 text-decoration-none">
+          <div class="card-body py-4">
+            <i class="fas fa-book fa-2x text-primary mb-2"></i>
+            <h6 class="card-title mb-0">{{ materia_data.materia.nombre }}</h6>
+            <small class="text-muted">{{ materia_data.num_profesores }} profesor{{ materia_data.num_profesores|pluralize:"es" }}</small>
+          </div>
+        </a>
+      </div>
+      {% empty %}
+      <div class="col-12">
+        <div class="text-center py-4">
+          <i class="fas fa-book fa-3x text-muted mb-3"></i>
+          <p class="text-muted">Aún no hay materias populares.</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- PROFESORES VERIFICADOS -->
+  {% if profesores_verificados %}
+  <section class="verified-teachers mb-5">
+    <h3 class="fw-bold mb-4">✅ Profesores Verificados</h3>
+    <div class="row g-3">
+      {% for maestro_data in profesores_verificados %}
+        {% with maestro=maestro_data.maestro %}
+        <div class="col-md-4">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                {% if maestro.usuario.foto_perfil %}
+                  <img src="{{ maestro.usuario.foto_perfil.url }}" class="rounded-circle me-3" width="50" height="50" alt="{{ maestro.usuario.get_full_name }}" style="object-fit: cover;">
+                {% else %}
+                  <div class="bg-light rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                    <i class="fas fa-user text-muted"></i>
+                  </div>
+                {% endif %}
+                <div class="flex-grow-1">
+                  <h6 class="fw-bold mb-0">{{ maestro.usuario.get_full_name|default:maestro.usuario.username }}</h6>
+                  <small class="text-muted">
+                    {% with maestro.materias.all|first as primera_materia %}
+                      {% if primera_materia %}
+                        {{ primera_materia.nombre }}
+                      {% else %}
+                        Profesor
+                      {% endif %}
+                    {% endwith %}
+                  </small>
+                </div>
+                <span class="badge bg-primary">
+                  <i class="fas fa-check-circle"></i>
+                </span>
+              </div>
+              <div class="mt-2">
+                <span class="text-primary fw-bold">${{ maestro.precio_hora }}/h</span>
+                <span class="badge bg-light text-dark ms-2">{{ maestro.modalidad }}</span>
+              </div>
+              {% if maestro_data.avg_rating %}
+              <div class="mt-1">
+                <small class="text-warning">
+                  ⭐ {{ maestro_data.avg_rating|floatformat:1 }} ({{ maestro_data.review_count }})
+                </small>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endwith %}
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ESPACIO PARA PUBLICIDAD -->
+  <section class="advertisement mb-5">
+    <div class="card bg-light border-dashed text-center py-5">
+      <div class="card-body">
+        <i class="fas fa-ad fa-3x text-muted mb-3"></i>
+        <h5 class="text-muted">¿Querés promocionar tus servicios?</h5>
+        <p class="text-muted">Contactanos para aparecer en esta sección destacada</p>
+        <button class="btn btn-outline-secondary">Anunciarse aquí</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- CTA FINAL -->
+<section class="bg-dark text-white py-5 mt-5">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-lg-8">
+        <h3 class="fw-bold mb-2">¿Listo para empezar a aprender?</h3>
+        <p class="mb-0">Unite a {{ total_profesores }} profesores y {{ total_clases }} clases impartidas</p>
+      </div>
+      <div class="col-lg-4 text-lg-end">
+        {% if not user.is_authenticated %}
+        <a class="btn btn-primary btn-lg me-2" href="{% url 'registro_persona' %}">Crear cuenta gratis</a>
+        <a class="btn btn-outline-light btn-lg" href="{% url 'login' %}">Ingresar</a>
+        {% else %}
+        <a class="btn btn-primary btn-lg me-2" href="{% url 'buscar_clases' %}">Buscar Clases</a>
+        {% if user.rol == 'MAESTRO' %}
+        <a class="btn btn-outline-light btn-lg" href="{% url 'dashboard_maestro' %}">Mi Panel</a>
+        {% else %}
+        <a class="btn btn-outline-light btn-lg" href="{% url 'dashboard_alumno' %}">Mi Panel</a>
+        {% endif %}
+        {% endif %}
+      </div>
     </div>
   </div>
 </section>
 
-<!-- CATEGORÍAS / MATERIAS -->
-{% if materias %}
-<section class="mb-5">
-  <div class="d-flex align-items-center justify-content-between mb-3">
-    <h5 class="mb-0">Materias populares</h5>
-    <a class="text-decoration-none" href="{% url 'maestros_list' %}">Ver todos los maestros →</a>
-  </div>
-  <div class="d-flex flex-wrap">
-    {% for m in materias %}
-      <a class="badge-chip" href="{% url 'maestros_list' %}?materia={{ m.nombre|urlencode }}">{{ m.nombre }}</a>
-    {% empty %}
-      <p class="text-muted mb-0">Aún no hay materias cargadas.</p>
-    {% endfor %}
-  </div>
-</section>
-{% endif %}
+{% endblock %}
 
-<!-- BENEFICIOS -->
-<section class="mb-5">
-  <div class="row g-3 g-md-4">
-    <div class="col-md-4">
-      <div class="feature-card">
-        <h6 class="fw-semibold mb-2">Encontrá rápido</h6>
-        <p class="text-muted mb-0">Filtrá por materia, ciudad y modalidad para dar con el profe ideal.</p>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="feature-card">
-        <h6 class="fw-semibold mb-2">Flexible</h6>
-        <p class="text-muted mb-0">Clases online o presenciales, cuando te quede cómodo.</p>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="feature-card">
-        <h6 class="fw-semibold mb-2">Transparente</h6>
-        <p class="text-muted mb-0">Perfiles con precio por hora y materias declaradas.</p>
-      </div>
-    </div>
-  </div>
-</section>
+{% block extra_css %}
+<style>
+.hero-section {
+  background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);
+  border-radius: 0 0 2rem 2rem;
+}
 
-<!-- CTA -->
-<section class="mb-4">
-  <div class="p-4 p-md-5 text-center border rounded-3" style="background:#f8fbff; border-color:#dbe7ff;">
-    <h4 class="fw-semibold mb-2">¿Listo para empezar?</h4>
-    <p class="text-muted mb-3">Creá tu cuenta gratis y reservá tu primera clase.</p>
-    <a class="btn btn-primary me-2" href="{% url 'registro_persona' %}">Crear cuenta</a>
-    <a class="btn btn-outline-primary" href="{% url 'login' %}">Ya tengo cuenta</a>
-  </div>
-</section>
+.search-card {
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.95) !important;
+}
 
-<!-- FOOTER MINI -->
-<section class="footer-mini pt-3">
-  <div class="d-flex flex-wrap justify-content-between align-items-center">
-    <small>© {{ now|date:"Y" }} EduLink</small>
-    <small class="text-muted">Hecho con Django · Catamarca</small>
-  </div>
-</section>
+.promo-card {
+  transition: transform 0.3s ease;
+}
 
+.promo-card:hover {
+  transform: translateY(-5px);
+}
+
+.subject-card {
+  transition: all 0.3s ease;
+}
+
+.subject-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.teacher-card {
+  transition: all 0.3s ease;
+}
+
+.teacher-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.border-dashed {
+  border: 2px dashed #dee2e6 !important;
+}
+
+.object-fit-cover {
+  object-fit: cover;
+}
+</style>
 {% endblock %}

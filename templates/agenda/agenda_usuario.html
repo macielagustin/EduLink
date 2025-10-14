@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+{% load agenda_filters %}
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
@@ -16,6 +17,107 @@
             </a>
         </div>
     </div>
+
+
+
+
+    <!-- Filtros para Agenda -->
+<div class="card mb-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">🔍 Filtros de Agenda</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <!-- Filtro por Tipo de Evento -->
+            <div class="col-md-3">
+                <label class="form-label">Tipo de Evento:</label>
+                <select name="tipo" class="form-select">
+                    <option value="todos" {% if tipo_filtro == 'todos' %}selected{% endif %}>Todos los tipos</option>
+                    <option value="clase" {% if tipo_filtro == 'clase' %}selected{% endif %}>Solo Clases</option>
+                    <option value="disponible" {% if tipo_filtro == 'disponible' %}selected{% endif %}>Solo Disponible</option>
+                    <option value="ocupacion" {% if tipo_filtro == 'ocupacion' %}selected{% endif %}>Solo Ocupaciones</option>
+                </select>
+            </div>
+            
+            <!-- Filtro por Materia -->
+            <div class="col-md-3">
+                <label class="form-label">Materia:</label>
+                <select name="materia" class="form-select">
+                    <option value="">Todas las materias</option>
+                    {% for materia in materias_filtro %}
+                    <option value="{{ materia.id }}" {% if materia_filtro == materia.id|stringformat:"i" %}selected{% endif %}>
+                        {{ materia.nombre }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Filtro por Usuario (Alumno/Maestro) -->
+            <div class="col-md-3">
+                <label class="form-label">
+                    {% if rol == 'ALUMNO' %}Maestro:{% else %}Alumno:{% endif %}
+                </label>
+                <select name="usuario" class="form-select">
+                    <option value="">Todos los {% if rol == 'ALUMNO' %}maestros{% else %}alumnos{% endif %}</option>
+                    {% for usuario in usuarios_filtro %}
+                    <option value="{{ usuario.usuario.get_full_name }}" {% if usuario_filtro == usuario.usuario.get_full_name %}selected{% endif %}>
+                        {{ usuario.usuario.get_full_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Botones -->
+            <div class="col-md-3 d-flex align-items-end">
+                <div class="d-grid gap-2 w-100">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter me-1"></i> Filtrar
+                    </button>
+                    <a href="{% url 'agenda_usuario' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-1"></i> Limpiar
+                    </a>
+                </div>
+            </div>
+        </form>
+        
+        <!-- Resumen de filtros activos -->
+        {% if tipo_filtro != 'todos' or materia_filtro or usuario_filtro %}
+        <div class="mt-3">
+            <small class="text-muted">Filtros activos:</small>
+            <div class="d-flex flex-wrap gap-2 mt-1">
+                {% if tipo_filtro != 'todos' %}
+                <span class="badge bg-primary">
+                    Tipo: {{ tipo_filtro }}
+                    <a href="?{% if materia_filtro %}materia={{ materia_filtro }}&{% endif %}{% if usuario_filtro %}usuario={{ usuario_filtro }}&{% endif %}tipo=todos" class="text-white ms-1">
+                        <i class="fas fa-times"></i>
+                    </a>
+                </span>
+                {% endif %}
+                
+                {% if materia_filtro %}
+                <span class="badge bg-success">
+                    Materia: {{ materias_filtro|get_item:materia_filtro }}
+                    <a href="?{% if tipo_filtro != 'todos' %}tipo={{ tipo_filtro }}&{% endif %}{% if usuario_filtro %}usuario={{ usuario_filtro }}&{% endif %}" class="text-white ms-1">
+                        <i class="fas fa-times"></i>
+                    </a>
+                </span>
+                {% endif %}
+                
+                {% if usuario_filtro %}
+                <span class="badge bg-info">
+                    {% if rol == 'ALUMNO' %}Maestro{% else %}Alumno{% endif %}: {{ usuario_filtro }}
+                    <a href="?{% if tipo_filtro != 'todos' %}tipo={{ tipo_filtro }}&{% endif %}{% if materia_filtro %}materia={{ materia_filtro }}&{% endif %}" class="text-white ms-1">
+                        <i class="fas fa-times"></i>
+                    </a>
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+
 
     {% if messages %}
         {% for message in messages %}
