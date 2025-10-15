@@ -63,7 +63,7 @@ urlpatterns = [
     
 
 
-    #path("maestro/agenda/", agenda_maestro, name="agenda_maestro"),
+    path("maestro/agenda/", agenda_maestro, name="agenda_maestro"),
 
 
 
