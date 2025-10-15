@@ -15,7 +15,7 @@
       <select name="materia" class="form-select">
         <option value="">Todas</option>
         {% for m in materias %}
-        <option value="{{ m.id }}" {% if q.materia == m.id %}selected{% endif %}>{{ m.nombre }}</option>
+        <option value="{{ m.id }}" {% if q.materia == m.id %} selected {% endif %}>{{ m.nombre }}</option>
         {% endfor %}
       </select>
     </div>
@@ -56,7 +56,7 @@
 
     <div class="col-12 d-flex gap-2">
       <button type="submit" class="btn btn-acento">Buscar</button>
-      <a href="?{% if q.materia %}materia={{ q.materia }}&{% endif %}{% if q.modalidad %}modalidad={{ q.modalidad }}&{% endif %}{% if q.provincia %}provincia={{ q.provincia }}&{% endif %}{% if q.radio %}radio={{ q.radio }}&{% endif %}view=map" 
+      <a href="?{% if q.materia %}materia={{ q.materia }}&{% endif %}{% if q.modalidad %}modalidad={{ q.modalidad }}&{% endif %}{% if q.provincia %}provincia={{ q.provincia }}&{% endif %}{% if q.radio %}radio={{ q.radio }}&{% endif %}view=map"
         class="btn btn-outline-primary">
         Ver mapa
       </a>
@@ -84,6 +84,23 @@
   <div class="col-md-4">
     <div class="feature-card">
       <h6 class="fw-bold mb-1">{{ m.usuario.first_name }} {{ m.usuario.last_name }}</h6>
+      <!-- ⭐ Calificación promedio -->
+      {% if m.promedio_reseñas %}
+      <div class="mb-2">
+        {% for i in "12345" %}
+        {% if forloop.counter <= m.promedio_reseñas|floatformat:0 %} <i class="fa fa-star text-warning"></i>
+          {% else %}
+          <i class="fa fa-star text-secondary"></i>
+          {% endif %}
+          {% endfor %}
+          <small class="text-muted">
+            {{ m.promedio_reseñas }} / 5 ({{ m.total_reseñas }} reseñas)
+          </small>
+      </div>
+      {% else %}
+      <p class="text-muted small mb-2">Sin reseñas todavía</p>
+      {% endif %}
+
       <p class="text-muted mb-1">Materias: {{ m.materias.all|join:", " }}</p>
       <p class="text-muted mb-1">Modalidad: {{ m.get_modalidad_display }}</p>
       <p class="fw-bold">💲 {{ m.precio_hora }} /hora</p>
@@ -112,10 +129,15 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
   // Mapa centrado en la ubicación del alumno
-  var alumnoLat = {{ request.user.latitud|default_if_none:"null"|safe }};
-  var alumnoLon = {{ request.user.longitud|default_if_none:"null"|safe }};
+  var alumnoLat = {{ request.user.latitud|default:"null"|safe }};
+  var alumnoLon = {{ request.user.longitud|default:"null"|safe }};
 
-  var map = L.map('map').setView([alumnoLat, alumnoLon], 12);
+  // Evitar errores si las coordenadas son nulas
+  if (alumnoLat && alumnoLon) {
+    var map = L.map('map').setView([alumnoLat, alumnoLon], 12);
+  } else {
+    var map = L.map('map').setView([-28.4696, -65.7852], 12); // Catamarca por defecto
+  }
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
@@ -130,9 +152,25 @@
   {% for m, distancia in resultados %}
     {% if m.usuario.latitud and m.usuario.longitud %}
       L.marker([{{ m.usuario.latitud|safe }}, {{ m.usuario.longitud|safe }}]).addTo(map)
-        .bindPopup("<b>{{ m.usuario.first_name }} {{ m.usuario.last_name }}</b><br>Materias: {{ m.materias.all|join:', ' }}{% if distancia %}<br>Distancia: {{ distancia }} km{% endif %}");
+        .bindPopup(`
+          <b>{{ m.usuario.first_name }} {{ m.usuario.last_name }}</b><br>
+          Materias: {{ m.materias.all|join:", " }}
+          {% if distancia %}
+            <br>Distancia: {{ distancia }} km
+          {% endif %}
+        `);
     {% endif %}
   {% endfor %}
 </script>
+<style>
+.fa-star {
+  font-size: 0.9rem;
+  margin-right: 1px;
+}
+.text-warning {
+  color: #FFD43B !important;
+}
+</style>
+
 {% endif %}
 {% endblock %}

@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
-from .models import Usuario, Alumno, Maestro, Provincia, Departamento, Municipio, Localidad, Idioma, NivelEducativo, Disponibilidad, SolicitudClase, Mensaje, Resena, DisponibilidadUsuario
+from .models import Usuario, Alumno, Maestro, Provincia, Departamento, Municipio, Localidad, Idioma, NivelEducativo, Disponibilidad, SolicitudClase, Mensaje, Reseña, DisponibilidadUsuario
 from catalogo.models import Materia
 
 
@@ -391,7 +391,7 @@ class MensajeForm(forms.ModelForm):
         }
 
 
-
+"""
 
 class ResenaForm(forms.ModelForm):
     class Meta:
@@ -400,7 +400,7 @@ class ResenaForm(forms.ModelForm):
         widgets = {
             'calificacion': forms.RadioSelect(choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5')]),
             'comentario': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Comparte tu experiencia...'}),
-        }
+        } """
 
 
 
@@ -479,4 +479,15 @@ class ConfirmarFechaForm(forms.ModelForm):
             'metodo_pago': forms.Select(attrs={'class': 'form-select'}),
         } """
 
-
+class ReseñaForm(forms.ModelForm):
+    class Meta:
+        model = Reseña
+        fields = ['puntuacion', 'comentario']
+        widgets = {
+            'puntuacion': forms.HiddenInput(),  # lo manejamos con JavaScript (estrellas clickeables)
+            'comentario': forms.Textarea(attrs={
+                'rows': 3,
+                'placeholder': 'Escribí un comentario (opcional)...',
+                'class': 'form-control'
+            }),
+        }

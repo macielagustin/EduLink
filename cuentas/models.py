@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils import timezone
 
 # 🔹 Si ya tenés modelos Provincia/Departamento/Municipio/Localidad definidos en otra app, importa desde allí.
 # from ubicaciones.models import Provincia, Departamento, Municipio, Localidad
@@ -74,6 +75,16 @@ class Maestro(models.Model):
     # Nuevo campo para datos de pago
     cbu_cvu_alias = models.CharField(max_length=100, blank=True, null=True, verbose_name="CBU/CVU o Alias")
 
+    @property
+    def promedio_reseñas(self):
+        reseñas = self.reseñas.all()
+        if reseñas.exists():
+            return round(sum(r.puntuacion for r in reseñas) / reseñas.count(), 1)
+        return None
+
+    @property
+    def total_reseñas(self):
+        return self.reseñas.count()
 
     def __str__(self):
         return f"Maestro: {self.usuario.username}"
@@ -257,3 +268,18 @@ class Resena(models.Model):
         return f"Reseña de {self.autor.username} para {self.destinatario.username} - {self.calificacion} estrellas"
 
 
+class Reseña(models.Model):
+    alumno = models.ForeignKey('Alumno', on_delete=models.SET_NULL, null=True, blank=True)
+    maestro = models.ForeignKey('Maestro', on_delete=models.CASCADE, related_name='reseñas')
+    solicitud = models.OneToOneField('SolicitudClase', on_delete=models.CASCADE, related_name='reseña')
+    puntuacion = models.PositiveSmallIntegerField(choices=[(i, str(i)) for i in range(1, 6)])
+    comentario = models.TextField(blank=True, null=True)
+    fecha_creacion = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"{self.puntuacion} ⭐ - {self.maestro.usuario.username}"
+
+    class Meta:
+        verbose_name = "Reseña"
+        verbose_name_plural = "Reseñas"
+        ordering = ['-fecha_creacion']

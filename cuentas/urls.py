@@ -105,6 +105,11 @@ urlpatterns = [
     path("solicitud/<int:solicitud_id>/qr-pago/", generar_qr_pago, name="generar_qr_pago"),
     path("agenda/", agenda_usuario, name="agenda_usuario"),
 
+    # Marcar clase como completada (para maestro)
+    path('solicitud/<int:solicitud_id>/completar/', views.marcar_completada, name='marcar_completada'),
+
+    # Dejar reseña (para alumno)
+    path('reseñas/<int:solicitud_id>/dejar/', views.dejar_reseña, name='dejar_reseña'),
 
 
     # Agregar esta ruta a urlpatterns
