@@ -14,6 +14,7 @@ from .views import perfil_publico_maestro, perfil_maestro_publico
 from .views import mis_solicitudes_alumno, enviar_solicitud_clase
 from .views import lista_conversaciones, ver_conversacion, iniciar_conversacion
 from .views import proponer_fecha_solicitud, confirmar_fecha_solicitud, generar_qr_pago, agenda_usuario
+from .views import debug_eventos
 
 from django.contrib.auth import views as auth_views
 
@@ -62,7 +63,7 @@ urlpatterns = [
     
 
 
-    path("maestro/agenda/", agenda_maestro, name="agenda_maestro"),
+    #path("maestro/agenda/", agenda_maestro, name="agenda_maestro"),
 
 
 
@@ -114,5 +115,7 @@ urlpatterns = [
     path("agenda/imprimir/<str:vista>/", views.imprimir_agenda, name="imprimir_agenda"),
 
 
+
+    path("debug/eventos/", debug_eventos, name="debug_eventos"),
 
 ]

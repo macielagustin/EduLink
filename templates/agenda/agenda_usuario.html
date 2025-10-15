@@ -11,16 +11,12 @@
             <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#agregarEventoModal">
                 <i class="fas fa-plus me-2"></i>Agregar Evento
             </button>
-            <div class="btn-group">
-                <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
-                    <i class="fas fa-print me-2"></i>Imprimir
-                </button>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="#" onclick="imprimirVista('month')"><i class="fas fa-calendar-alt me-2"></i>Vista Mensual</a></li>
-                    <li><a class="dropdown-item" href="#" onclick="imprimirVista('week')"><i class="fas fa-calendar-week me-2"></i>Vista Semanal</a></li>
-                    <li><a class="dropdown-item" href="#" onclick="imprimirVista('day')"><i class="fas fa-calendar-day me-2"></i>Vista Diaria</a></li>
-                </ul>
-            </div>
+            <a href="{% url 'exportar_calendario_ics' %}" class="btn btn-success me-2">
+                <i class="fas fa-download me-2"></i>Exportar
+            </a>
+            <a href="{% url 'imprimir_agenda' 'month' %}" class="btn btn-outline-primary" target="_blank">
+                <i class="fas fa-print me-2"></i>Imprimir
+            </a>
         </div>
     </div>
 
@@ -75,34 +71,22 @@
                         <strong class="text-success">{{ eventos.count }}</strong>
                     </div>
                     <div class="d-flex justify-content-between">
-                        <span>Próxima clase:</span>
-                        <strong class="text-info">
-                            {% now "d/m" %}
-                        </strong>
+                        <span>Total eventos:</span>
+                        <strong class="text-info">{{ eventos.count|add:clases.count }}</strong>
                     </div>
                 </div>
             </div>
 
-            <!-- Navegación Rápida -->
+            <!-- Debug -->
             <div class="card">
                 <div class="card-header">
-                    <h6 class="mb-0"><i class="fas fa-bolt me-2"></i>Navegación Rápida</h6>
+                    <h6 class="mb-0"><i class="fas fa-bug me-2"></i>Debug</h6>
                 </div>
                 <div class="card-body">
-                    <div class="d-grid gap-2">
-                        <button class="btn btn-outline-primary btn-sm" onclick="calendar.today()">
-                            <i class="fas fa-home me-1"></i>Ir a Hoy
-                        </button>
-                        <button class="btn btn-outline-success btn-sm" onclick="calendar.changeView('dayGridMonth')">
-                            <i class="fas fa-calendar-alt me-1"></i>Vista Mes
-                        </button>
-                        <button class="btn btn-outline-info btn-sm" onclick="calendar.changeView('timeGridWeek')">
-                            <i class="fas fa-calendar-week me-1"></i>Vista Semana
-                        </button>
-                        <button class="btn btn-outline-warning btn-sm" onclick="calendar.changeView('timeGridDay')">
-                            <i class="fas fa-calendar-day me-1"></i>Vista Día
-                        </button>
-                    </div>
+                    <button class="btn btn-outline-warning btn-sm w-100" onclick="debugEventos()">
+                        <i class="fas fa-bug me-1"></i>Ver Eventos en Consola
+                    </button>
+                    <small class="text-muted mt-2 d-block">Usa F12 → Console para ver los detalles</small>
                 </div>
             </div>
         </div>
@@ -163,12 +147,8 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-2"></i>Cancelar
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-2"></i>Guardar Evento
-                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Evento</button>
                 </div>
             </form>
         </div>
@@ -183,9 +163,7 @@
                 <h5 class="modal-title" id="detallesEventoTitulo"></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body" id="detallesEventoCuerpo">
-                <!-- Los detalles se cargarán aquí -->
-            </div>
+            <div class="modal-body" id="detallesEventoCuerpo"></div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
             </div>
@@ -193,7 +171,7 @@
     </div>
 </div>
 
-<!-- Incluir FullCalendar -->
+<!-- FullCalendar -->
 <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/es.min.js'></script>
@@ -215,61 +193,10 @@
     padding: 2px 4px;
 }
 
-.fc-daygrid-event-dot {
-    display: none;
-}
-
-.fc-toolbar {
-    flex-wrap: wrap;
-}
-
-.fc-header-toolbar {
-    margin-bottom: 1.5em !important;
-}
-
-/* Estilos para impresión */
-@media print {
-    .no-print, .navbar, .card-header, .btn, .modal, .fc-toolbar,
-    .fc-header-toolbar, .fc-toolbar-chunk, .col-md-3 {
-        display: none !important;
-    }
-    
-    .col-md-9 {
-        flex: 0 0 100%;
-        max-width: 100%;
-    }
-    
-    .card {
-        border: none !important;
-        box-shadow: none !important;
-    }
-    
-    .card-body {
-        padding: 0 !important;
-    }
-    
-    #calendario {
-        height: auto !important;
-        min-height: auto !important;
-    }
-    
-    .fc-view {
-        height: auto !important;
-    }
-}
-
-/* Estilo para días con eventos */
-.fc-daygrid-day-has-events {
-    cursor: pointer;
-}
-
-.fc-daygrid-day-has-events .fc-daygrid-day-number {
-    font-weight: bold;
-    color: #0d6efd;
+.fc-day-today {
+    background-color: #e7f3ff !important;
 }
 </style>
-
-{{ eventos_calendario|json_script:"eventos-data" }}
 
 <script>
 // Variable global para el calendario
@@ -277,9 +204,11 @@ let calendar;
 
 document.addEventListener('DOMContentLoaded', function() {
     var calendarEl = document.getElementById('calendario');
-    var eventosData = JSON.parse(document.getElementById('eventos-data').textContent);
-
-    console.log('Eventos cargados:', eventosData); // Para debug
+    
+    // Obtener los eventos directamente desde Django - FORMA CORRECTA
+    var eventosData = JSON.parse('{{ eventos_json|escapejs }}');
+    
+    console.log('Eventos cargados:', eventosData);
 
     calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
@@ -287,21 +216,19 @@ document.addEventListener('DOMContentLoaded', function() {
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
-            right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth'
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
         },
         buttonText: {
             today: 'Hoy',
             month: 'Mes',
             week: 'Semana',
-            day: 'Día',
-            list: 'Lista'
+            day: 'Día'
         },
-        events: eventosData,
+        events: eventosData, // Pasar los eventos directamente como array
         navLinks: true,
         dayMaxEvents: true,
         selectable: true,
-        selectMirror: true,
-        weekends: true,
+        editable: false,
         
         // Manejar clic en eventos
         eventClick: function(info) {
@@ -311,71 +238,35 @@ document.addEventListener('DOMContentLoaded', function() {
         // Manejar clic en día
         dateClick: function(info) {
             mostrarEventosDelDia(info.date, info.dateStr);
-        },
-        
-        // Configuración de vistas
-        views: {
-            dayGridMonth: {
-                dayMaxEventRows: 3,
-                dayHeaderFormat: { weekday: 'short' }
-            },
-            timeGridWeek: {
-                slotMinTime: "06:00:00",
-                slotMaxTime: "22:00:00"
-            },
-            timeGridDay: {
-                slotMinTime: "06:00:00",
-                slotMaxTime: "22:00:00"
-            }
-        },
-        
-        // Manejar cambio de vista
-        viewDidMount: function(view) {
-            console.log('Vista cambiada a:', view.type);
-        },
-        
-        // Manejar errores de eventos
-        eventDidMount: function(info) {
-            console.log('Evento montado:', info.event.title);
         }
     });
 
     calendar.render();
+    
+    // Hacer el calendario global para debugging
+    window.calendar = calendar;
 });
 
 // Función para mostrar detalles del evento
 function mostrarDetallesEvento(evento) {
-    const titulo = evento.title;
-    const start = evento.start ? new Date(evento.start).toLocaleString('es-ES') : 'No definida';
-    const end = evento.end ? new Date(evento.end).toLocaleString('es-ES') : 'No definida';
     const extendedProps = evento.extendedProps;
+    let detallesHTML = '';
     
-    let detallesHTML = `
-        <p><strong>Inicio:</strong> ${start}</p>
-        <p><strong>Fin:</strong> ${end}</p>
-    `;
-    
-    if (extendedProps.descripcion) {
-        detallesHTML += `<p><strong>Descripción:</strong> ${extendedProps.descripcion}</p>`;
+    if (extendedProps.tipo === 'clase') {
+        detallesHTML = `
+            <p><strong>Materia:</strong> ${extendedProps.materia}</p>
+            <p><strong>Duración:</strong> ${extendedProps.duracion} minutos</p>
+            <p><strong>Descripción:</strong> ${extendedProps.descripcion}</p>
+            ${extendedProps.monto ? `<p><strong>Monto:</strong> $${extendedProps.monto}</p>` : ''}
+        `;
+    } else {
+        detallesHTML = `
+            <p><strong>Tipo:</strong> ${extendedProps.tipo_display}</p>
+            <p><strong>Descripción:</strong> ${extendedProps.descripcion || 'Sin descripción'}</p>
+        `;
     }
     
-    if (extendedProps.materia) {
-        detallesHTML += `<p><strong>Materia:</strong> ${extendedProps.materia}</p>`;
-    }
-    
-    if (extendedProps.duracion) {
-        detallesHTML += `<p><strong>Duración:</strong> ${extendedProps.duracion} minutos</p>`;
-    }
-    
-    if (extendedProps.monto) {
-        detallesHTML += `<p><strong>Monto:</strong> $${extendedProps.monto}</p>`;
-    }
-    
-    if (extendedProps.tipo_display) {
-        detallesHTML += `<p><strong>Tipo:</strong> ${extendedProps.tipo_display}</p>`;
-    }
-
-    document.getElementById('detallesEventoTitulo').textContent = titulo;
+    document.getElementById('detallesEventoTitulo').textContent = evento.title;
     document.getElementById('detallesEventoCuerpo').innerHTML = detallesHTML;
     
     const modal = new bootstrap.Modal(document.getElementById('detallesEventoModal'));
@@ -389,11 +280,12 @@ function mostrarEventosDelDia(fecha, fechaStr) {
         return eventStart && eventStart.toDateString() === fecha.toDateString();
     });
 
+    let detallesHTML = '';
+    
     if (eventosDelDia.length === 0) {
-        document.getElementById('detallesEventoTitulo').textContent = `Eventos del ${fecha.toLocaleDateString('es-ES')}`;
-        document.getElementById('detallesEventoCuerpo').innerHTML = '<p>No hay eventos programados para este día.</p>';
+        detallesHTML = '<p>No hay eventos programados para este día.</p>';
     } else {
-        let detallesHTML = `<p><strong>${eventosDelDia.length} evento(s) para este día:</strong></p>`;
+        detallesHTML = `<p><strong>${eventosDelDia.length} evento(s) para este día:</strong></p>`;
         
         eventosDelDia.forEach((evento, index) => {
             const hora = evento.start ? evento.start.toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'}) : 'Todo el día';
@@ -405,89 +297,67 @@ function mostrarEventosDelDia(fecha, fechaStr) {
                 </div>
             `;
         });
-
-        document.getElementById('detallesEventoTitulo').textContent = `Eventos del ${fecha.toLocaleDateString('es-ES')}`;
-        document.getElementById('detallesEventoCuerpo').innerHTML = detallesHTML;
     }
+
+    document.getElementById('detallesEventoTitulo').textContent = `Eventos del ${fecha.toLocaleDateString('es-ES')}`;
+    document.getElementById('detallesEventoCuerpo').innerHTML = detallesHTML;
     
     const modal = new bootstrap.Modal(document.getElementById('detallesEventoModal'));
     modal.show();
 }
 
-// Función para imprimir vistas específicas
-function imprimirVista(tipo) {
-    // Guardar la vista actual
-    const vistaActual = calendar.view.type;
-    
-    // Cambiar a la vista deseada
-    switch(tipo) {
-        case 'month':
-            calendar.changeView('dayGridMonth');
-            break;
-        case 'week':
-            calendar.changeView('timeGridWeek');
-            break;
-        case 'day':
-            calendar.changeView('timeGridDay');
-            break;
-    }
-    
-    // Esperar un momento para que se renderice la vista
-    setTimeout(() => {
-        // Ocultar elementos no deseados para impresión
-        document.querySelectorAll('.no-print').forEach(el => {
-            el.classList.add('d-none');
+// Función para debug
+function debugEventos() {
+    if (window.calendar) {
+        const eventos = window.calendar.getEvents();
+        console.log('=== DEBUG EVENTOS ===');
+        console.log('Total eventos en calendario:', eventos.length);
+        eventos.forEach((evento, index) => {
+            console.log(`Evento ${index + 1}:`, {
+                id: evento.id,
+                title: evento.title,
+                start: evento.start,
+                end: evento.end,
+                color: evento.backgroundColor,
+                extendedProps: evento.extendedProps
+            });
         });
         
-        // Imprimir
-        window.print();
-        
-        // Restaurar la vista original después de imprimir
-        setTimeout(() => {
-            calendar.changeView(vistaActual);
-            document.querySelectorAll('.no-print').forEach(el => {
-                el.classList.remove('d-none');
-            });
-        }, 500);
-        
-    }, 500);
+        // Mostrar alerta con resumen
+        if (eventos.length === 0) {
+            alert('No se encontraron eventos en el calendario. Revisa la consola (F12) para más detalles.');
+        } else {
+            alert(`Se encontraron ${eventos.length} eventos en el calendario. Revisa la consola (F12) para ver los detalles.`);
+        }
+    } else {
+        alert('Error: El calendario no está inicializado');
+    }
 }
 
 // Validación del formulario
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('eventoForm');
-    form.addEventListener('submit', function(e) {
-        const titulo = document.getElementById('id_titulo').value;
-        const fechaInicio = document.getElementById('id_fecha_inicio').value;
-        const fechaFin = document.getElementById('id_fecha_fin').value;
-        
-        if (!titulo || !fechaInicio || !fechaFin) {
-            e.preventDefault();
-            alert('Por favor, completa todos los campos obligatorios.');
-            return false;
-        }
-        
-        if (new Date(fechaFin) <= new Date(fechaInicio)) {
-            e.preventDefault();
-            alert('La fecha de fin debe ser posterior a la fecha de inicio.');
-            return false;
-        }
-        
-        return true;
-    });
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const titulo = document.getElementById('id_titulo').value;
+            const fechaInicio = document.getElementById('id_fecha_inicio').value;
+            const fechaFin = document.getElementById('id_fecha_fin').value;
+            
+            if (!titulo || !fechaInicio || !fechaFin) {
+                e.preventDefault();
+                alert('Por favor, completa todos los campos obligatorios.');
+                return false;
+            }
+            
+            if (new Date(fechaFin) <= new Date(fechaInicio)) {
+                e.preventDefault();
+                alert('La fecha de fin debe ser posterior a la fecha de inicio.');
+                return false;
+            }
+            
+            return true;
+        });
+    }
 });
-
-// Función para recargar eventos (útil para debug)
-function recargarEventos() {
-    calendar.refetchEvents();
-    console.log('Eventos recargados');
-}
 </script>
-
-<!-- Botón de debug (quitar en producción) -->
-<div class="mt-3 no-print">
-    <button class="btn btn-sm btn-outline-secondary" onclick="recargarEventos()">
-        <i class="fas fa-sync me-1"></i>Recargar Eventos (Debug)
-    </button>
-</div>
 {% endblock %}

@@ -1500,29 +1500,34 @@ def generar_qr_pago(request, solicitud_id):
     })
 
 # Vistas para disponibilidad/agenda
-# En views.py
 @login_required
 def agenda_usuario(request):
     # Obtener eventos del usuario
     eventos = DisponibilidadUsuario.objects.filter(usuario=request.user).order_by('fecha_inicio')
     
     # Obtener clases para el calendario
-    clases = SolicitudClase.objects.filter(
-        Q(alumno__usuario=request.user) | Q(maestro__usuario=request.user),
-        estado='aceptada'
-    )
+    if request.user.rol == 'ALUMNO':
+        clases = SolicitudClase.objects.filter(
+            alumno__usuario=request.user,
+            estado='aceptada'
+        )
+    else:  # MAESTRO
+        clases = SolicitudClase.objects.filter(
+            maestro__usuario=request.user,
+            estado='aceptada'
+        )
 
-    # Convertir eventos a formato calendario
+    # Convertir eventos a formato calendario - FORMATO CORRECTO
     eventos_calendario = []
     
     # Agregar eventos de disponibilidad
     for evento in eventos:
         eventos_calendario.append({
             'id': f"disponibilidad_{evento.id}",
-            'title': f"📅 {evento.titulo}",
+            'title': evento.titulo,
             'start': evento.fecha_inicio.isoformat(),
             'end': evento.fecha_fin.isoformat(),
-            'color': '#28a745' if evento.tipo == 'disponible' else '#dc3545' if evento.tipo == 'ocupacion' else '#007bff',
+            'color': get_event_color(evento.tipo),
             'textColor': 'white',
             'extendedProps': {
                 'tipo': 'evento_personal',
@@ -1534,16 +1539,15 @@ def agenda_usuario(request):
     
     # Agregar clases al calendario
     for clase in clases:
-        # Usar la fecha confirmada si existe, sino la propuesta
         fecha_clase = clase.fecha_clase_confirmada or clase.fecha_clase_propuesta
         if not fecha_clase:
             continue
 
         if request.user.rol == 'ALUMNO':
-            titulo = f'🎓 Clase: {clase.materia.nombre}'
+            titulo = f'Clase: {clase.materia.nombre}'
             descripcion = f"Profesor: {clase.maestro.usuario.get_full_name()}"
         else:
-            titulo = f'👨‍🏫 Clase: {clase.materia.nombre}'
+            titulo = f'Clase: {clase.materia.nombre}'
             descripcion = f"Alumno: {clase.alumno.usuario.get_full_name()}"
         
         fecha_fin = fecha_clase + timedelta(minutes=clase.duracion_minutos)
@@ -1565,6 +1569,9 @@ def agenda_usuario(request):
             }
         })
 
+    # Pasar los eventos como lista Python, no como JSON
+    eventos_json = json.dumps(eventos_calendario)
+
     # Manejar el formulario de eventos
     if request.method == 'POST':
         form = DisponibilidadForm(request.POST)
@@ -1573,12 +1580,12 @@ def agenda_usuario(request):
                 evento = form.save(commit=False)
                 evento.usuario = request.user
                 evento.save()
-                messages.success(request, f'✅ Evento "{evento.titulo}" agregado correctamente a tu agenda.')
+                messages.success(request, f'Evento "{evento.titulo}" agregado correctamente.')
                 return redirect('agenda_usuario')
             except Exception as e:
-                messages.error(request, f'❌ Error al guardar el evento: {str(e)}')
+                messages.error(request, f'Error al guardar el evento: {str(e)}')
         else:
-            messages.error(request, '❌ Por favor, corrige los errores en el formulario.')
+            messages.error(request, 'Por favor, corrige los errores en el formulario.')
     else:
         form = DisponibilidadForm()
 
@@ -1586,11 +1593,20 @@ def agenda_usuario(request):
         'form': form,
         'eventos': eventos,
         'clases': clases,
-        'eventos_calendario': json.dumps(eventos_calendario),
+        'eventos_json': eventos_json,  # Cambiado el nombre
         'rol': request.user.rol,
     }
     
     return render(request, 'agenda/agenda_usuario.html', context)
+
+def get_event_color(tipo_evento):
+    """Asigna colores según el tipo de evento"""
+    colores = {
+        'clase': '#28a745',      # Verde
+        'ocupacion': '#dc3545',  # Rojo
+        'disponible': '#007bff', # Azul
+    }
+    return colores.get(tipo_evento, '#6c757d')
 
 
 
@@ -1668,63 +1684,62 @@ def exportar_calendario_ics(request):
 
 
 
-    # En views.py, agregar esta vista
 @login_required
 def imprimir_agenda(request, vista='month'):
-    """Vista específica para imprimir la agenda"""
+    """Vista simplificada para imprimir la agenda"""
     
     # Obtener eventos del usuario
     eventos = DisponibilidadUsuario.objects.filter(usuario=request.user).order_by('fecha_inicio')
     
-    # Obtener clases para el calendario
-    clases = SolicitudClase.objects.filter(
-        Q(alumno__usuario=request.user) | Q(maestro__usuario=request.user),
-        estado='aceptada'
-    )
-
-    # Agrupar eventos por fecha para la impresión
-    eventos_por_fecha = {}
-    
-    for evento in eventos:
-        fecha_key = evento.fecha_inicio.date().isoformat()
-        if fecha_key not in eventos_por_fecha:
-            eventos_por_fecha[fecha_key] = []
-        eventos_por_fecha[fecha_key].append({
-            'tipo': 'evento',
-            'titulo': evento.titulo,
-            'inicio': evento.fecha_inicio,
-            'fin': evento.fecha_fin,
-            'descripcion': evento.descripcion,
-            'tipo_display': evento.get_tipo_display()
-        })
-    
-    for clase in clases:
-        fecha_clase = clase.fecha_clase_confirmada or clase.fecha_clase_propuesta
-        if not fecha_clase:
-            continue
-            
-        fecha_key = fecha_clase.date().isoformat()
-        if fecha_key not in eventos_por_fecha:
-            eventos_por_fecha[fecha_key] = []
-            
-        eventos_por_fecha[fecha_key].append({
-            'tipo': 'clase',
-            'titulo': f"Clase: {clase.materia.nombre}",
-            'inicio': fecha_clase,
-            'fin': fecha_clase + timedelta(minutes=clase.duracion_minutos),
-            'descripcion': f"{clase.materia.nombre} - {clase.duracion_minutos}min",
-            'monto': clase.monto_acordado,
-            'persona': clase.alumno.usuario.get_full_name() if request.user.rol == 'MAESTRO' else clase.maestro.usuario.get_full_name()
-        })
+    # Obtener clases
+    if request.user.rol == 'ALUMNO':
+        clases = SolicitudClase.objects.filter(
+            alumno__usuario=request.user,
+            estado='aceptada'
+        )
+    else:
+        clases = SolicitudClase.objects.filter(
+            maestro__usuario=request.user,
+            estado='aceptada'
+        )
 
     context = {
-        'eventos_por_fecha': dict(sorted(eventos_por_fecha.items())),
-        'vista': vista,
+        'eventos': eventos,
+        'clases': clases,
         'usuario': request.user,
-        'fecha_impresion': timezone.now().date()
+        'fecha_impresion': timezone.now().date(),
+        'vista': vista
     }
     
     return render(request, 'agenda/imprimir_agenda.html', context)
 
+
+
+
+# En views.py - SOLO PARA DEBUG
+@login_required
+def debug_eventos(request):
+    eventos = DisponibilidadUsuario.objects.filter(usuario=request.user)
+    clases = SolicitudClase.objects.filter(
+        Q(alumno__usuario=request.user) | Q(maestro__usuario=request.user),
+        estado='aceptada'
+    )
+    
+    print("=== DEBUG EVENTOS ===")
+    print(f"Eventos personales: {eventos.count()}")
+    print(f"Clases: {clases.count()}")
+    
+    for evento in eventos:
+        print(f"Evento: {evento.titulo} - {evento.fecha_inicio} a {evento.fecha_fin}")
+    
+    for clase in clases:
+        print(f"Clase: {clase.materia.nombre} - {clase.fecha_clase_propuesta}")
+    
+    return JsonResponse({
+        'eventos_count': eventos.count(),
+        'clases_count': clases.count(),
+        'eventos': list(eventos.values('titulo', 'fecha_inicio', 'fecha_fin')),
+        'clases': list(clases.values('materia__nombre', 'fecha_clase_propuesta'))
+    })
 
 
