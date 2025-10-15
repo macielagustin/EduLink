@@ -5,7 +5,7 @@ from django.contrib.auth.views import LoginView
 from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
 from django.http import JsonResponse
-from .forms import RegistroPersonaForm, RegistroAlumnoForm, RegistroMaestroForm, LoginForm, UsuarioForm, AlumnoForm, ConfirmarFechaForm, DisponibilidadForm
+from .forms import RegistroPersonaForm, RegistroAlumnoForm, RegistroMaestroForm, ReseñaForm, LoginForm, UsuarioForm, AlumnoForm, ConfirmarFechaForm, DisponibilidadForm
 from .models import Departamento, Municipio, Localidad, Provincia, Maestro, Alumno, Usuario, DisponibilidadUsuario
 from catalogo.models import Materia
 import math
@@ -23,7 +23,6 @@ from .forms import SolicitudClaseForm, MensajeForm, ProponerFechaForm
 from django.http import JsonResponse
 from django.db.models import Count, Avg, Q, Sum
 from .models import Notificacion, Resena
-from .forms import ResenaForm
 import json
 from datetime import datetime, timedelta
 
@@ -719,9 +718,9 @@ def dashboard_alumno(request):
     # Próximas clases (las 5 más cercanas, aceptadas)
     proximas_clases = SolicitudClase.objects.filter(
         alumno=alumno,
-        estado="aceptada",
-        fecha_clase_propuesta__gte=ahora
+        estado__in=["aceptada", "completada"]
     ).order_by("fecha_clase_propuesta")[:5]
+
 
     # Conversaciones y mensajes recientes
     conversaciones = Conversacion.objects.filter(alumno=alumno).prefetch_related("mensajes")
@@ -911,9 +910,10 @@ def dashboard_maestro(request):
     # Próximas clases (5 más cercanas)
     proximas_clases = SolicitudClase.objects.filter(
         maestro=perfil_maestro,
-        estado="aceptada",
-        fecha_clase_propuesta__gte=ahora
+        estado__in=["aceptada", "completada"],
+        #fecha_clase_propuesta__gte=ahora
     ).order_by('fecha_clase_propuesta')[:5]
+
 
     # Mensajes recientes
     conversaciones = Conversacion.objects.filter(maestro=perfil_maestro).prefetch_related("mensajes")
@@ -1742,4 +1742,51 @@ def debug_eventos(request):
         'clases': list(clases.values('materia__nombre', 'fecha_clase_propuesta'))
     })
 
+############## FUNCIONES DE RESEÑA ##########################
 
+<<<<<<< HEAD
+=======
+@login_required
+def marcar_completada(request, solicitud_id):
+    solicitud = get_object_or_404(SolicitudClase, id=solicitud_id, maestro__usuario=request.user)
+    if solicitud.estado == 'aceptada':
+        solicitud.estado = 'completada'
+        solicitud.save()
+        messages.success(request, "Clase marcada como completada ✅")
+    else:
+        messages.warning(request, "No se puede marcar esta clase como completada.")
+    return redirect('solicitudes_para_maestro')
+
+# ⭐ DEJAR RESEÑA (Alumno)
+@login_required
+def dejar_reseña(request, solicitud_id):
+    solicitud = get_object_or_404(
+        SolicitudClase,
+        id=solicitud_id,
+        alumno__usuario=request.user,
+        estado='completada'
+    )
+
+    # Evitar reseñas duplicadas
+    if hasattr(solicitud, 'reseña'):
+        messages.info(request, "Ya enviaste una reseña para esta clase.")
+        return redirect('dashboard_alumno')
+
+    if request.method == 'POST':
+        form = ReseñaForm(request.POST)
+        if form.is_valid():
+            reseña = form.save(commit=False)
+            reseña.solicitud = solicitud
+            reseña.alumno = solicitud.alumno
+            reseña.maestro = solicitud.maestro
+            reseña.save()
+            messages.success(request, "¡Gracias por tu reseña!")
+            return redirect('dashboard_alumno')
+    else:
+        form = ReseñaForm()
+
+    return render(request, 'reseñas/dejar_reseña.html', {
+        'form': form,
+        'solicitud': solicitud,
+    })
+>>>>>>> 5d3b51b (Reseñas)

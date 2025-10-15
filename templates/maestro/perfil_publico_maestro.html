@@ -20,6 +20,7 @@
         </div>
     </div>
 
+<<<<<<< HEAD
     <!-- Vista previa del perfil público -->
     <div class="card border-info">
         <div class="card-header bg-info text-white">
@@ -56,8 +57,124 @@
                 </div>
                 
                 <div class="col-md-8">
+=======
+    <!-- Tarjeta principal del perfil -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Foto de perfil y info básica -->
+                        <!-- En la sección de foto de perfil, agrega: -->
+                        <div class="col-md-4 text-center">
+                            {% if usuario.foto_perfil %}
+                            <img src="{{ usuario.foto_perfil.url }}" class="rounded-circle mb-3" width="150"
+                                height="150" alt="Foto de perfil">
+                            {% else %}
+                            <img src="{% static 'img/default-avatar.png' %}" class="rounded-circle mb-3" width="150"
+                                height="150" alt="Avatar por defecto">
+                            {% endif %}
+
+                            <h4 class="fw-bold">{{ usuario.get_full_name|default:usuario.username }}</h4>
+                            <p class="text-muted">🎓 Maestro certificado</p>
+
+                            {% if maestro.precio_hora %}
+                            <div class="bg-light rounded p-2 mb-3">
+                                <span class="fw-bold text-primary">${{ maestro.precio_hora }}</span> / hora
+                            </div>
+                            {% endif %}
+
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-primary btn-sm">
+                                    📤 Compartir perfil
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Información detallada -->
+                        <div class="col-md-8">
+                            <!-- Contacto -->
+                            <div class="mb-4">
+                                <h5 class="fw-bold">📞 Información de contacto</h5>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <small class="text-muted">Email</small>
+                                        <p class="mb-2">{{ usuario.email }}</p>
+                                    </div>
+                                    {% if usuario.telefono %}
+                                    <div class="col-6">
+                                        <small class="text-muted">Teléfono</small>
+                                        <p class="mb-2">{{ usuario.telefono }}</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Ubicación -->
+                            <!-- En la sección de ubicación, agrega el mapa: -->
+                            <div class="mb-4">
+                                <h5 class="fw-bold">📍 Ubicación</h5>
+                                {% if usuario.latitud and usuario.longitud %}
+                                <div id="map-perfil" style="height: 200px; border-radius: 8px; margin-bottom: 10px;">
+                                </div>
+                                {% endif %}
+                                <p class="mb-1">
+                                    {% if usuario.localidad %}{{ usuario.localidad.nombre }}, {% endif %}
+                                    {% if usuario.municipio %}{{ usuario.municipio.nombre }}, {% endif %}
+                                    {% if usuario.provincia %}{{ usuario.provincia.nombre }}{% endif %}
+                                </p>
+                                {% if usuario.calle %}
+                                <p class="text-muted small">🏠 {{ usuario.calle }}</p>
+                                {% endif %}
+                            </div>
+
+                            <!-- Modalidad -->
+                            <div class="mb-4">
+                                <h5 class="fw-bold">🎯 Modalidad de enseñanza</h5>
+                                <span
+                                    class="badge {% if maestro.modalidad == 'Online' %}bg-success{% elif maestro.modalidad == 'Presencial' %}bg-primary{% else %}bg-warning{% endif %}">
+                                    {{ maestro.modalidad }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Descripción/Bio -->
+                    {% if usuario.bio or maestro.descripcion %}
+                    <div class="mt-4">
+                        <h5 class="fw-bold">📝 Sobre mí</h5>
+                        <p class="mb-0">{{ maestro.descripcion|default:usuario.bio }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Materias e idiomas -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">📚 Materias que enseño</h6>
+                        </div>
+                        <div class="card-body">
+                            {% if maestro.materias.all %}
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for materia in maestro.materias.all %}
+                                <span class="badge bg-primary">{{ materia.nombre }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <p class="text-muted mb-0">No hay materias especificadas</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+>>>>>>> 5d3b51b (Reseñas)
                     <div class="card">
                         <div class="card-body">
+<<<<<<< HEAD
                             <div class="d-flex justify-content-between align-items-start mb-3">
                                 <div>
                                     <h5 class="card-title fw-bold">Información del Profesor</h5>
@@ -82,6 +199,16 @@
                                     Añade una descripción para que los alumnos conozcan más sobre ti.
                                     <a href="{% url 'editar_perfil_maestro' %}">Editar perfil</a>
                                 </p>
+=======
+                            {% if maestro.idiomas.all %}
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for idioma in maestro.idiomas.all %}
+                                <span class="badge bg-success">{{ idioma.nombre }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <p class="text-muted mb-0">No hay idiomas especificados</p>
+>>>>>>> 5d3b51b (Reseñas)
                             {% endif %}
                         </div>
                     </div>
@@ -139,6 +266,35 @@
                     </div>
                 </div>
             </div>
+            <!-- 💬 Reseñas de alumnos -->
+            <div class="card mt-4">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="fw-bold mb-0">💬 Opiniones de alumnos</h5>
+                </div>
+                <div class="card-body">
+                    {% if maestro.reseñas.all %}
+                    {% for r in maestro.reseñas.all %}
+                    <div class="border-bottom pb-3 mb-3">
+                        <div class="mb-1">
+                            {% for i in "12345" %}
+                            {% if forloop.counter <= r.puntuacion %} <i class="fa fa-star text-warning"></i>
+                                {% else %}
+                                <i class="fa fa-star text-secondary"></i>
+                                {% endif %}
+                                {% endfor %}
+                        </div>
+                        <p class="mb-1">{{ r.comentario|default:"(Sin comentario)" }}</p>
+                        <small class="text-muted">Publicado el {{ r.fecha_creacion|date:"d/m/Y" }}</small>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">Todavía no hay reseñas para este maestro.</p>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-muted">Todavía no hay reseñas para este maestro.</p>
+                    {% endif %}
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -152,6 +308,7 @@
                     </h6>
                 </div>
                 <div class="card-body">
+<<<<<<< HEAD
                     <div class="row">
                         <div class="col-md-6">
                             <ul class="list-unstyled">
@@ -203,10 +360,98 @@
                                 </li>
                             </ul>
                         </div>
+=======
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Clases impartidas:</span>
+                        <strong>0</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Alumnos activos:</span>
+                        <strong>0</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>Valoración:</span>
+                        {% if maestro.promedio_reseñas %}
+                        <div class="text-end">
+                            <div>
+                                {% for i in "12345" %}
+                                {% if forloop.counter <= maestro.promedio_reseñas|floatformat:0 %} <i
+                                    class="fa fa-star text-warning"></i>
+                                    {% else %}
+                                    <i class="fa fa-star text-secondary"></i>
+                                    {% endif %}
+                                    {% endfor %}
+                            </div>
+                            <small class="text-muted">
+                                {{ maestro.promedio_reseñas }} / 5 ({{ maestro.total_reseñas }} reseñas)
+                            </small>
+                        </div>
+                        {% else %}
+                        <strong class="text-muted">Sin reseñas</strong>
+                        {% endif %}
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Disponibilidad -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">⏰ Disponibilidad</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted">Horarios en los que estás disponible para clases:</p>
+                    <ul class="list-unstyled small">
+                        <li>✅ Lunes a Viernes: 14:00 - 18:00</li>
+                        <li>❌ Sábados y Domingos: No disponible</li>
+                    </ul>
+                    <button class="btn btn-outline-primary btn-sm w-100">
+                        ⚙️ Configurar horarios
+                    </button>
+                </div>
+            </div>
+
+            <!-- Acciones rápidas -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">🚀 Acciones rápidas</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'editar_perfil_maestro' %}" class="btn btn-outline-primary btn-sm">
+                            ✏️ Editar información
+                        </a>
+                        <button class="btn btn-outline-secondary btn-sm">
+                            📤 Compartir perfil
+                        </button>
+                        <button class="btn btn-outline-info btn-sm">
+                            📊 Ver estadísticas
+                        </button>
+>>>>>>> 5d3b51b (Reseñas)
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+<<<<<<< HEAD
+=======
+
+<style>
+    .card {
+        border: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1rem;
+    }
+
+    .badge {
+        font-size: 0.8em;
+        padding: 0.5em 0.7em;
+    }
+
+    .btn-sm {
+        font-size: 0.85rem;
+    }
+</style>
+>>>>>>> 5d3b51b (Reseñas)
 {% endblock %}

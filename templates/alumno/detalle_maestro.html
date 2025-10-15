@@ -26,6 +26,25 @@
                         </div>
                     </div>
 
+                    <!-- ⭐ Calificación promedio -->
+                    {% if maestro.promedio_reseñas %}
+                    <div class="mb-2">
+                        {% for i in "12345" %}
+                        {% if forloop.counter <= maestro.promedio_reseñas|floatformat:0 %} <i
+                            class="fa fa-star text-warning"></i>
+                            {% else %}
+                            <i class="fa fa-star text-secondary"></i>
+                            {% endif %}
+                            {% endfor %}
+                            <small class="text-muted">
+                                {{ maestro.promedio_reseñas }} / 5 ({{ maestro.total_reseñas }} reseñas)
+                            </small>
+                    </div>
+                    {% else %}
+                    <p class="text-muted small mb-2">Sin reseñas todavía</p>
+                    {% endif %}
+
+
                     {% if maestro.descripcion %}
                     <div class="mb-4">
                         <h5>Sobre mí</h5>
@@ -52,6 +71,35 @@
                         </div>
                     </div>
                 </div>
+                <!-- 💬 Opiniones de alumnos -->
+                <div class="card mt-4">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h5 class="fw-bold mb-0">💬 Opiniones de alumnos</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if maestro.reseñas.all %}
+                        {% for r in maestro.reseñas.all %}
+                        <div class="border-bottom pb-3 mb-3">
+                            <div class="mb-1">
+                                {% for i in "12345" %}
+                                {% if forloop.counter <= r.puntuacion %} <i class="fa fa-star text-warning"></i>
+                                    {% else %}
+                                    <i class="fa fa-star text-secondary"></i>
+                                    {% endif %}
+                                    {% endfor %}
+                            </div>
+                            <p class="mb-1">{{ r.comentario|default:"(Sin comentario)" }}</p>
+                            <small class="text-muted">Publicado el {{ r.fecha_creacion|date:"d/m/Y" }}</small>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted">Todavía no hay reseñas para este maestro.</p>
+                        {% endfor %}
+                        {% else %}
+                        <p class="text-muted">Todavía no hay reseñas para este maestro.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -83,7 +131,7 @@
             </div>
         </div>
 
-        
+
 
 
 
