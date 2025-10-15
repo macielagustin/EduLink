@@ -1,30 +1,220 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}{{ usuario_maestro.get_full_name }} | Maestro en EduLink{% endblock %}
+{% block title %}{{ usuario_maestro.get_full_name|default:usuario_maestro.username }} | Maestro en EduLink{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <!-- Header público -->
-    <div class="hero-wrap p-4 mb-4 bg-primary text-white rounded">
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <h2 class="fw-bold mb-1">{{ usuario_maestro.get_full_name|default:usuario_maestro.username }}</h2>
-                <p class="mb-0">🎓 Maestro certificado en EduLink</p>
-            </div>
-            {% if user.is_authenticated and user.rol == 'ALUMNO' %}
-            <a href="#" class="btn btn-light">
-                📨 Solicitar clase
-            </a>
+<div class="container py-4">
+    <!-- Header del perfil -->
+    <div class="row mb-4">
+        <div class="col-md-4 text-center">
+            {% if usuario_maestro.foto_perfil %}
+                <img src="{{ usuario_maestro.foto_perfil.url }}" class="rounded-circle mb-3" 
+                     width="150" height="150" alt="Foto de perfil" style="object-fit: cover;">
+            {% else %}
+                <div class="bg-light rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" 
+                     style="width: 150px; height: 150px;">
+                    <i class="fas fa-user-graduate fa-3x text-muted"></i>
+                </div>
             {% endif %}
+            
+            <h4 class="fw-bold">{{ usuario_maestro.get_full_name|default:usuario_maestro.username }}</h4>
+            
+            {% if promedio_rating %}
+            <div class="rating-display mb-2">
+                <span class="h4 text-warning">⭐ {{ promedio_rating|floatformat:1 }}</span>
+                <small class="text-muted">({{ total_resenas }} reseña{{ total_resenas|pluralize }})</small>
+            </div>
+            {% endif %}
+            
+            <div class="bg-light rounded p-2 mb-3">
+                <span class="fw-bold text-primary">${{ maestro.precio_hora }}</span> / hora
+            </div>
+
+            <!-- Botones de acción -->
+            <div class="d-grid gap-2">
+                {% if user.is_authenticated and user.rol == 'ALUMNO' %}
+                    <a href="{% url 'enviar_solicitud_clase' maestro.id %}" class="btn btn-primary">
+                        <i class="fas fa-calendar-plus me-2"></i>Solicitar Clase
+                    </a>
+                    <a href="{% url 'iniciar_conversacion' usuario_maestro.id %}" class="btn btn-outline-primary">
+                        <i class="fas fa-comment me-2"></i>Enviar Mensaje
+                    </a>
+                {% elif not user.is_authenticated %}
+                    <div class="alert alert-info py-2">
+                        <small>
+                            <i class="fas fa-info-circle me-1"></i>
+                            Regístrate para contactar a este profesor
+                        </small>
+                    </div>
+                    <a href="{% url 'registro_persona' %}" class="btn btn-primary">Registrarme</a>
+                    <a href="{% url 'login' %}" class="btn btn-outline-primary">Ya tengo cuenta</a>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <!-- Información básica siempre visible -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h5 class="card-title fw-bold">Información del Profesor</h5>
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                <span class="badge bg-info">{{ maestro.modalidad }}</span>
+                                {% if usuario_maestro.verificado %}
+                                <span class="badge bg-primary">
+                                    <i class="fas fa-check-circle me-1"></i>Verificado
+                                </span>
+                                {% endif %}
+                                <span class="badge bg-secondary">{{ clases_impartidas }} clase{{ clases_impartidas|pluralize }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Descripción (truncada para no registrados) -->
+                    {% if maestro.descripcion %}
+                        <p class="card-text">
+                            {% if mostrar_info_completa %}
+                                {{ maestro.descripcion }}
+                            {% else %}
+                                {{ maestro.descripcion|truncatewords:30 }}
+                                <small class="text-muted d-block mt-1">
+                                    <i class="fas fa-lock me-1"></i>Regístrate para ver la descripción completa
+                                </small>
+                            {% endif %}
+                        </p>
+                    {% else %}
+                        <p class="card-text text-muted">Este profesor aún no ha agregado una descripción.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Materias e idiomas -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">📚 Materias que enseña</h6>
+                        </div>
+                        <div class="card-body">
+                            {% if maestro.materias.all %}
+                                <div class="d-flex flex-wrap gap-2">
+                                    {% for materia in maestro.materias.all %}
+                                        <span class="badge bg-primary">{{ materia.nombre }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="text-muted mb-0">No hay materias especificadas</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">🌍 Idiomas</h6>
+                        </div>
+                        <div class="card-body">
+                            {% if maestro.idiomas.all %}
+                                <div class="d-flex flex-wrap gap-2">
+                                    {% for idioma in maestro.idiomas.all %}
+                                        <span class="badge bg-success">{{ idioma.nombre }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="text-muted mb-0">No hay idiomas especificados</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Contenido del perfil público (similar al anterior pero sin botones de edición) -->
-    <div class="row">
-        <div class="col-lg-8">
-            <!-- Mismo contenido que perfil_publico_maestro.html pero sin acciones de edición -->
-            <!-- Solo cambia los botones por acciones para alumnos -->
+    <!-- Información completa (solo para usuarios registrados) -->
+    {% if not mostrar_info_completa %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-warning">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-lock fa-3x text-warning mb-3"></i>
+                    <h4 class="text-warning">Información Completa Bloqueada</h4>
+                    <p class="text-muted mb-4">
+                        Regístrate como alumno para ver la información completa de este profesor, 
+                        incluyendo su experiencia detallada, curriculum vitae y reseñas de otros estudiantes.
+                    </p>
+                    <div class="d-flex justify-content-center gap-3 flex-wrap">
+                        <a href="{% url 'registro_persona' %}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-user-plus me-2"></i>Registrarme como Alumno
+                        </a>
+                        <a href="{% url 'login' %}" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-sign-in-alt me-2"></i>Ya tengo cuenta
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+    {% else %}
+        <!-- Información adicional para usuarios registrados -->
+        {% if maestro.cv %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">📄 Curriculum Vitae</h5>
+                        <a href="{{ maestro.cv.url }}" class="btn btn-outline-primary" target="_blank">
+                            <i class="fas fa-download me-2"></i>Descargar CV
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Reseñas recientes -->
+        {% if resenas_recientes %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">⭐ Reseñas Recientes</h5>
+                        {% for resena in resenas_recientes %}
+                        <div class="border-bottom pb-3 mb-3">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <strong>{{ resena.autor.get_full_name|default:resena.autor.username }}</strong>
+                                <div class="text-warning">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= resena.calificacion %}⭐{% else %}☆{% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <p class="mb-0">{{ resena.comentario }}</p>
+                            <small class="text-muted">{{ resena.fecha_creacion|date:"d/m/Y" }}</small>
+                        </div>
+                        {% endfor %}
+                        
+                        {% if total_resenas > 2 %}
+                        <div class="text-center">
+                            <a href="{% url 'ver_resenas_usuario' usuario_maestro.id %}" class="btn btn-outline-primary">
+                                Ver todas las reseñas ({{ total_resenas }})
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    {% endif %}
 </div>
+
+<style>
+.card {
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 1rem;
+}
+</style>
 {% endblock %}

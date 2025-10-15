@@ -106,4 +106,13 @@ urlpatterns = [
 
 
 
+    # Agregar esta ruta a urlpatterns
+    path("agenda/exportar-ics/", views.exportar_calendario_ics, name="exportar_calendario_ics"),
+
+
+
+    path("agenda/imprimir/<str:vista>/", views.imprimir_agenda, name="imprimir_agenda"),
+
+
+
 ]

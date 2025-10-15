@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agenda EduLink - {{ usuario.get_full_name }}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #0d6efd;
+            padding-bottom: 10px;
+        }
+        .fecha-section {
+            margin-bottom: 25px;
+            page-break-inside: avoid;
+        }
+        .fecha-titulo {
+            background-color: #f8f9fa;
+            padding: 8px 12px;
+            border-left: 4px solid #0d6efd;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .evento-item {
+            margin-bottom: 8px;
+            padding: 8px;
+            border-radius: 4px;
+            border-left: 3px solid #0d6efd;
+        }
+        .evento-clase {
+            border-left-color: #ffc107;
+            background-color: #fff9e6;
+        }
+        .evento-disponible {
+            border-left-color: #28a745;
+            background-color: #f0fff4;
+        }
+        .evento-ocupado {
+            border-left-color: #dc3545;
+            background-color: #fff0f0;
+        }
+        .evento-hora {
+            font-weight: bold;
+            color: #666;
+        }
+        .evento-titulo {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        .evento-descripcion {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .no-eventos {
+            color: #999;
+            font-style: italic;
+            text-align: center;
+            padding: 20px;
+        }
+        @media print {
+            body { margin: 0; }
+            .header { margin-bottom: 20px; }
+            .fecha-section { margin-bottom: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📅 Agenda EduLink</h1>
+        <p><strong>Usuario:</strong> {{ usuario.get_full_name }}</p>
+        <p><strong>Fecha de impresión:</strong> {{ fecha_impresion|date:"d/m/Y" }}</p>
+        <p><strong>Vista:</strong> 
+            {% if vista == 'month' %}Mensual
+            {% elif vista == 'week' %}Semanal
+            {% else %}Diaria{% endif %}
+        </p>
+    </div>
+
+    {% if eventos_por_fecha %}
+        {% for fecha_str, eventos in eventos_por_fecha.items %}
+        <div class="fecha-section">
+            <div class="fecha-titulo">
+                📅 {{ fecha_str|date:"l, d \\d\\e F \\d\\e Y"|title }}
+            </div>
+            
+            {% for evento in eventos %}
+            <div class="evento-item 
+                {% if evento.tipo == 'clase' %}evento-clase
+                {% elif evento.tipo_display == 'Disponible' %}evento-disponible
+                {% elif evento.tipo_display == 'Ocupación Personal' %}evento-ocupado
+                {% endif %}">
+                
+                <div class="evento-hora">
+                    ⏰ {{ evento.inicio|date:"H:i" }} - {{ evento.fin|date:"H:i" }}
+                </div>
+                <div class="evento-titulo">
+                    {{ evento.titulo }}
+                </div>
+                {% if evento.descripcion %}
+                <div class="evento-descripcion">
+                    {{ evento.descripcion }}
+                </div>
+                {% endif %}
+                {% if evento.persona %}
+                <div class="evento-descripcion">
+                    👤 {{ evento.persona }}
+                </div>
+                {% endif %}
+                {% if evento.monto %}
+                <div class="evento-descripcion">
+                    💰 ${{ evento.monto }}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="no-eventos">
+            No hay eventos programados para el período seleccionado.
+        </div>
+    {% endif %}
+
+    <div style="margin-top: 40px; text-align: center; color: #666; font-size: 0.8em;">
+        <p>Generado automáticamente por EduLink - {{ fecha_impresion|date:"d/m/Y H:i" }}</p>
+    </div>
+</body>
+</html>

@@ -1101,16 +1101,59 @@ def perfil_publico_maestro(request):
     
     return render(request, "maestro/perfil_publico_maestro.html", {
         "maestro": perfil_maestro,
-        "usuario": request.user
+        "usuario": request.user,
+        "usuario_maestro": request.user,  # ✅ agregado
     })
+
 
 # También necesitamos una vista pública para que otros usuarios vean el perfil
 def perfil_maestro_publico(request, maestro_id):
     maestro = get_object_or_404(Maestro, id=maestro_id)
-    return render(request, "maestro/perfil_maestro_publico.html", {
-        "maestro": maestro,
-        "usuario_maestro": maestro.usuario
-    })
+    usuario_maestro = maestro.usuario
+    
+    # Calcular estadísticas reales
+    clases_impartidas = SolicitudClase.objects.filter(
+        maestro=maestro, 
+        estado__in=['aceptada', 'completada']
+    ).count()
+    
+    # Contar alumnos únicos
+    alumnos_unicos = SolicitudClase.objects.filter(
+        maestro=maestro, 
+        estado__in=['aceptada', 'completada']
+    ).values('alumno').distinct().count()
+    
+    # Calcular rating promedio
+    resenas = Resena.objects.filter(destinatario=usuario_maestro)
+    promedio_rating = resenas.aggregate(Avg('calificacion'))['calificacion__avg']
+    total_resenas = resenas.count()
+    
+    # Determinar qué información mostrar
+    es_propio_perfil = request.user.is_authenticated and request.user == usuario_maestro
+    es_alumno_autenticado = request.user.is_authenticated and request.user.rol == 'ALUMNO'
+    
+    # Mostrar perfil completo solo para el propio maestro o alumnos autenticados
+    mostrar_info_completa = es_propio_perfil or es_alumno_autenticado
+    
+    # Si es el propio perfil, mostrar vista de preview
+    if es_propio_perfil:
+        template_name = "maestro/perfil_publico_maestro.html"
+    else:
+        template_name = "maestro/perfil_maestro_publico.html"
+    
+    context = {
+        'maestro': maestro,
+        'usuario_maestro': usuario_maestro,
+        'clases_impartidas': clases_impartidas,
+        'alumnos_unicos': alumnos_unicos,
+        'promedio_rating': promedio_rating,
+        'total_resenas': total_resenas,
+        'mostrar_info_completa': mostrar_info_completa,
+        'es_propio_perfil': es_propio_perfil,
+        'resenas_recientes': resenas.order_by('-fecha_creacion')[:2] if mostrar_info_completa else [],
+    }
+    
+    return render(request, template_name, context)
 
 
 
@@ -1457,11 +1500,72 @@ def generar_qr_pago(request, solicitud_id):
     })
 
 # Vistas para disponibilidad/agenda
+# En views.py
 @login_required
 def agenda_usuario(request):
     # Obtener eventos del usuario
     eventos = DisponibilidadUsuario.objects.filter(usuario=request.user).order_by('fecha_inicio')
     
+    # Obtener clases para el calendario
+    clases = SolicitudClase.objects.filter(
+        Q(alumno__usuario=request.user) | Q(maestro__usuario=request.user),
+        estado='aceptada'
+    )
+
+    # Convertir eventos a formato calendario
+    eventos_calendario = []
+    
+    # Agregar eventos de disponibilidad
+    for evento in eventos:
+        eventos_calendario.append({
+            'id': f"disponibilidad_{evento.id}",
+            'title': f"📅 {evento.titulo}",
+            'start': evento.fecha_inicio.isoformat(),
+            'end': evento.fecha_fin.isoformat(),
+            'color': '#28a745' if evento.tipo == 'disponible' else '#dc3545' if evento.tipo == 'ocupacion' else '#007bff',
+            'textColor': 'white',
+            'extendedProps': {
+                'tipo': 'evento_personal',
+                'descripcion': evento.descripcion or '',
+                'id': evento.id,
+                'tipo_display': evento.get_tipo_display()
+            }
+        })
+    
+    # Agregar clases al calendario
+    for clase in clases:
+        # Usar la fecha confirmada si existe, sino la propuesta
+        fecha_clase = clase.fecha_clase_confirmada or clase.fecha_clase_propuesta
+        if not fecha_clase:
+            continue
+
+        if request.user.rol == 'ALUMNO':
+            titulo = f'🎓 Clase: {clase.materia.nombre}'
+            descripcion = f"Profesor: {clase.maestro.usuario.get_full_name()}"
+        else:
+            titulo = f'👨‍🏫 Clase: {clase.materia.nombre}'
+            descripcion = f"Alumno: {clase.alumno.usuario.get_full_name()}"
+        
+        fecha_fin = fecha_clase + timedelta(minutes=clase.duracion_minutos)
+        
+        eventos_calendario.append({
+            'id': f"clase_{clase.id}",
+            'title': titulo,
+            'start': fecha_clase.isoformat(),
+            'end': fecha_fin.isoformat(),
+            'color': '#ffc107',
+            'textColor': 'black',
+            'extendedProps': {
+                'tipo': 'clase',
+                'materia': clase.materia.nombre,
+                'duracion': clase.duracion_minutos,
+                'monto': float(clase.monto_acordado) if clase.monto_acordado else 0,
+                'descripcion': descripcion,
+                'id': clase.id
+            }
+        })
+
+    # Manejar el formulario de eventos
     if request.method == 'POST':
         form = DisponibilidadForm(request.POST)
         if form.is_valid():
@@ -1478,68 +1582,149 @@ def agenda_usuario(request):
     else:
         form = DisponibilidadForm()
 
-    # Obtener clases para el calendario - MODIFICADO
+    context = {
+        'form': form,
+        'eventos': eventos,
+        'clases': clases,
+        'eventos_calendario': json.dumps(eventos_calendario),
+        'rol': request.user.rol,
+    }
+    
+    return render(request, 'agenda/agenda_usuario.html', context)
+
+
+
+from django.http import HttpResponse
+from django.utils import timezone
+import json
+
+@login_required
+def exportar_calendario_ics(request):
+    """Exportar calendario a formato ICS para Google Calendar"""
+    
+    # Obtener eventos del usuario
+    eventos = DisponibilidadUsuario.objects.filter(usuario=request.user)
     clases = SolicitudClase.objects.filter(
         Q(alumno__usuario=request.user) | Q(maestro__usuario=request.user),
         estado='aceptada',
         fecha_clase_confirmada__isnull=False
     )
     
-    # Convertir eventos a formato calendario
-    eventos_calendario = []
+    # Generar contenido ICS
+    ics_content = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//EduLink//Calendario//ES",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH"
+    ]
     
     # Agregar eventos de disponibilidad
     for evento in eventos:
-        eventos_calendario.append({
-            'title': f"📅 {evento.titulo}",
-            'start': evento.fecha_inicio.isoformat(),
-            'end': evento.fecha_fin.isoformat(),
-            'color': '#28a745' if evento.tipo == 'disponible' else '#dc3545' if evento.tipo == 'ocupacion' else '#007bff',
-            'textColor': 'white',
-            'extendedProps': {
-                'tipo': 'evento_personal',
-                'descripcion': evento.descripcion or '',
-                'id': evento.id,
-                'tipo_display': evento.get_tipo_display()
-            }
+        ics_content.extend([
+            "BEGIN:VEVENT",
+            f"UID:disponibilidad_{evento.id}@edulink.com",
+            f"DTSTAMP:{timezone.now().strftime('%Y%m%dT%H%M%SZ')}",
+            f"DTSTART:{evento.fecha_inicio.strftime('%Y%m%dT%H%M%SZ')}",
+            f"DTEND:{evento.fecha_fin.strftime('%Y%m%dT%H%M%SZ')}",
+            f"SUMMARY:{evento.titulo}",
+            f"DESCRIPTION:{evento.descripcion or 'Evento de disponibilidad'}",
+            f"LOCATION:EduLink",
+            "END:VEVENT"
+        ])
+    
+    # Agregar clases
+    for clase in clases:
+        if clase.fecha_clase_confirmada:
+            fecha_fin = clase.fecha_clase_confirmada + timedelta(minutes=clase.duracion_minutos)
+            titulo = f"Clase: {clase.materia.nombre}"
+            descripcion = f"Clase de {clase.materia.nombre} con "
+            
+            if request.user.rol == 'ALUMNO':
+                descripcion += f"Profesor: {clase.maestro.usuario.get_full_name()}"
+            else:
+                descripcion += f"Alumno: {clase.alumno.usuario.get_full_name()}"
+            
+            ics_content.extend([
+                "BEGIN:VEVENT",
+                f"UID:clase_{clase.id}@edulink.com",
+                f"DTSTAMP:{timezone.now().strftime('%Y%m%dT%H%M%SZ')}",
+                f"DTSTART:{clase.fecha_clase_confirmada.strftime('%Y%m%dT%H%M%SZ')}",
+                f"DTEND:{fecha_fin.strftime('%Y%m%dT%H%M%SZ')}",
+                f"SUMMARY:{titulo}",
+                f"DESCRIPTION:{descripcion}",
+                f"LOCATION:EduLink",
+                "END:VEVENT"
+            ])
+    
+    ics_content.append("END:VCALENDAR")
+    
+    # Crear respuesta
+    response = HttpResponse("\r\n".join(ics_content), content_type='text/calendar')
+    response['Content-Disposition'] = 'attachment; filename="edulink-calendario.ics"'
+    
+    return response
+
+
+
+
+    # En views.py, agregar esta vista
+@login_required
+def imprimir_agenda(request, vista='month'):
+    """Vista específica para imprimir la agenda"""
+    
+    # Obtener eventos del usuario
+    eventos = DisponibilidadUsuario.objects.filter(usuario=request.user).order_by('fecha_inicio')
+    
+    # Obtener clases para el calendario
+    clases = SolicitudClase.objects.filter(
+        Q(alumno__usuario=request.user) | Q(maestro__usuario=request.user),
+        estado='aceptada'
+    )
+
+    # Agrupar eventos por fecha para la impresión
+    eventos_por_fecha = {}
+    
+    for evento in eventos:
+        fecha_key = evento.fecha_inicio.date().isoformat()
+        if fecha_key not in eventos_por_fecha:
+            eventos_por_fecha[fecha_key] = []
+        eventos_por_fecha[fecha_key].append({
+            'tipo': 'evento',
+            'titulo': evento.titulo,
+            'inicio': evento.fecha_inicio,
+            'fin': evento.fecha_fin,
+            'descripcion': evento.descripcion,
+            'tipo_display': evento.get_tipo_display()
         })
     
-    # Agregar clases al calendario - MODIFICADO
     for clase in clases:
-        if request.user.rol == 'ALUMNO':
-            titulo = f'🎓 Clase: {clase.materia.nombre}'
-            descripcion = f"Profesor: {clase.maestro.usuario.get_full_name()}"
-            fecha_clase = clase.fecha_clase_confirmada
-        else:
-            titulo = f'👨‍🏫 Clase: {clase.materia.nombre}'
-            descripcion = f"Alumno: {clase.alumno.usuario.get_full_name()}"
-            fecha_clase = clase.fecha_clase_confirmada
-        
-        if fecha_clase:  # Solo agregar si hay fecha confirmada
-            fecha_fin = fecha_clase + timedelta(minutes=clase.duracion_minutos)
+        fecha_clase = clase.fecha_clase_confirmada or clase.fecha_clase_propuesta
+        if not fecha_clase:
+            continue
             
-            eventos_calendario.append({
-                'title': titulo,
-                'start': fecha_clase.isoformat(),
-                'end': fecha_fin.isoformat(),
-                'color': '#ffc107',
-                'textColor': 'black',
-                'extendedProps': {
-                    'tipo': 'clase',
-                    'materia': clase.materia.nombre,
-                    'duracion': clase.duracion_minutos,
-                    'monto': float(clase.monto_acordado) if clase.monto_acordado else 0,
-                    'descripcion': descripcion,
-                    'id': clase.id
-                }
-            })
+        fecha_key = fecha_clase.date().isoformat()
+        if fecha_key not in eventos_por_fecha:
+            eventos_por_fecha[fecha_key] = []
+            
+        eventos_por_fecha[fecha_key].append({
+            'tipo': 'clase',
+            'titulo': f"Clase: {clase.materia.nombre}",
+            'inicio': fecha_clase,
+            'fin': fecha_clase + timedelta(minutes=clase.duracion_minutos),
+            'descripcion': f"{clase.materia.nombre} - {clase.duracion_minutos}min",
+            'monto': clase.monto_acordado,
+            'persona': clase.alumno.usuario.get_full_name() if request.user.rol == 'MAESTRO' else clase.maestro.usuario.get_full_name()
+        })
+
+    context = {
+        'eventos_por_fecha': dict(sorted(eventos_por_fecha.items())),
+        'vista': vista,
+        'usuario': request.user,
+        'fecha_impresion': timezone.now().date()
+    }
     
-    return render(request, 'agenda/agenda_usuario.html', {
-        'form': form,
-        'eventos': eventos,
-        'clases': clases,
-        'eventos_calendario': json.dumps(eventos_calendario)
-    })
+    return render(request, 'agenda/imprimir_agenda.html', context)
 
 
 
