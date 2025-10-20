@@ -20,44 +20,6 @@
         </div>
     </div>
 
-<<<<<<< HEAD
-    <!-- Vista previa del perfil público -->
-    <div class="card border-info">
-        <div class="card-header bg-info text-white">
-            <h5 class="card-title mb-0">
-                <i class="fas fa-eye me-2"></i>Vista Previa de tu Perfil Público
-            </h5>
-        </div>
-        <div class="card-body">
-            <!-- Aquí reutilizamos el mismo contenido del perfil público -->
-            <div class="row">
-                <div class="col-md-4 text-center">
-                    {% if usuario_maestro.foto_perfil %}
-                        <img src="{{ usuario_maestro.foto_perfil.url }}" class="rounded-circle mb-3" 
-                             width="150" height="150" alt="Foto de perfil" style="object-fit: cover;">
-                    {% else %}
-                        <div class="bg-light rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" 
-                             style="width: 150px; height: 150px;">
-                            <i class="fas fa-user-graduate fa-3x text-muted"></i>
-                        </div>
-                    {% endif %}
-                    
-                    <h4 class="fw-bold">{{ usuario_maestro.get_full_name|default:usuario_maestro.username }}</h4>
-                    
-                    {% if promedio_rating %}
-                    <div class="rating-display mb-2">
-                        <span class="h4 text-warning">⭐ {{ promedio_rating|floatformat:1 }}</span>
-                        <small class="text-muted">({{ total_resenas }} reseña{{ total_resenas|pluralize }})</small>
-                    </div>
-                    {% endif %}
-                    
-                    <div class="bg-light rounded p-2 mb-3">
-                        <span class="fw-bold text-primary">${{ maestro.precio_hora }}</span> / hora
-                    </div>
-                </div>
-                
-                <div class="col-md-8">
-=======
     <!-- Tarjeta principal del perfil -->
     <div class="row">
         <div class="col-lg-8">
@@ -171,35 +133,8 @@
                 </div>
 
                 <div class="col-md-6">
->>>>>>> 5d3b51b (Reseñas)
                     <div class="card">
                         <div class="card-body">
-<<<<<<< HEAD
-                            <div class="d-flex justify-content-between align-items-start mb-3">
-                                <div>
-                                    <h5 class="card-title fw-bold">Información del Profesor</h5>
-                                    <div class="d-flex flex-wrap gap-2 mb-3">
-                                        <span class="badge bg-info">{{ maestro.modalidad }}</span>
-                                        {% if usuario_maestro.verificado %}
-                                        <span class="badge bg-primary">
-                                            <i class="fas fa-check-circle me-1"></i>Verificado
-                                        </span>
-                                        {% endif %}
-                                        <span class="badge bg-secondary">{{ clases_impartidas }} clase{{ clases_impartidas|pluralize }}</span>
-                                        <span class="badge bg-success">{{ alumnos_unicos }} alumno{{ alumnos_unicos|pluralize }}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {% if maestro.descripcion %}
-                                <p class="card-text">{{ maestro.descripcion }}</p>
-                            {% else %}
-                                <p class="card-text text-muted">
-                                    <i class="fas fa-exclamation-triangle text-warning me-1"></i>
-                                    Añade una descripción para que los alumnos conozcan más sobre ti.
-                                    <a href="{% url 'editar_perfil_maestro' %}">Editar perfil</a>
-                                </p>
-=======
                             {% if maestro.idiomas.all %}
                             <div class="d-flex flex-wrap gap-2">
                                 {% for idioma in maestro.idiomas.all %}
@@ -208,7 +143,6 @@
                             </div>
                             {% else %}
                             <p class="text-muted mb-0">No hay idiomas especificados</p>
->>>>>>> 5d3b51b (Reseñas)
                             {% endif %}
                         </div>
                     </div>
@@ -308,59 +242,6 @@
                     </h6>
                 </div>
                 <div class="card-body">
-<<<<<<< HEAD
-                    <div class="row">
-                        <div class="col-md-6">
-                            <ul class="list-unstyled">
-                                <li class="mb-2">
-                                    {% if usuario_maestro.foto_perfil %}
-                                    ✅ <strong>Foto de perfil:</strong> ¡Excelente!
-                                    {% else %}
-                                    ❌ <strong>Foto de perfil:</strong> Añade una foto profesional
-                                    {% endif %}
-                                </li>
-                                <li class="mb-2">
-                                    {% if maestro.descripcion %}
-                                    ✅ <strong>Descripción:</strong> ¡Muy bien!
-                                    {% else %}
-                                    ❌ <strong>Descripción:</strong> Escribe una descripción atractiva
-                                    {% endif %}
-                                </li>
-                                <li class="mb-2">
-                                    {% if maestro.materias.all %}
-                                    ✅ <strong>Materias:</strong> {{ maestro.materias.count }} materia(s) definida(s)
-                                    {% else %}
-                                    ❌ <strong>Materias:</strong> Especifica las materias que enseñas
-                                    {% endif %}
-                                </li>
-                            </ul>
-                        </div>
-                        <div class="col-md-6">
-                            <ul class="list-unstyled">
-                                <li class="mb-2">
-                                    {% if maestro.precio_hora and maestro.precio_hora > 0 %}
-                                    ✅ <strong>Precio por hora:</strong> ${{ maestro.precio_hora }}
-                                    {% else %}
-                                    ❌ <strong>Precio por hora:</strong> Establece tu tarifa
-                                    {% endif %}
-                                </li>
-                                <li class="mb-2">
-                                    {% if usuario_maestro.verificado %}
-                                    ✅ <strong>Verificación:</strong> Cuenta verificada
-                                    {% else %}
-                                    ❌ <strong>Verificación:</strong> Solicita la verificación
-                                    {% endif %}
-                                </li>
-                                <li class="mb-2">
-                                    {% if maestro.cv %}
-                                    ✅ <strong>CV:</strong> Documento cargado
-                                    {% else %}
-                                    ❌ <strong>CV:</strong> Sube tu curriculum
-                                    {% endif %}
-                                </li>
-                            </ul>
-                        </div>
-=======
                     <div class="d-flex justify-content-between mb-2">
                         <span>Clases impartidas:</span>
                         <strong>0</strong>
@@ -427,15 +308,12 @@
                         <button class="btn btn-outline-info btn-sm">
                             📊 Ver estadísticas
                         </button>
->>>>>>> 5d3b51b (Reseñas)
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
-<<<<<<< HEAD
-=======
 
 <style>
     .card {
@@ -453,5 +331,5 @@
         font-size: 0.85rem;
     }
 </style>
->>>>>>> 5d3b51b (Reseñas)
+
 {% endblock %}

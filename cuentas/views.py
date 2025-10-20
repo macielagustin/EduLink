@@ -1744,8 +1744,6 @@ def debug_eventos(request):
 
 ############## FUNCIONES DE RESEÑA ##########################
 
-<<<<<<< HEAD
-=======
 @login_required
 def marcar_completada(request, solicitud_id):
     solicitud = get_object_or_404(SolicitudClase, id=solicitud_id, maestro__usuario=request.user)
@@ -1789,4 +1787,3 @@ def dejar_reseña(request, solicitud_id):
         'form': form,
         'solicitud': solicitud,
     })
->>>>>>> 5d3b51b (Reseñas)
