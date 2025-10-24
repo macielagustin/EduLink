@@ -22,7 +22,7 @@ from .forms import SolicitudClaseForm, MensajeForm, ProponerFechaForm
 
 from django.http import JsonResponse
 from django.db.models import Count, Avg, Q, Sum
-from .models import Notificacion, Resena
+from .models import Notificacion, Reseña
 import json
 from datetime import datetime, timedelta
 
@@ -238,7 +238,7 @@ def calendario_maestro(request):
         "eventos": json.dumps(eventos)
     })
 
-# Vista para agregar reseña
+""" # Vista para agregar reseña
 @login_required
 def agregar_resena(request, clase_id):
     clase = get_object_or_404(SolicitudClase, id=clase_id)
@@ -295,56 +295,21 @@ def ver_resenas_usuario(request, usuario_id):
         'resenas': resenas,
         'promedio': round(promedio, 1),
         'total_resenas': resenas.count()
-    })
+    }) """
 
 
 
 
 """ ####################   COMO ANTES   ###########3# """
 def home_view(request):
-    # Estadísticas generales
     total_profesores = Maestro.objects.count()
     total_materias = Materia.objects.count()
     
-    # Total de clases (aceptadas o completadas)
     total_clases = SolicitudClase.objects.filter(
         Q(estado='aceptada') | Q(estado='completada')
     ).count()
 
-    # Profesor mejor calificado - precalculamos todo en la vista
-    profesores_con_rating = []
-    for maestro in Maestro.objects.all():
-        resenas = Resena.objects.filter(destinatario=maestro.usuario)
-        if resenas.exists():
-            avg_rating = resenas.aggregate(avg=Avg('calificacion'))['avg']
-            review_count = resenas.count()
-            total_clases_maestro = SolicitudClase.objects.filter(
-                maestro=maestro, estado='aceptada'
-            ).count()
-            
-            profesores_con_rating.append({
-                'maestro': maestro,
-                'avg_rating': avg_rating,
-                'review_count': review_count,
-                'total_clases': total_clases_maestro
-            })
-    
-    # Ordenar por rating y encontrar el destacado
-    profesor_destacado_data = None
-    if profesores_con_rating:
-        profesor_destacado_data = sorted(
-            profesores_con_rating, 
-            key=lambda x: (-x['avg_rating'], -x['review_count'])
-        )[0]
-        profesor_destacado = profesor_destacado_data['maestro']
-        # Agregar los datos calculados al objeto maestro
-        profesor_destacado.avg_rating = profesor_destacado_data['avg_rating']
-        profesor_destacado.review_count = profesor_destacado_data['review_count']
-        profesor_destacado.total_clases = profesor_destacado_data['total_clases']
-    else:
-        profesor_destacado = None
-
-    # Profesor con más alumnos (más solicitudes aceptadas)
+    # Profesor con más alumnos
     profesores_con_alumnos = []
     for maestro in Maestro.objects.all():
         total_alumnos = SolicitudClase.objects.filter(
@@ -367,30 +332,16 @@ def home_view(request):
         profesor_popular = profesor_popular_data['maestro']
         profesor_popular.total_alumnos = profesor_popular_data['total_alumnos']
 
-    # Nuevos profesores (últimos 7 días)
+    # Nuevos profesores
     una_semana_atras = timezone.now() - timedelta(days=7)
     nuevos_profesores_qs = Maestro.objects.filter(
         usuario__fecha_creacion__gte=una_semana_atras
     ).select_related('usuario').order_by('-usuario__fecha_creacion')[:4]
 
-    # Si no hay nuevos de la semana, mostrar los últimos registrados
     if not nuevos_profesores_qs.exists():
         nuevos_profesores_qs = Maestro.objects.select_related('usuario').order_by('-usuario__fecha_creacion')[:4]
 
-    # Precalcular ratings para nuevos profesores
-    nuevos_profesores = []
-    for maestro in nuevos_profesores_qs:
-        resenas = Resena.objects.filter(destinatario=maestro.usuario)
-        avg_rating = resenas.aggregate(avg=Avg('calificacion'))['avg'] if resenas.exists() else None
-        review_count = resenas.count()
-        
-        nuevos_profesores.append({
-            'maestro': maestro,
-            'avg_rating': avg_rating,
-            'review_count': review_count
-        })
-
-    # Materias populares (con más profesores)
+    # Materias populares
     materias_populares = []
     for materia in Materia.objects.all():
         num_profesores = materia.maestros.count()
@@ -400,31 +351,16 @@ def home_view(request):
                 'num_profesores': num_profesores
             })
     
-    # Ordenar y tomar las 6 más populares
     materias_populares = sorted(
         materias_populares, 
         key=lambda x: -x['num_profesores']
     )[:6]
 
-    # Profesores verificados destacados
+    # Profesores verificados
     profesores_verificados_qs = Maestro.objects.filter(
         usuario__verificado=True
     ).select_related('usuario')[:3]
 
-    # Precalcular datos para profesores verificados
-    profesores_verificados = []
-    for maestro in profesores_verificados_qs:
-        resenas = Resena.objects.filter(destinatario=maestro.usuario)
-        avg_rating = resenas.aggregate(avg=Avg('calificacion'))['avg'] if resenas.exists() else None
-        review_count = resenas.count()
-        
-        profesores_verificados.append({
-            'maestro': maestro,
-            'avg_rating': avg_rating,
-            'review_count': review_count
-        })
-
-    # Estadísticas para los badges
     profesores_ultima_semana = Maestro.objects.filter(
         usuario__fecha_creacion__gte=una_semana_atras
     ).count()
@@ -433,11 +369,8 @@ def home_view(request):
         'total_profesores': total_profesores,
         'total_materias': total_materias,
         'total_clases': total_clases,
-        'profesor_destacado': profesor_destacado,
         'profesor_popular': profesor_popular,
-        'nuevos_profesores': nuevos_profesores,
         'materias_populares': materias_populares,
-        'profesores_verificados': profesores_verificados,
         'profesores_ultima_semana': profesores_ultima_semana,
     }
     return render(request, "home.html", context)
@@ -1111,31 +1044,21 @@ def perfil_maestro_publico(request, maestro_id):
     maestro = get_object_or_404(Maestro, id=maestro_id)
     usuario_maestro = maestro.usuario
     
-    # Calcular estadísticas reales
     clases_impartidas = SolicitudClase.objects.filter(
         maestro=maestro, 
         estado__in=['aceptada', 'completada']
     ).count()
     
-    # Contar alumnos únicos
     alumnos_unicos = SolicitudClase.objects.filter(
         maestro=maestro, 
         estado__in=['aceptada', 'completada']
     ).values('alumno').distinct().count()
     
-    # Calcular rating promedio
-    resenas = Resena.objects.filter(destinatario=usuario_maestro)
-    promedio_rating = resenas.aggregate(Avg('calificacion'))['calificacion__avg']
-    total_resenas = resenas.count()
-    
-    # Determinar qué información mostrar
     es_propio_perfil = request.user.is_authenticated and request.user == usuario_maestro
     es_alumno_autenticado = request.user.is_authenticated and request.user.rol == 'ALUMNO'
     
-    # Mostrar perfil completo solo para el propio maestro o alumnos autenticados
     mostrar_info_completa = es_propio_perfil or es_alumno_autenticado
     
-    # Si es el propio perfil, mostrar vista de preview
     if es_propio_perfil:
         template_name = "maestro/perfil_publico_maestro.html"
     else:
@@ -1146,11 +1069,8 @@ def perfil_maestro_publico(request, maestro_id):
         'usuario_maestro': usuario_maestro,
         'clases_impartidas': clases_impartidas,
         'alumnos_unicos': alumnos_unicos,
-        'promedio_rating': promedio_rating,
-        'total_resenas': total_resenas,
         'mostrar_info_completa': mostrar_info_completa,
         'es_propio_perfil': es_propio_perfil,
-        'resenas_recientes': resenas.order_by('-fecha_creacion')[:2] if mostrar_info_completa else [],
     }
     
     return render(request, template_name, context)

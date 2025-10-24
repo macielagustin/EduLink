@@ -89,8 +89,6 @@ urlpatterns = [
     path('maestro/calendario/', views.calendario_maestro, name='calendario_maestro'),
     
     # Reseñas
-    path('resenas/agregar/<int:clase_id>/', views.agregar_resena, name='agregar_resena'),
-    path('resenas/usuario/<int:usuario_id>/', views.ver_resenas_usuario, name='ver_resenas_usuario'),
 
 
     # Recuperar Contraseña

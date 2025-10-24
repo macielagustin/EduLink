@@ -253,7 +253,7 @@ class Notificacion(models.Model):
     def __str__(self):
         return f"Notificación para {self.usuario.username}: {self.mensaje}"
 
-class Resena(models.Model):
+""" class Resena(models.Model):
     clase = models.ForeignKey(SolicitudClase, on_delete=models.CASCADE, related_name='resenas')
     autor = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='resenas_escritas')
     destinatario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='resenas_recibidas')
@@ -265,7 +265,7 @@ class Resena(models.Model):
         unique_together = ['clase', 'autor']  # Una reseña por clase por autor
 
     def __str__(self):
-        return f"Reseña de {self.autor.username} para {self.destinatario.username} - {self.calificacion} estrellas"
+        return f"Reseña de {self.autor.username} para {self.destinatario.username} - {self.calificacion} estrellas" """
 
 
 class Reseña(models.Model):
