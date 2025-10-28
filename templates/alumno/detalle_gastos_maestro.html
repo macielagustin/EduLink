@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Gastos con {{ maestro.usuario.get_full_name }} - EduLink{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h2 fw-bold text-primary">
+                💰 Gastos con {{ maestro.usuario.get_full_name }}
+            </h1>
+            <p class="text-muted mb-0">
+                Detalle completo de todas las clases y pagos con este maestro
+            </p>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'control_gastos_alumno' %}" class="btn btn-outline-secondary">
+                ← Volver al Control de Gastos
+            </a>
+        </div>
+    </div>
+
+    <!-- Resumen del Maestro -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="text-primary">${{ total_gastado_maestro|default:0 }}</h3>
+                    <p class="text-muted mb-0">Total Gastado</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="text-info">{{ total_clases_maestro }}</h3>
+                    <p class="text-muted mb-0">Total de Clases</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="text-warning">{{ clases_pendientes.count }}</h3>
+                    <p class="text-muted mb-0">Clases Pendientes</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detalle de Clases -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 py-3">
+            <h5 class="fw-bold mb-0">📋 Historial de Clases</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Materia</th>
+                            <th>Duración</th>
+                            <th>Monto</th>
+                            <th>Estado Pago</th>
+                            <th>Estado Clase</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for clase in clases_con_maestro %}
+                        <tr>
+                            <td>{{ clase.fecha_clase_confirmada|date:"d/m/Y H:i" }}</td>
+                            <td>{{ clase.materia.nombre }}</td>
+                            <td>{{ clase.duracion_minutos }} min</td>
+                            <td>${{ clase.monto_acordado }}</td>
+                            <td>
+                                {% if clase.pago_realizado %}
+                                <span class="badge bg-success">Pagado</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark">Pendiente</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge 
+                                    {% if clase.estado == 'completada' %}bg-success
+                                    {% elif clase.estado == 'aceptada' %}bg-primary
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ clase.estado|title }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-3 text-muted">
+                                No hay clases registradas con este maestro.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

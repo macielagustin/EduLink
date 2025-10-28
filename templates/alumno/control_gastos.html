@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Control de Gastos - EduLink{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h2 fw-bold text-primary">
+                💰 Control de Gastos
+            </h1>
+            <p class="text-muted mb-0">
+                Gestiona y visualiza todos tus gastos en clases particulares
+            </p>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'dashboard_alumno' %}" class="btn btn-outline-secondary">
+                ← Volver al Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Tarjetas de Resumen -->
+    <div class="row g-3 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 bg-primary bg-opacity-10 p-3 rounded">
+                            <i class="fas fa-money-bill-wave text-primary fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="card-title text-muted mb-1">Total Gastado</h6>
+                            <h4 class="mb-0 fw-bold">${{ total_gastado|default:0 }}</h4>
+                            <small class="text-success">{{ total_clases }} clases</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 bg-warning bg-opacity-10 p-3 rounded">
+                            <i class="fas fa-clock text-warning fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="card-title text-muted mb-1">Pendiente de Pago</h6>
+                            <h4 class="mb-0 fw-bold">${{ total_pendiente|default:0 }}</h4>
+                            <small class="text-warning">Por confirmar</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 bg-info bg-opacity-10 p-3 rounded">
+                            <i class="fas fa-chart-pie text-info fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="card-title text-muted mb-1">Maestros Diferentes</h6>
+                            <h4 class="mb-0 fw-bold">{{ gastos_por_maestro|length }}</h4>
+                            <small class="text-info">Proveedores</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 bg-success bg-opacity-10 p-3 rounded">
+                            <i class="fas fa-book text-success fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="card-title text-muted mb-1">Materias Diferentes</h6>
+                            <h4 class="mb-0 fw-bold">{{ gastos_por_materia|length }}</h4>
+                            <small class="text-success">Áreas de estudio</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Columna izquierda: Distribución -->
+        <div class="col-lg-6">
+            <!-- Gastos por Maestro -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="fw-bold mb-0">👨‍🏫 Gastos por Maestro</h5>
+                </div>
+                <div class="card-body">
+                    {% if gastos_por_maestro %}
+                        <div class="list-group list-group-flush">
+                            {% for maestro, monto in gastos_por_maestro.items %}
+                            <a href="{% url 'detalle_gastos_maestro' solicitudes.first.maestro.id %}" 
+                               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center px-0">
+                                <div>
+                                    <h6 class="mb-1">{{ maestro }}</h6>
+                                    <small class="text-muted">Ver detalle completo</small>
+                                </div>
+                                <span class="badge bg-primary rounded-pill">${{ monto }}</span>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-3">Aún no tienes gastos registrados.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Gastos por Materia -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="fw-bold mb-0">📚 Gastos por Materia</h5>
+                </div>
+                <div class="card-body">
+                    {% if gastos_por_materia %}
+                        <div class="list-group list-group-flush">
+                            {% for materia, monto in gastos_por_materia.items %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>{{ materia }}</span>
+                                <span class="badge bg-info rounded-pill">${{ monto }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-3">Aún no tienes gastos por materia.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna derecha: Historial y Próximos -->
+        <div class="col-lg-6">
+            <!-- Próximos Pagos -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="fw-bold mb-0">📅 Próximos Pagos Pendientes</h5>
+                </div>
+                <div class="card-body">
+                    {% if proximos_pagos %}
+                        <div class="list-group list-group-flush">
+                            {% for pago in proximos_pagos %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <div>
+                                    <h6 class="mb-1">{{ pago.materia.nombre }}</h6>
+                                    <small class="text-muted">
+                                        {{ pago.maestro.usuario.get_full_name }} - 
+                                        {{ pago.fecha_clase_confirmada|date:"d/m H:i" }}
+                                    </small>
+                                </div>
+                                <span class="badge bg-warning text-dark">${{ pago.monto_acordado }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-3">No tienes pagos pendientes.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Historial Reciente -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="fw-bold mb-0">📝 Historial de Pagos</h5>
+                </div>
+                <div class="card-body">
+                    {% if historial_pagos %}
+                        <div class="list-group list-group-flush">
+                            {% for pago in historial_pagos %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <div>
+                                    <h6 class="mb-1">{{ pago.materia.nombre }}</h6>
+                                    <small class="text-muted">
+                                        {{ pago.maestro.usuario.get_full_name }} - 
+                                        {{ pago.fecha_clase_confirmada|date:"d/m/Y" }}
+                                    </small>
+                                </div>
+                                <span class="badge bg-success">${{ pago.monto_acordado }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-3">No hay historial de pagos.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -121,4 +121,9 @@ urlpatterns = [
 
     path("debug/eventos/", debug_eventos, name="debug_eventos"),
 
+
+    # Control de gastos
+    path("alumno/gastos/", views.control_gastos_alumno, name="control_gastos_alumno"),
+    path("alumno/gastos/maestro/<int:maestro_id>/", views.detalle_gastos_maestro, name="detalle_gastos_maestro"),
+
 ]

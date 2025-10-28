@@ -674,6 +674,22 @@ def dashboard_alumno(request):
         "mensajes_recientes": mensajes_recientes,
         "mensajes_nuevos": mensajes_nuevos,
     }
+
+    # Agregar cálculo del total gastado
+    total_gastado = SolicitudClase.objects.filter(
+        alumno=alumno,
+        pago_realizado=True
+    ).aggregate(Sum('monto_acordado'))['monto_acordado__sum'] or 0
+
+    context = {
+        "solicitudes_pendientes": solicitudes_pendientes,
+        "clases_esta_semana": clases_esta_semana,
+        "materias_activas": materias_activas,
+        "proximas_clases": proximas_clases,
+        "mensajes_recientes": mensajes_recientes,
+        "mensajes_nuevos": mensajes_nuevos,
+        "total_gastado": total_gastado,  # ← Agregar esto
+    }
     return render(request, "cuentas/dashboard_alumno.html", context)
 
 
@@ -1707,3 +1723,97 @@ def dejar_reseña(request, solicitud_id):
         'form': form,
         'solicitud': solicitud,
     })
+
+
+
+
+@login_required
+def control_gastos_alumno(request):
+    """Vista principal del control de gastos del alumno"""
+    try:
+        alumno = Alumno.objects.get(usuario=request.user)
+        
+        # Obtener todas las solicitudes con montos
+        solicitudes = SolicitudClase.objects.filter(
+            alumno=alumno
+        ).exclude(monto_acordado__isnull=True).order_by('-fecha_clase_propuesta')
+        
+        # Estadísticas
+        total_gastado = sum(s.monto_acordado for s in solicitudes.filter(pago_realizado=True))
+        total_pendiente = sum(s.monto_acordado for s in solicitudes.filter(pago_realizado=False, estado='aceptada'))
+        total_clases = solicitudes.count()
+        
+        # Gastos por maestro
+        gastos_por_maestro = {}
+        for solicitud in solicitudes.filter(pago_realizado=True):
+            maestro_nombre = solicitud.maestro.usuario.get_full_name()
+            if maestro_nombre not in gastos_por_maestro:
+                gastos_por_maestro[maestro_nombre] = 0
+            gastos_por_maestro[maestro_nombre] += float(solicitud.monto_acordado)
+        
+        # Gastos por materia
+        gastos_por_materia = {}
+        for solicitud in solicitudes.filter(pago_realizado=True):
+            materia_nombre = solicitud.materia.nombre
+            if materia_nombre not in gastos_por_materia:
+                gastos_por_materia[materia_nombre] = 0
+            gastos_por_materia[materia_nombre] += float(solicitud.monto_acordado)
+        
+        # Próximos pagos pendientes
+        proximos_pagos = solicitudes.filter(
+            pago_realizado=False, 
+            estado='aceptada',
+            fecha_clase_confirmada__gte=timezone.now()
+        ).order_by('fecha_clase_confirmada')
+        
+        # Historial de pagos (últimos 10)
+        historial_pagos = solicitudes.filter(pago_realizado=True).order_by('-fecha_clase_confirmada')[:10]
+        
+        context = {
+            'solicitudes': solicitudes,
+            'total_gastado': total_gastado,
+            'total_pendiente': total_pendiente,
+            'total_clases': total_clases,
+            'gastos_por_maestro': gastos_por_maestro,
+            'gastos_por_materia': gastos_por_materia,
+            'proximos_pagos': proximos_pagos,
+            'historial_pagos': historial_pagos,
+        }
+        
+        return render(request, 'alumno/control_gastos.html', context)
+        
+    except Alumno.DoesNotExist:
+        messages.error(request, "No tienes un perfil de alumno.")
+        return redirect('dashboard_alumno')
+
+@login_required
+def detalle_gastos_maestro(request, maestro_id):
+    """Vista detallada de gastos con un maestro específico"""
+    try:
+        alumno = Alumno.objects.get(usuario=request.user)
+        maestro = get_object_or_404(Maestro, id=maestro_id)
+        
+        # Obtener todas las clases con este maestro
+        clases_con_maestro = SolicitudClase.objects.filter(
+            alumno=alumno,
+            maestro=maestro
+        ).exclude(monto_acordado__isnull=True).order_by('-fecha_clase_propuesta')
+        
+        # Estadísticas específicas
+        total_gastado_maestro = sum(c.monto_acordado for c in clases_con_maestro.filter(pago_realizado=True))
+        total_clases_maestro = clases_con_maestro.count()
+        clases_pendientes = clases_con_maestro.filter(pago_realizado=False, estado='aceptada')
+        
+        context = {
+            'maestro': maestro,
+            'clases_con_maestro': clases_con_maestro,
+            'total_gastado_maestro': total_gastado_maestro,
+            'total_clases_maestro': total_clases_maestro,
+            'clases_pendientes': clases_pendientes,
+        }
+        
+        return render(request, 'alumno/detalle_gastos_maestro.html', context)
+        
+    except Alumno.DoesNotExist:
+        messages.error(request, "No tienes un perfil de alumno.")
+        return redirect('dashboard_alumno')

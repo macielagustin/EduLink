@@ -230,6 +230,30 @@
                 </div>
             </div>
 
+             <!-- Control de Gastos -->
+            <div class="card border-0 shadow-sm mt-4">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="fw-bold mb-0">💰 Control de Gastos</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="flex-shrink-0 bg-primary bg-opacity-10 p-3 rounded">
+                            <i class="fas fa-chart-line text-primary fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="card-title text-muted mb-1">Total Gastado</h6>
+                            <h4 class="mb-0 fw-bold">${{ total_gastado|default:0 }}</h4>
+                        </div>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'control_gastos_alumno' %}" class="btn btn-outline-primary btn-lg d-flex align-items-center justify-content-start">
+                            <i class="fas fa-chart-pie me-2"></i>
+                            Ver Control Completo
+                        </a>
+                    </div>
+                </div>
+            </div>
+
             <!-- Notificaciones -->
             <div class="card border-0 shadow-sm mt-4">
                 <div class="card-header bg-white border-0 py-3">
