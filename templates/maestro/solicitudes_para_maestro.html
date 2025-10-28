@@ -20,22 +20,56 @@
     <div class="card mb-4">
         <div class="card-body">
             <h5 class="card-title">Filtrar por estado:</h5>
-            <div class="btn-group" role="group">
-                <a href="?estado=todas" class="btn {% if estado_filtro == 'todas' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+            <div class="btn-group flex-wrap" role="group">
+                <a href="?estado=todas{% if query %}&q={{ query }}{% endif %}" 
+                   class="btn {% if estado_filtro == 'todas' %}btn-primary{% else %}btn-outline-primary{% endif %}">
                     Todas <span class="badge bg-light text-dark">{{ contadores.todas }}</span>
                 </a>
-                <a href="?estado=pendiente" class="btn {% if estado_filtro == 'pendiente' %}btn-warning{% else %}btn-outline-warning{% endif %}">
+                <a href="?estado=pendiente{% if query %}&q={{ query }}{% endif %}" 
+                   class="btn {% if estado_filtro == 'pendiente' %}btn-warning{% else %}btn-outline-warning{% endif %}">
                     Pendientes <span class="badge bg-light text-dark">{{ contadores.pendientes }}</span>
                 </a>
-                <a href="?estado=aceptada" class="btn {% if estado_filtro == 'aceptada' %}btn-success{% else %}btn-outline-success{% endif %}">
+                <a href="?estado=aceptada{% if query %}&q={{ query }}{% endif %}" 
+                   class="btn {% if estado_filtro == 'aceptada' %}btn-success{% else %}btn-outline-success{% endif %}">
                     Aceptadas <span class="badge bg-light text-dark">{{ contadores.aceptadas }}</span>
                 </a>
-                <a href="?estado=rechazada" class="btn {% if estado_filtro == 'rechazada' %}btn-danger{% else %}btn-outline-danger{% endif %}">
+                <a href="?estado=rechazada{% if query %}&q={{ query }}{% endif %}" 
+                   class="btn {% if estado_filtro == 'rechazada' %}btn-danger{% else %}btn-outline-danger{% endif %}">
                     Rechazadas <span class="badge bg-light text-dark">{{ contadores.rechazadas }}</span>
                 </a>
             </div>
         </div>
     </div>
+
+    <!-- 🔍 Buscador -->
+    <form method="get" class="row g-2 align-items-center mb-4">
+        <!-- Mantiene el estado actual -->
+        <input type="hidden" name="estado" value="{{ estado_filtro }}">
+
+        <div class="col-auto">
+            <input 
+                type="text" 
+                name="q" 
+                class="form-control"
+                placeholder="Buscar por alumno o materia..."
+                value="{{ query|default:'' }}"
+            >
+        </div>
+
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="fas fa-search me-1"></i> Buscar
+            </button>
+        </div>
+
+        {% if query %}
+        <div class="col-auto">
+            <a href="?estado={{ estado_filtro }}" class="btn btn-outline-secondary btn-sm">
+                ❌ Limpiar
+            </a>
+        </div>
+        {% endif %}
+    </form>
 
     <!-- Lista de Solicitudes -->
     {% if solicitudes %}
@@ -102,7 +136,6 @@
                         </div>
                         {% endif %}
 
-                        <!-- Si está aceptada y confirmada -->
                         {% if solicitud.fecha_clase_confirmada %}
                         <div class="alert alert-success">
                             <small>✅ Confirmada para: {{ solicitud.fecha_clase_confirmada|date:"d/m/Y H:i" }}</small>

@@ -907,21 +907,37 @@ def editar_perfil_maestro(request):
 
 
 
+from django.db.models import Q  # 👈 importante arriba del archivo
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+
 @login_required
 def solicitudes_para_maestro(request):
     try:
-        # Obtenemos el perfil de maestro del usuario actual
+        # Perfil del maestro logueado
         perfil_maestro = Maestro.objects.get(usuario=request.user)
         
-        # Filtramos las solicitudes para este maestro
-        solicitudes = SolicitudClase.objects.filter(maestro=perfil_maestro).order_by('-fecha_solicitud')
+        # Base: todas las solicitudes hacia este maestro
+        solicitudes = SolicitudClase.objects.filter(
+            maestro=perfil_maestro
+        ).order_by('-fecha_solicitud')
         
-        # Filtros por estado
+        # --- Filtro por estado ---
         estado_filtro = request.GET.get('estado', 'todas')
         if estado_filtro != 'todas':
             solicitudes = solicitudes.filter(estado=estado_filtro)
-        
-        # Contadores para los badges
+
+        # --- Filtro por búsqueda (alumno o materia) ---
+        query = request.GET.get('q', '').strip()
+        if query:
+            solicitudes = solicitudes.filter(
+                Q(alumno__usuario__nombre__icontains=query) |
+                Q(alumno__usuario__apellido__icontains=query) |
+                Q(alumno__usuario__username__icontains=query) |
+                Q(materia__nombre__icontains=query)
+            )
+
+        # Contadores para los badges (sin filtros, totales reales)
         contadores = {
             'todas': SolicitudClase.objects.filter(maestro=perfil_maestro).count(),
             'pendientes': SolicitudClase.objects.filter(maestro=perfil_maestro, estado='pendiente').count(),
@@ -936,8 +952,10 @@ def solicitudes_para_maestro(request):
     return render(request, "maestro/solicitudes_para_maestro.html", {
         "solicitudes": solicitudes,
         "contadores": contadores,
-        "estado_filtro": estado_filtro
+        "estado_filtro": estado_filtro,
+        "query": query,
     })
+
 
 @login_required
 def cambiar_estado_solicitud(request, solicitud_id, nuevo_estado):
@@ -1109,16 +1127,27 @@ def mis_solicitudes_alumno(request):
         alumno = Alumno.objects.get(usuario=request.user)
         solicitudes = SolicitudClase.objects.filter(alumno=alumno).order_by('-fecha_solicitud')
         
-        # Filtros
+        # --- Filtro por estado ---
         estado_filtro = request.GET.get('estado', 'todas')
         if estado_filtro != 'todas':
             solicitudes = solicitudes.filter(estado=estado_filtro)
-        
+
+        # --- NUEVO: Filtro de búsqueda por maestro o materia ---
+        query = request.GET.get('q', '').strip()
+        if query:
+            solicitudes = solicitudes.filter(
+                Q(maestro__usuario__nombre__icontains=query) |
+                Q(maestro__usuario__apellido__icontains=query) |
+                Q(maestro__usuario__username__icontains=query) |
+                Q(materia__nombre__icontains=query)
+            )
+
+        # --- Contadores ---
         contadores = {
-            'todas': solicitudes.count(),
-            'pendientes': solicitudes.filter(estado='pendiente').count(),
-            'aceptadas': solicitudes.filter(estado='aceptada').count(),
-            'rechazadas': solicitudes.filter(estado='rechazada').count(),
+            'todas': SolicitudClase.objects.filter(alumno=alumno).count(),
+            'pendientes': SolicitudClase.objects.filter(alumno=alumno, estado='pendiente').count(),
+            'aceptadas': SolicitudClase.objects.filter(alumno=alumno, estado='aceptada').count(),
+            'rechazadas': SolicitudClase.objects.filter(alumno=alumno, estado='rechazada').count(),
         }
         
     except Alumno.DoesNotExist:
@@ -1128,9 +1157,9 @@ def mis_solicitudes_alumno(request):
     return render(request, "alumno/mis_solicitudes.html", {
         "solicitudes": solicitudes,
         "contadores": contadores,
-        "estado_filtro": estado_filtro
+        "estado_filtro": estado_filtro,
+        "query": query,  # 👈 Para mantener el valor del input
     })
-
 # VISTAS PARA MENSAJES
 
 @login_required
