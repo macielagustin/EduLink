@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Calificar Alumno | EduLink{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+            <div class="card border-0 shadow-sm p-4">
+                <h3 class="fw-bold mb-3 text-primary">
+                    🧑‍🎓 Calificar a {{ solicitud.alumno.usuario.get_full_name }}
+                </h3>
+                <p class="text-muted mb-4">
+                    Clase de <strong>{{ solicitud.materia.nombre }}</strong><br>
+                    Fecha: {{ solicitud.fecha_clase_propuesta|date:"l d/m/Y H:i" }}
+                </p>
+
+                <form method="POST" id="reseñaAlumnoForm">
+                    {% csrf_token %}
+                    {{ form.puntuacion }}
+
+                    <!-- Estrellas -->
+                    <div class="star-rating mb-4 text-center">
+                        {% for i in "54321" %}
+                            <i class="fa fa-star" data-value="{{ i }}"></i>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_comentario" class="form-label fw-semibold">
+                            Comentario sobre el alumno (opcional)
+                        </label>
+                        {{ form.comentario }}
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{% url 'dashboard_maestro' %}" class="btn btn-outline-secondary">
+                            ← Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            Guardar Reseña
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.star-rating {
+  display: flex;
+  flex-direction: row-reverse;
+  justify-content: center;
+  font-size: 2rem;
+  color: #ddd;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.star-rating .fa-star {
+  margin: 0 5px;
+}
+.star-rating .fa-star.active {
+  color: #FFD700;
+}
+.star-rating .fa-star:hover,
+.star-rating .fa-star:hover ~ .fa-star {
+  color: #FFD700;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const stars = document.querySelectorAll('.star-rating .fa-star');
+  const input = document.querySelector('#id_puntuacion');
+
+  stars.forEach(star => {
+    star.addEventListener('click', () => {
+      const value = star.getAttribute('data-value');
+      input.value = value;
+      stars.forEach(s => s.classList.remove('active'));
+      star.classList.add('active');
+      let previous = star.nextElementSibling;
+      while (previous) {
+        previous.classList.add('active');
+        previous = previous.nextElementSibling;
+      }
+    });
+  });
+});
+</script>
+{% endblock %}

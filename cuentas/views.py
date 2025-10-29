@@ -5,7 +5,7 @@ from django.contrib.auth.views import LoginView
 from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
 from django.http import JsonResponse
-from .forms import RegistroPersonaForm, RegistroAlumnoForm, RegistroMaestroForm, ReseñaForm, LoginForm, UsuarioForm, AlumnoForm, ConfirmarFechaForm, DisponibilidadForm
+from .forms import ReseñaAlumnoForm, RegistroPersonaForm, RegistroAlumnoForm, RegistroMaestroForm, ReseñaForm, LoginForm, UsuarioForm, AlumnoForm, ConfirmarFechaForm, DisponibilidadForm
 from .models import Departamento, Municipio, Localidad, Provincia, Maestro, Alumno, Usuario, DisponibilidadUsuario
 from catalogo.models import Materia
 import math
@@ -14,7 +14,7 @@ from .utils import enviar_email
 from django.contrib.auth.forms import PasswordResetForm
 
 from .forms import EditarPerfilMaestroForm  # Asegúrate de importar el formulario
-from .models import SolicitudClase
+from .models import SolicitudClase, ReseñaAlumno
 from django.db.models import Q  # Para búsquedas complejas
 from django.utils import timezone
 from .models import Conversacion, Mensaje
@@ -997,7 +997,44 @@ def cambiar_estado_solicitud(request, solicitud_id, nuevo_estado):
     
     return redirect("solicitudes_para_maestro")
 
+@login_required
+def dejar_reseña_alumno(request, solicitud_id):
+    # 1. Buscamos esa clase, asegurándonos de que:
+    #    - Pertenece a ESTE maestro logueado
+    #    - Está completada (ya se dictó)
+    solicitud = get_object_or_404(
+        SolicitudClase,
+        id=solicitud_id,
+        maestro__usuario=request.user,
+        estado='completada'
+    )
 
+    # 2. ¿Ya se calificó al alumno para esta clase?
+    #    Evitamos reseña duplicada.
+    if hasattr(solicitud, 'reseña_alumno'):
+        messages.info(request, "Ya calificaste a este alumno para esta clase.")
+        return redirect('dashboard_maestro')
+
+    # 3. Manejo del formulario
+    if request.method == 'POST':
+        form = ReseñaAlumnoForm(request.POST)
+        if form.is_valid():
+            reseña_alumno = form.save(commit=False)
+            reseña_alumno.solicitud = solicitud
+            reseña_alumno.maestro = solicitud.maestro
+            reseña_alumno.alumno = solicitud.alumno
+            reseña_alumno.save()
+
+            messages.success(request, "Reseña del alumno registrada ✅")
+            return redirect('dashboard_maestro')
+    else:
+        form = ReseñaAlumnoForm()
+
+    # 4. Renderizar el formulario de calificación
+    return render(request, 'reseñas/dejar_reseña_alumno.html', {
+        'form': form,
+        'solicitud': solicitud,
+    })
 
 @login_required
 def agenda_maestro(request):
