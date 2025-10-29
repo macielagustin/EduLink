@@ -1,45 +1,211 @@
-/* Hero */
-.hero-wrap {
-  position: relative;
-  background: linear-gradient(180deg, #eaf2ff 0%, #ffffff 60%);
-  border-radius: 16px;
-  overflow: hidden;
-  border: 1px solid #e5e7eb;
+/* ===== VARIABLES GLOBALES ===== */
+:root {
+  /* Colores principales */
+  --primary-color: #0d6efd;
+  --secondary-color: #6c757d;
+  --success-color: #198754;
+  --warning-color: #ffc107;
+  --danger-color: #dc3545;
+  --info-color: #0dcaf0;
+  
+  /* Colores de fondo */
+  --bg-light: #f8f9fa;
+  --bg-white: #ffffff;
+  --bg-dark: #212529;
+  
+  /* Colores de texto */
+  --text-dark: #212529;
+  --text-muted: #6c757d;
+  --text-light: #f8f9fa;
+  
+  /* Gradientes */
+  --gradient-primary: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);
+  --gradient-success: linear-gradient(135deg, #198754 0%, #20c997 100%);
+  --gradient-warning: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
 }
-.hero-blob {
+
+/* ===== ESTILOS BASE ===== */
+body {
+  font-family: 'Segoe UI', Roboto, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content {
+  flex: 1;
+}
+
+/* ===== FONDOS PERSONALIZADOS ===== */
+.bg-home {
+  background: linear-gradient(rgba(13, 110, 253, 0.9), rgba(13, 202, 240, 0.8)), 
+              url('https://images.unsplash.com/photo-1523050854058-8df90110c9f1?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+.bg-login {
+  background: linear-gradient(rgba(25, 135, 84, 0.9), rgba(32, 201, 151, 0.8)), 
+              url('/static/img/fondo-login.jpg');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+.bg-registro {
+  background: linear-gradient(rgba(255, 193, 7, 0.9), rgba(253, 126, 20, 0.8)), 
+              url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+.bg-dashboard {
+  background-color: var(--bg-light);
+}
+
+/* ===== NAVBAR MEJORADA ===== */
+.navbar-custom {
+  background: var(--gradient-primary) !important;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.navbar-custom .navbar-brand {
+  font-weight: 800;
+  font-size: 1.5rem;
+  color: white !important;
+}
+
+.navbar-custom .nav-link {
+  color: rgba(255,255,255,0.9) !important;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.navbar-custom .nav-link:hover {
+  color: white !important;
+  transform: translateY(-1px);
+}
+
+.navbar-custom .dropdown-menu {
+  border: none;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+  border-radius: 10px;
+}
+
+/* ===== BOTÓN VOLVER AL DASHBOARD ===== */
+.btn-dashboard {
+  background: rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: white;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-dashboard:hover {
+  background: rgba(255,255,255,0.3);
+  color: white;
+  transform: translateY(-1px);
+}
+
+/* ===== TARJETAS MEJORADAS ===== */
+.card {
+  border: none;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  transition: all 0.3s ease;
+  border-radius: 12px;
+}
+
+.card:hover {
+  box-shadow: 0 5px 20px rgba(0,0,0,0.12);
+  transform: translateY(-2px);
+}
+
+/* ===== BOTONES MEJORADOS ===== */
+.btn-acento {
+  background: var(--gradient-primary);
+  border: none;
+  color: white;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.btn-acento:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(13, 110, 253, 0.3);
+  color: white;
+}
+
+/* ===== NOTIFICACIONES ===== */
+.notification-badge {
   position: absolute;
-  width: 420px;
-  height: 420px;
-  right: -120px;
-  top: -120px;
-  background: radial-gradient(circle at 30% 30%, #0d6efd40, transparent 60%),
-              radial-gradient(circle at 70% 70%, #0d6efd22, transparent 70%);
-  filter: blur(4px);
+  top: -5px;
+  right: -5px;
+  background: var(--danger-color);
+  color: white;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.search-card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
+
+.notification-item {
+  border-left: 3px solid var(--primary-color);
+  margin-bottom: 5px;
+  transition: all 0.3s ease;
 }
-.badge-chip {
-  background: #f2f6ff;
-  color: #0d47a1;
-  border: 1px solid #dbe7ff;
-  padding: .5rem .75rem;
-  border-radius: 999px;
-  text-decoration: none;
-  display: inline-block;
-  margin: .25rem .35rem;
-  font-size: .95rem;
+
+.notification-item:hover {
+  background-color: var(--bg-light);
 }
-.feature-card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 1.25rem;
-  height: 100%;
+
+.notification-item.unread {
+  background-color: rgba(13, 110, 253, 0.05);
 }
-.footer-mini {
-  border-top: 1px solid #e5e7eb;
-  color: #6b7280;
+
+/* ===== ESTRELLAS DE CALIFICACIÓN ===== */
+.fa-star {
+  font-size: 1rem;
+  margin-right: 2px;
+}
+
+.text-warning {
+  color: var(--warning-color) !important;
+}
+
+/* ===== FORMULARIOS MEJORADOS ===== */
+.form-control, .form-select {
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  padding: 10px 15px;
+  transition: all 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* ===== HERO SECTIONS ===== */
+.hero-section {
+  border-radius: 0 0 2rem 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .bg-home, .bg-login, .bg-registro {
+    background-attachment: scroll;
+  }
+  
+  .hero-section {
+    border-radius: 0 0 1rem 1rem;
+  }
 }

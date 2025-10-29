@@ -122,8 +122,13 @@ urlpatterns = [
     path("debug/eventos/", debug_eventos, name="debug_eventos"),
 
 
-    # Control de gastos
+    # Control de gastos y pagos
     path("alumno/gastos/", views.control_gastos_alumno, name="control_gastos_alumno"),
     path("alumno/gastos/maestro/<int:maestro_id>/", views.detalle_gastos_maestro, name="detalle_gastos_maestro"),
+    path("alumno/pago/<int:solicitud_id>/marcar/", views.marcar_pago_realizado, name="marcar_pago_realizado"),
+    path("maestro/pago/<int:solicitud_id>/confirmar/", views.confirmar_pago_maestro, name="confirmar_pago_maestro"),
+
+    # Ruta temporal para corregir datos (eliminar después de usar)
+    path("corregir-pagos/", views.corregir_estados_pago, name="corregir_estados_pago"),
 
 ]

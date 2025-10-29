@@ -172,25 +172,31 @@ class Localidad(models.Model):
 class SolicitudClase(models.Model):
     ESTADOS = [
         ('pendiente', 'Pendiente'),
-        ('propuesta', 'Propuesta'),  # Nuevo estado
+        ('propuesta', 'Propuesta'),
         ('aceptada', 'Aceptada'),
         ('rechazada', 'Rechazada'),
         ('cancelada', 'Cancelada'),
         ('completada', 'Completada'),
     ]
     
-    # ... resto de campos permanecen igual
+    ESTADOS_PAGO = [
+        ('pendiente', 'Pendiente'),
+        ('pagado', 'Pagado'),
+        ('reembolsado', 'Reembolsado'),
+        ('cancelado', 'Cancelado'),
+    ]
     
     alumno = models.ForeignKey('Alumno', on_delete=models.CASCADE)
     maestro = models.ForeignKey('Maestro', on_delete=models.CASCADE)
     materia = models.ForeignKey('catalogo.Materia', on_delete=models.CASCADE)
     fecha_solicitud = models.DateTimeField(auto_now_add=True)
-    fecha_clase_propuesta = models.DateTimeField(null=True, blank=True)  # Ahora nullable
-    fecha_clase_confirmada = models.DateTimeField(null=True, blank=True)  # Nueva fecha confirmada
+    fecha_clase_propuesta = models.DateTimeField(null=True, blank=True)
+    fecha_clase_confirmada = models.DateTimeField(null=True, blank=True)
     duracion_minutos = models.PositiveIntegerField(default=60)
     mensaje = models.TextField(blank=True, null=True)
     estado = models.CharField(max_length=20, choices=ESTADOS, default='pendiente')
-    # Campos para pago
+    
+    # Campos para pago - MEJORADOS
     monto_acordado = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     metodo_pago = models.CharField(
         max_length=20,
@@ -201,11 +207,29 @@ class SolicitudClase(models.Model):
         ],
         default='efectivo'
     )
-    pago_realizado = models.BooleanField(default=False)
-    codigo_pago = models.CharField(max_length=255, blank=True, null=True)  # Para QR de pago
+    estado_pago = models.CharField(max_length=20, choices=ESTADOS_PAGO, default='pendiente')
+    fecha_pago = models.DateTimeField(null=True, blank=True)
+    codigo_pago = models.CharField(max_length=255, blank=True, null=True)
+    
+    # Propiedad para compatibilidad
+    @property
+    def pago_realizado(self):
+        return self.estado_pago == 'pagado'
+    
+    @pago_realizado.setter
+    def pago_realizado(self, value):
+        if value:
+            self.estado_pago = 'pagado'
+            self.fecha_pago = timezone.now()
+        else:
+            self.estado_pago = 'pendiente'
+            self.fecha_pago = None
     
     def __str__(self):
         return f"Solicitud de {self.alumno.usuario.username} a {self.maestro.usuario.username}"
+    
+    class Meta:
+        ordering = ['-fecha_solicitud']
 
 
 

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Marcar Pago como Realizado - EduLink{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <h4 class="fw-bold mb-0 text-center">✅ Marcar Pago como Realizado</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <h6>Detalles de la Clase:</h6>
+                        <ul class="mb-0">
+                            <li><strong>Materia:</strong> {{ solicitud.materia.nombre }}</li>
+                            <li><strong>Maestro:</strong> {{ solicitud.maestro.usuario.get_full_name }}</li>
+                            <li><strong>Monto:</strong> ${{ solicitud.monto_acordado }}</li>
+                            <li><strong>Método de pago:</strong> {{ solicitud.get_metodo_pago_display }}</li>
+                            {% if solicitud.fecha_clase_confirmada %}
+                            <li><strong>Fecha de clase:</strong> {{ solicitud.fecha_clase_confirmada|date:"d/m/Y H:i" }}</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+
+                    <p class="text-muted mb-4">
+                        ¿Ya realizaste el pago al maestro? Al confirmar, se notificará al maestro.
+                    </p>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                ✅ Sí, ya realicé el pago
+                            </button>
+                            <a href="{% url 'control_gastos_alumno' %}" class="btn btn-outline-secondary">
+                                ↩ Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

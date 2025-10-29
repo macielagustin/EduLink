@@ -2,10 +2,12 @@
 {% load static %}
 {% block title %}EduLink · Tu plataforma de clases particulares{% endblock %}
 
+{% block body_class %}bg-home{% endblock %}
+
 {% block content %}
 
 <!-- HERO MEJORADO -->
-<section class="hero-section bg-gradient-primary text-white py-5 mb-5">
+<section class="hero-section text-white py-5 mb-5">
   <div class="container">
     <div class="row align-items-center">
       <div class="col-lg-6">
@@ -75,66 +77,69 @@
 
 <div class="container">
   
-  <!-- PROMOCIONES DESTACADAS -->
-  <section class="promo-banner mb-5">
-    <div class="row g-3">
-      <div class="col-md-4">
-        <div class="promo-card bg-warning text-dark rounded-3 p-3 h-100">
-          <div class="d-flex align-items-center">
-            <i class="fas fa-star fa-2x me-3"></i>
-            <div>
-              <h6 class="fw-bold mb-1">Profesor Verificado</h6>
-              <small>{{ profesores_verificados|length }} profesores verificados disponibles</small>
+  <!-- CONTENIDO PRINCIPAL CON FONDO BLANCO -->
+  <div class="bg-white rounded-3 p-4 shadow-sm mb-4">
+    
+    <!-- PROMOCIONES DESTACADAS -->
+    <section class="promo-banner mb-5">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <div class="promo-card bg-warning text-dark rounded-3 p-3 h-100">
+            <div class="d-flex align-items-center">
+              <i class="fas fa-star fa-2x me-3"></i>
+              <div>
+                <h6 class="fw-bold mb-1">Profesor Verificado</h6>
+                <small>{{ profesores_verificados|length }} profesores verificados disponibles</small>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="promo-card bg-info text-white rounded-3 p-3 h-100">
+            <div class="d-flex align-items-center">
+              <i class="fas fa-users fa-2x me-3"></i>
+              <div>
+                <h6 class="fw-bold mb-1">Nuevos Profesores</h6>
+                <small>{{ profesores_ultima_semana }} nuevos esta semana</small>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="promo-card bg-success text-white rounded-3 p-3 h-100">
+            <div class="d-flex align-items-center">
+              <i class="fas fa-bolt fa-2x me-3"></i>
+              <div>
+                <h6 class="fw-bold mb-1">Clase de Prueba</h6>
+                <small>20% descuento en primera clase</small>
+              </div>
             </div>
           </div>
         </div>
       </div>
-      <div class="col-md-4">
-        <div class="promo-card bg-info text-white rounded-3 p-3 h-100">
-          <div class="d-flex align-items-center">
-            <i class="fas fa-users fa-2x me-3"></i>
-            <div>
-              <h6 class="fw-bold mb-1">Nuevos Profesores</h6>
-              <small>{{ profesores_ultima_semana }} nuevos esta semana</small>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-4">
-        <div class="promo-card bg-success text-white rounded-3 p-3 h-100">
-          <div class="d-flex align-items-center">
-            <i class="fas fa-bolt fa-2x me-3"></i>
-            <div>
-              <h6 class="fw-bold mb-1">Clase de Prueba</h6>
-              <small>20% descuento en primera clase</small>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+    </section>
 
   <!-- PROFESOR DESTACADO (MEJOR CALIFICADO) -->
   {% if profesor_destacado %}
-  <section class="featured-teacher mb-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h3 class="fw-bold">🌟 Profesor Destacado</h3>
-      <a href="{% url 'buscar_clases' %}" class="btn btn-outline-primary btn-sm">Ver todos los profesores</a>
-    </div>
-    
-    <div class="card border-0 shadow-lg">
-      <div class="row g-0">
-        <div class="col-md-3">
-          {% if profesor_destacado.usuario.foto_perfil %}
-            <img src="{{ profesor_destacado.usuario.foto_perfil.url }}" class="img-fluid rounded-start h-100 object-fit-cover" alt="{{ profesor_destacado.usuario.get_full_name }}" style="height: 250px; object-fit: cover;">
-          {% else %}
-            <div class="bg-light d-flex align-items-center justify-content-center h-100 rounded-start">
-              <i class="fas fa-user-graduate fa-5x text-muted"></i>
-            </div>
-          {% endif %}
-        </div>
-        <div class="col-md-9">
-          <div class="card-body p-4">
+    <section class="featured-teacher mb-5">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold">🌟 Profesor Destacado</h3>
+        <a href="{% url 'buscar_clases' %}" class="btn btn-outline-primary btn-sm">Ver todos los profesores</a>
+      </div>
+      
+      <div class="card border-0 shadow-lg">
+        <div class="row g-0">
+          <div class="col-md-3">
+            {% if profesor_destacado.usuario.foto_perfil %}
+              <img src="{{ profesor_destacado.usuario.foto_perfil.url }}" class="img-fluid rounded-start h-100 object-fit-cover" alt="{{ profesor_destacado.usuario.get_full_name }}" style="height: 250px; object-fit: cover;">
+            {% else %}
+              <div class="bg-light d-flex align-items-center justify-content-center h-100 rounded-start">
+                <i class="fas fa-user-graduate fa-5x text-muted"></i>
+              </div>
+            {% endif %}
+          </div>
+          <div class="col-md-9">
+            <div class="card-body p-4">
             <div class="d-flex justify-content-between align-items-start">
               <div>
                 <span class="badge bg-warning text-dark mb-2">
@@ -397,6 +402,9 @@
       </div>
     </div>
   </section>
+
+</div> <!-- Fin del contenedor blanco -->
+
 
 </div>
 

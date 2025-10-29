@@ -1,12 +1,19 @@
 {% extends "base.html" %}
-{% block title %}Registro{% endblock %}
+{% block title %}Registro - EduLink{% endblock %}
 {% load widget_tweaks %}
+
+{% block body_class %}bg-registro{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-md-10">
-    <div class="card p-4 shadow">
-      <h3 class="mb-3">Crear cuenta</h3>
+    <div class="card p-4 shadow-lg border-0">
+      <div class="text-center mb-4">
+        <i class="fas fa-user-plus fa-3x text-warning mb-3"></i>
+        <h3 class="fw-bold">Crear Cuenta en EduLink</h3>
+        <p class="text-muted">Completá tus datos para comenzar</p>
+      </div>
+      
       <form method="post" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
         {{ form.non_field_errors }}
@@ -15,98 +22,83 @@
           <!-- Columna izquierda -->
           <div class="col-md-6">
             <div class="mb-3">
-              <label class="form-label">Nombre</label>
+              <label class="form-label fw-semibold">Nombre</label>
               {{ form.nombre|add_class:"form-control" }}
               {{ form.nombre.errors }}
             </div>
             <div class="mb-3">
-              <label class="form-label">Apellido</label>
+              <label class="form-label fw-semibold">Apellido</label>
               {{ form.apellido|add_class:"form-control" }}
               {{ form.apellido.errors }}
             </div>
             <div class="mb-3">
-              <label class="form-label">Usuario</label>
+              <label class="form-label fw-semibold">Usuario</label>
               {{ form.username|add_class:"form-control" }}
               {{ form.username.errors }}
             </div>
             <div class="mb-3">
-              <label class="form-label">Email</label>
+              <label class="form-label fw-semibold">Email</label>
               {{ form.email|add_class:"form-control" }}
               {{ form.email.errors }}
             </div>
             <div class="mb-3">
-              <label class="form-label">Contraseña</label>
+              <label class="form-label fw-semibold">Contraseña</label>
               {{ form.password1|add_class:"form-control" }}
               <div class="form-text">Mínimo 8 caracteres y al menos una mayúscula.</div>
               {{ form.password1.errors }}
             </div>
             <div class="mb-3">
-              <label class="form-label">Repetir contraseña</label>
+              <label class="form-label fw-semibold">Repetir contraseña</label>
               {{ form.password2|add_class:"form-control" }}
               {{ form.password2.errors }}
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Fecha de Nacimiento</label>
-              {{ form.fecha_nacimiento|add_class:"form-control" }}
-              {{ form.fecha_nacimiento.errors }}
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Teléfono</label>
-              {{ form.telefono|add_class:"form-control" }}
-              {{ form.telefono.errors }}
             </div>
           </div>
 
           <!-- Columna derecha -->
           <div class="col-md-6">
             <div class="mb-3">
-              <label class="form-label">Bio</label>
+              <label class="form-label fw-semibold">Fecha de Nacimiento</label>
+              {{ form.fecha_nacimiento|add_class:"form-control" }}
+              {{ form.fecha_nacimiento.errors }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Teléfono</label>
+              {{ form.telefono|add_class:"form-control" }}
+              {{ form.telefono.errors }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Bio</label>
               {{ form.bio|add_class:"form-control" }}
               {{ form.bio.errors }}
             </div>
 
-            <!-- Campos de ubicación (ahora inputs de texto readonly) -->
+            <!-- Campos de ubicación -->
             <div class="mb-3">
-              <label class="form-label">Provincia</label>
+              <label class="form-label fw-semibold">Provincia</label>
               {{ form.provincia|add_class:"form-control" }}
               {{ form.provincia.errors }}
             </div>
             <div class="mb-3">
-              <label class="form-label">Departamento</label>
+              <label class="form-label fw-semibold">Departamento</label>
               {{ form.departamento|add_class:"form-control" }}
               {{ form.departamento.errors }}
             </div>
             <div class="mb-3">
-              <label class="form-label">Municipio</label>
+              <label class="form-label fw-semibold">Municipio</label>
               {{ form.municipio|add_class:"form-control" }}
               {{ form.municipio.errors }}
             </div>
             <div class="mb-3">
-              <label class="form-label">Localidad</label>
+              <label class="form-label fw-semibold">Localidad</label>
               {{ form.localidad|add_class:"form-control" }}
               {{ form.localidad.errors }}
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label">Calle</label>
-              {{ form.calle|add_class:"form-control" }}
-              {{ form.calle.errors }}
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Imagen de perfil</label>
-              {{ form.foto_perfil }}
-              <div id="image-preview-container" style="display:none;">
-                <img id="image-preview" src="" class="img-thumbnail mt-2" style="max-height:150px;" alt="Vista previa">
-                <button type="button" class="btn btn-sm btn-danger mt-2" id="remove-image">Eliminar imagen</button>
-              </div>
-              {{ form.foto_perfil.errors }}
             </div>
           </div>
         </div>
 
         <!-- Mapa -->
-        <div class="mb-3">
-          <h5>Tu ubicación</h5>
+        <div class="mb-4">
+          <h5 class="fw-bold">📍 Tu ubicación</h5>
           <p class="text-muted">Haz clic en el mapa para marcar tu ubicación exacta.</p>
           <div id="map" style="height: 350px; border-radius: 8px;"></div>
           {{ form.latitud }}
@@ -114,9 +106,14 @@
           <p id="geo-msg" class="text-success small mt-2"></p>
         </div>
 
-        <button class="btn btn-acento w-100">Registrarse</button>
+        <button class="btn btn-acento w-100 btn-lg py-2">
+          <i class="fas fa-user-plus me-2"></i>Registrarse
+        </button>
       </form>
-      <p class="mt-3 text-muted">¿Ya tenés cuenta? <a href="{% url 'login' %}">Iniciar sesión</a></p>
+      
+      <p class="mt-3 text-muted text-center">
+        ¿Ya tenés cuenta? <a href="{% url 'login' %}" class="fw-semibold">Iniciar sesión</a>
+      </p>
     </div>
   </div>
 </div>

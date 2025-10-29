@@ -675,11 +675,20 @@ def dashboard_alumno(request):
         "mensajes_nuevos": mensajes_nuevos,
     }
 
-    # Agregar cálculo del total gastado
-    total_gastado = SolicitudClase.objects.filter(
-        alumno=alumno,
-        pago_realizado=True
-    ).aggregate(Sum('monto_acordado'))['monto_acordado__sum'] or 0
+# AGREGAR ESTOS CÁLCULOS PARA GASTOS:
+    solicitudes_con_pago = SolicitudClase.objects.filter(
+        alumno=alumno
+    ).exclude(monto_acordado__isnull=True)
+    
+    total_gastado = sum(
+        float(s.monto_acordado) for s in solicitudes_con_pago.filter(estado_pago='pagado') 
+        if s.monto_acordado
+    )
+    
+    total_pendiente = sum(
+        float(s.monto_acordado) for s in solicitudes_con_pago.filter(estado_pago='pendiente', estado='aceptada') 
+        if s.monto_acordado
+    )
 
     context = {
         "solicitudes_pendientes": solicitudes_pendientes,
@@ -688,7 +697,8 @@ def dashboard_alumno(request):
         "proximas_clases": proximas_clases,
         "mensajes_recientes": mensajes_recientes,
         "mensajes_nuevos": mensajes_nuevos,
-        "total_gastado": total_gastado,  # ← Agregar esto
+        "total_gastado": total_gastado,  # ← Esto debe estar
+        "total_pendiente": total_pendiente,  # ← Y esto también
     }
     return render(request, "cuentas/dashboard_alumno.html", context)
 
@@ -1339,9 +1349,14 @@ def confirmar_fecha_solicitud(request, solicitud_id):
             try:
                 solicitud = form.save(commit=False)
                 solicitud.estado = 'aceptada'
+                
+                # ✅ INICIALIZAR EL ESTADO DEL PAGO CORRECTAMENTE
+                solicitud.estado_pago = 'pendiente'  # Esto es crucial
+                
                 # Si no se modifica la fecha, usar la propuesta por defecto
                 if not solicitud.fecha_clase_confirmada:
                     solicitud.fecha_clase_confirmada = solicitud.fecha_clase_propuesta
+                
                 solicitud.save()
                 
                 # Crear notificación para el maestro
@@ -1358,7 +1373,8 @@ def confirmar_fecha_solicitud(request, solicitud_id):
                 if solicitud.metodo_pago != 'efectivo':
                     return redirect('generar_qr_pago', solicitud_id=solicitud.id)
                 else:
-                    return redirect('mis_solicitudes_alumno')
+                    # ✅ Para pagos en efectivo, redirigir al control de gastos
+                    return redirect('control_gastos_alumno')
                     
             except Exception as e:
                 messages.error(request, f'❌ Error al confirmar la clase: {str(e)}')
@@ -1389,6 +1405,11 @@ def generar_qr_pago(request, solicitud_id):
     if solicitud.estado != 'aceptada':
         messages.error(request, "Esta clase no está confirmada para generar pago.")
         return redirect('mis_solicitudes_alumno')
+    
+    # ✅ Asegurarnos de que el estado de pago esté inicializado
+    if not solicitud.estado_pago or solicitud.estado_pago == '':
+        solicitud.estado_pago = 'pendiente'
+        solicitud.save()
     
     try:
         qr_image = None
@@ -1758,45 +1779,74 @@ def dejar_reseña(request, solicitud_id):
 
 @login_required
 def control_gastos_alumno(request):
-    """Vista principal del control de gastos del alumno"""
+    """Vista principal del control de gastos del alumno - MEJORADA CON DEBUG"""
     try:
         alumno = Alumno.objects.get(usuario=request.user)
         
-        # Obtener todas las solicitudes con montos
+        # Obtener TODAS las solicitudes con montos
         solicitudes = SolicitudClase.objects.filter(
             alumno=alumno
-        ).exclude(monto_acordado__isnull=True).order_by('-fecha_clase_propuesta')
+        ).exclude(monto_acordado__isnull=True).select_related(
+            'maestro', 'maestro__usuario', 'materia'
+        ).order_by('-fecha_solicitud')
         
-        # Estadísticas
-        total_gastado = sum(s.monto_acordado for s in solicitudes.filter(pago_realizado=True))
-        total_pendiente = sum(s.monto_acordado for s in solicitudes.filter(pago_realizado=False, estado='aceptada'))
+        # DEBUG DETALLADO
+        print(f"=== DEBUG CONTROL GASTOS ===")
+        print(f"Solicitudes encontradas: {solicitudes.count()}")
+        for s in solicitudes:
+            print(f"- ID: {s.id} | Materia: {s.materia.nombre} | Monto: ${s.monto_acordado} | Estado: {s.estado} | Estado Pago: {s.estado_pago} | Fecha: {s.fecha_clase_propuesta}")
+        
+        # Estadísticas MEJORADAS
+        solicitudes_pagadas = solicitudes.filter(estado_pago='pagado')
+        solicitudes_pendientes = solicitudes.filter(estado_pago='pendiente', estado='aceptada')
+        
+        total_gastado = sum(float(s.monto_acordado) for s in solicitudes_pagadas if s.monto_acordado)
+        total_pendiente = sum(float(s.monto_acordado) for s in solicitudes_pendientes if s.monto_acordado)
         total_clases = solicitudes.count()
+        
+        print(f"Total gastado: ${total_gastado}")
+        print(f"Total pendiente: ${total_pendiente}")
+        print(f"Clases pagadas: {solicitudes_pagadas.count()}")
+        print(f"Clases pendientes: {solicitudes_pendientes.count()}")
         
         # Gastos por maestro
         gastos_por_maestro = {}
-        for solicitud in solicitudes.filter(pago_realizado=True):
-            maestro_nombre = solicitud.maestro.usuario.get_full_name()
-            if maestro_nombre not in gastos_por_maestro:
-                gastos_por_maestro[maestro_nombre] = 0
-            gastos_por_maestro[maestro_nombre] += float(solicitud.monto_acordado)
+        for solicitud in solicitudes_pagadas:
+            if solicitud.monto_acordado:
+                maestro_nombre = solicitud.maestro.usuario.get_full_name()
+                monto = float(solicitud.monto_acordado)
+                
+                if maestro_nombre in gastos_por_maestro:
+                    gastos_por_maestro[maestro_nombre]['monto'] += monto
+                    gastos_por_maestro[maestro_nombre]['clases'] += 1
+                else:
+                    gastos_por_maestro[maestro_nombre] = {
+                        'monto': monto,
+                        'clases': 1,
+                        'maestro_id': solicitud.maestro.id,
+                    }
         
         # Gastos por materia
         gastos_por_materia = {}
-        for solicitud in solicitudes.filter(pago_realizado=True):
-            materia_nombre = solicitud.materia.nombre
-            if materia_nombre not in gastos_por_materia:
-                gastos_por_materia[materia_nombre] = 0
-            gastos_por_materia[materia_nombre] += float(solicitud.monto_acordado)
+        for solicitud in solicitudes_pagadas:
+            if solicitud.monto_acordado:
+                materia_nombre = solicitud.materia.nombre
+                monto = float(solicitud.monto_acordado)
+                
+                if materia_nombre in gastos_por_materia:
+                    gastos_por_materia[materia_nombre] += monto
+                else:
+                    gastos_por_materia[materia_nombre] = monto
         
         # Próximos pagos pendientes
+        ahora = timezone.now()
         proximos_pagos = solicitudes.filter(
-            pago_realizado=False, 
-            estado='aceptada',
-            fecha_clase_confirmada__gte=timezone.now()
+            estado_pago='pendiente', 
+            estado='aceptada'
         ).order_by('fecha_clase_confirmada')
         
-        # Historial de pagos (últimos 10)
-        historial_pagos = solicitudes.filter(pago_realizado=True).order_by('-fecha_clase_confirmada')[:10]
+        # Historial de pagos
+        historial_pagos = solicitudes_pagadas.order_by('-fecha_pago')[:10]
         
         context = {
             'solicitudes': solicitudes,
@@ -1807,6 +1857,13 @@ def control_gastos_alumno(request):
             'gastos_por_materia': gastos_por_materia,
             'proximos_pagos': proximos_pagos,
             'historial_pagos': historial_pagos,
+            'solicitudes_pagadas': solicitudes_pagadas,
+            'solicitudes_pendientes': solicitudes_pendientes,
+            'debug_info': {
+                'total_solicitudes': solicitudes.count(),
+                'pagadas_count': solicitudes_pagadas.count(),
+                'pendientes_count': solicitudes_pendientes.count(),
+            }
         }
         
         return render(request, 'alumno/control_gastos.html', context)
@@ -1814,6 +1871,10 @@ def control_gastos_alumno(request):
     except Alumno.DoesNotExist:
         messages.error(request, "No tienes un perfil de alumno.")
         return redirect('dashboard_alumno')
+    except Exception as e:
+        messages.error(request, f"Error en control de gastos: {str(e)}")
+        return redirect('dashboard_alumno')
+
 
 @login_required
 def detalle_gastos_maestro(request, maestro_id):
@@ -1829,9 +1890,9 @@ def detalle_gastos_maestro(request, maestro_id):
         ).exclude(monto_acordado__isnull=True).order_by('-fecha_clase_propuesta')
         
         # Estadísticas específicas
-        total_gastado_maestro = sum(c.monto_acordado for c in clases_con_maestro.filter(pago_realizado=True))
+        total_gastado_maestro = sum(c.monto_acordado for c in clases_con_maestro.filter(estado_pago='pagado'))
         total_clases_maestro = clases_con_maestro.count()
-        clases_pendientes = clases_con_maestro.filter(pago_realizado=False, estado='aceptada')
+        clases_pendientes = clases_con_maestro.filter(estado_pago='pendiente', estado='aceptada')
         
         context = {
             'maestro': maestro,
@@ -1846,3 +1907,106 @@ def detalle_gastos_maestro(request, maestro_id):
     except Alumno.DoesNotExist:
         messages.error(request, "No tienes un perfil de alumno.")
         return redirect('dashboard_alumno')
+    
+
+
+@login_required
+def marcar_pago_realizado(request, solicitud_id):
+    """Vista para que el alumno marque un pago como realizado"""
+    solicitud = get_object_or_404(SolicitudClase, id=solicitud_id)
+    
+    # Verificar que el alumno es el dueño de la solicitud
+    if solicitud.alumno.usuario != request.user:
+        messages.error(request, "No tienes permiso para esta acción.")
+        return redirect('mis_solicitudes_alumno')
+    
+    if request.method == 'POST':
+        try:
+            solicitud.estado_pago = 'pagado'
+            solicitud.fecha_pago = timezone.now()
+            solicitud.save()
+            
+            # Crear notificación para el maestro
+            crear_notificacion(
+                usuario=solicitud.maestro.usuario,
+                tipo='solicitud',
+                mensaje=f'El alumno {solicitud.alumno.usuario.get_full_name()} marcó como pagada la clase de {solicitud.materia.nombre}',
+                enlace=f'/maestro/solicitudes/'
+            )
+            
+            messages.success(request, '✅ Pago marcado como realizado correctamente.')
+            return redirect('control_gastos_alumno')
+            
+        except Exception as e:
+            messages.error(request, f'❌ Error al marcar el pago: {str(e)}')
+    
+    return render(request, 'alumno/marcar_pago.html', {
+        'solicitud': solicitud
+    })
+
+@login_required
+def confirmar_pago_maestro(request, solicitud_id):
+    """Vista para que el maestro confirme la recepción del pago"""
+    solicitud = get_object_or_404(SolicitudClase, id=solicitud_id)
+    
+    # Verificar que el maestro es el dueño de la solicitud
+    if solicitud.maestro.usuario != request.user:
+        messages.error(request, "No tienes permiso para esta acción.")
+        return redirect('solicitudes_para_maestro')
+    
+    if request.method == 'POST':
+        try:
+            solicitud.estado_pago = 'pagado'
+            solicitud.fecha_pago = timezone.now()
+            solicitud.save()
+            
+            # Crear notificación para el alumno
+            crear_notificacion(
+                usuario=solicitud.alumno.usuario,
+                tipo='solicitud',
+                mensaje=f'El maestro {solicitud.maestro.usuario.get_full_name()} confirmó el pago de la clase de {solicitud.materia.nombre}',
+                enlace=f'/alumno/solicitudes/'
+            )
+            
+            messages.success(request, '✅ Pago confirmado correctamente.')
+            return redirect('solicitudes_para_maestro')
+            
+        except Exception as e:
+            messages.error(request, f'❌ Error al confirmar el pago: {str(e)}')
+    
+    return render(request, 'maestro/confirmar_pago.html', {
+        'solicitud': solicitud
+    })
+
+
+@login_required
+def corregir_estados_pago(request):
+    """Vista temporal para corregir estados de pago de solicitudes existentes"""
+    if not request.user.is_superuser:
+        messages.error(request, "Solo administradores pueden acceder a esta función.")
+        return redirect('home')
+    
+    try:
+        # Obtener todas las solicitudes aceptadas o completadas que no tienen estado_pago definido
+        solicitudes = SolicitudClase.objects.filter(
+            Q(estado='aceptada') | Q(estado='completada')
+        ).filter(
+            Q(estado_pago__isnull=True) | Q(estado_pago='')
+        )
+        
+        correcciones = 0
+        for solicitud in solicitudes:
+            # Si tiene monto_acordado, asumimos que el pago está pendiente
+            if solicitud.monto_acordado:
+                solicitud.estado_pago = 'pendiente'
+                solicitud.save()
+                correcciones += 1
+                print(f"✅ Corregida: {solicitud.id} - {solicitud.materia.nombre} - ${solicitud.monto_acordado}")
+        
+        messages.success(request, f"Se corrigieron {correcciones} solicitudes.")
+        
+    except Exception as e:
+        messages.error(request, f"Error al corregir: {str(e)}")
+    
+    return redirect('home')
+

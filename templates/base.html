@@ -93,10 +93,12 @@
   </style>
 </head>
 
-<body>
+<body class="{% block body_class %}bg-dashboard{% endblock %}">
   <nav class="navbar navbar-expand-lg navbar-custom">
     <div class="container">
-      <a class="navbar-brand fw-bold" href="{% url 'home' %}">EduLink</a>
+      <a class="navbar-brand fw-bold" href="{% url 'home' %}">
+        <i class="fas fa-graduation-cap me-2"></i>EduLink
+      </a>
 
       <!-- Botón para móviles -->
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -107,6 +109,15 @@
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav me-auto">
           {% if request.user.is_authenticated %}
+          <!-- BOTÓN VOLVER AL DASHBOARD -->
+          <li class="nav-item me-2">
+            <a class="btn btn-dashboard btn-sm" 
+               href="{% if request.user.rol == 'ALUMNO' %}{% url 'dashboard_alumno' %}{% elif request.user.rol == 'MAESTRO' %}{% url 'dashboard_maestro' %}{% else %}{% url 'home' %}{% endif %}">
+              <i class="fas fa-tachometer-alt me-1"></i>
+              Mi Dashboard
+            </a>
+          </li>
+
           <li class="nav-item">
             <a class="nav-link" href="{% url 'agenda_usuario' %}">
               <i class="fas fa-calendar me-1"></i>Mi Agenda
@@ -127,6 +138,11 @@
           <li class="nav-item">
             <a class="nav-link" href="{% url 'mis_solicitudes_alumno' %}">
               <i class="fas fa-envelope me-1"></i>Mis Solicitudes
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'control_gastos_alumno' %}">
+              <i class="fas fa-chart-pie me-1"></i>Control de Gastos
             </a>
           </li>
           {% elif request.user.rol == 'MAESTRO' %}
@@ -188,19 +204,15 @@
             </a>
             <ul class="dropdown-menu dropdown-menu-end">
               {% if request.user.rol == 'ALUMNO' %}
-              <li><a class="dropdown-item" href="{% url 'perfil_alumno' %}"><i class="fas fa-edit me-2"></i>Mi
-                  Perfil</a></li>
+              <li><a class="dropdown-item" href="{% url 'perfil_alumno' %}"><i class="fas fa-edit me-2"></i>Mi Perfil</a></li>
               {% elif request.user.rol == 'MAESTRO' %}
-              <li><a class="dropdown-item" href="{% url 'editar_perfil_maestro' %}"><i class="fas fa-edit me-2"></i>Mi
-                  Perfil</a></li>
+              <li><a class="dropdown-item" href="{% url 'editar_perfil_maestro' %}"><i class="fas fa-edit me-2"></i>Mi Perfil</a></li>
               {% endif %}
-              <li><a class="dropdown-item" href="{% url 'agenda_usuario' %}"><i class="fas fa-calendar me-2"></i>Mi
-                  Agenda</a></li>
+              <li><a class="dropdown-item" href="{% url 'agenda_usuario' %}"><i class="fas fa-calendar me-2"></i>Mi Agenda</a></li>
               <li>
                 <hr class="dropdown-divider">
               </li>
-              <li><a class="dropdown-item" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt me-2"></i>Cerrar
-                  Sesión</a></li>
+              <li><a class="dropdown-item" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión</a></li>
             </ul>
           </li>
           {% else %}
@@ -233,8 +245,7 @@
       <div class="row">
         <div class="col-md-4">
           <h5 class="fw-bold">EduLink</h5>
-          <p class="text-white-50">Conectando estudiantes con los mejores profesores para un aprendizaje personalizado y
-            efectivo.</p>
+          <p class="text-white-50">Conectando estudiantes con los mejores profesores para un aprendizaje personalizado y efectivo.</p>
           <div class="social-links">
             <a href="#" class="text-white me-3"><i class="fab fa-facebook fa-lg"></i></a>
             <a href="#" class="text-white me-3"><i class="fab fa-twitter fa-lg"></i></a>
@@ -292,7 +303,6 @@
     document.addEventListener('DOMContentLoaded', function () {
       // Actualizar notificaciones cada 30 segundos
       setInterval(function () {
-        // Aquí podrías agregar lógica para actualizar el contador de notificaciones
         console.log('Actualizando notificaciones...');
       }, 30000);
     });
@@ -307,7 +317,6 @@
         },
       }).then(response => {
         if (response.ok) {
-          // Recargar la página para actualizar las notificaciones
           location.reload();
         }
       });
