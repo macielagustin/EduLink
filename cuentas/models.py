@@ -52,6 +52,17 @@ class Alumno(models.Model):
     disponibilidad = models.ManyToManyField('Disponibilidad', blank=True, related_name='alumnos')
     prefiere_online = models.BooleanField(default=True)
 
+    @property
+    def promedio_reseñas(self):
+        reseñas = self.reseñas_recibidas.all()
+        if reseñas.exists():
+            return round(sum(r.puntuacion for r in reseñas) / reseñas.count(), 1)
+        return None
+
+    @property
+    def total_reseñas(self):
+        return self.reseñas_recibidas.count()
+
     def __str__(self):
         return f"Alumno: {self.usuario.username}"
 
@@ -306,4 +317,23 @@ class Reseña(models.Model):
     class Meta:
         verbose_name = "Reseña"
         verbose_name_plural = "Reseñas"
+        ordering = ['-fecha_creacion']
+
+
+
+class ReseñaAlumno(models.Model):
+    maestro = models.ForeignKey('Maestro', on_delete=models.SET_NULL, null=True, blank=True)
+    alumno = models.ForeignKey('Alumno', on_delete=models.CASCADE, related_name='reseñas_recibidas')
+    solicitud = models.OneToOneField('SolicitudClase', on_delete=models.CASCADE, related_name='reseña_alumno')
+
+    puntuacion = models.PositiveSmallIntegerField(choices=[(i, str(i)) for i in range(1, 6)])
+    comentario = models.TextField(blank=True, null=True)
+    fecha_creacion = models.DateTimeField(default=timezone.now)
+
+    def _str_(self):
+        return f"{self.puntuacion} ⭐ - alumno {self.alumno.usuario.username}"
+
+    class Meta:
+        verbose_name = "Reseña de Alumno"
+        verbose_name_plural = "Reseñas de Alumnos"
         ordering = ['-fecha_creacion']

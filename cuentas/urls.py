@@ -109,6 +109,8 @@ urlpatterns = [
     # Dejar reseña (para alumno)
     path('reseñas/<int:solicitud_id>/dejar/', views.dejar_reseña, name='dejar_reseña'),
 
+    path('reseñas/<int:solicitud_id>/dejar-alumno/', views.dejar_reseña_alumno, name='dejar_reseña_alumno'),
+
 
     # Agregar esta ruta a urlpatterns
     path("agenda/exportar-ics/", views.exportar_calendario_ics, name="exportar_calendario_ics"),

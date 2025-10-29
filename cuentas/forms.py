@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
-from .models import Usuario, Alumno, Maestro, Provincia, Departamento, Municipio, Localidad, Idioma, NivelEducativo, Disponibilidad, SolicitudClase, Mensaje, Reseña, DisponibilidadUsuario
+from .models import Usuario, Alumno, Maestro, Provincia, Departamento, Municipio, Localidad, Idioma, NivelEducativo, Disponibilidad, SolicitudClase, Mensaje, Reseña, DisponibilidadUsuario, ReseñaAlumno
 from catalogo.models import Materia
 
 
@@ -489,5 +489,21 @@ class ReseñaForm(forms.ModelForm):
                 'rows': 3,
                 'placeholder': 'Escribí un comentario (opcional)...',
                 'class': 'form-control'
+            }),
+        }
+
+
+
+
+class ReseñaAlumnoForm(forms.ModelForm):
+    class Meta:
+        model = ReseñaAlumno
+        fields = ['puntuacion', 'comentario']
+        widgets = {
+            'puntuacion': forms.HiddenInput(),
+            'comentario': forms.Textarea(attrs={
+                'rows': 3,
+                'placeholder': 'Comentario sobre el alumno (opcional)...',
+                'class': 'form-control',
             }),
         }

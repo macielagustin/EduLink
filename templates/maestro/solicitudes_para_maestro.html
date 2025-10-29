@@ -21,20 +21,20 @@
         <div class="card-body">
             <h5 class="card-title">Filtrar por estado:</h5>
             <div class="btn-group flex-wrap" role="group">
-                <a href="?estado=todas{% if query %}&q={{ query }}{% endif %}" 
-                   class="btn {% if estado_filtro == 'todas' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                <a href="?estado=todas{% if query %}&q={{ query }}{% endif %}"
+                    class="btn {% if estado_filtro == 'todas' %}btn-primary{% else %}btn-outline-primary{% endif %}">
                     Todas <span class="badge bg-light text-dark">{{ contadores.todas }}</span>
                 </a>
-                <a href="?estado=pendiente{% if query %}&q={{ query }}{% endif %}" 
-                   class="btn {% if estado_filtro == 'pendiente' %}btn-warning{% else %}btn-outline-warning{% endif %}">
+                <a href="?estado=pendiente{% if query %}&q={{ query }}{% endif %}"
+                    class="btn {% if estado_filtro == 'pendiente' %}btn-warning{% else %}btn-outline-warning{% endif %}">
                     Pendientes <span class="badge bg-light text-dark">{{ contadores.pendientes }}</span>
                 </a>
-                <a href="?estado=aceptada{% if query %}&q={{ query }}{% endif %}" 
-                   class="btn {% if estado_filtro == 'aceptada' %}btn-success{% else %}btn-outline-success{% endif %}">
+                <a href="?estado=aceptada{% if query %}&q={{ query }}{% endif %}"
+                    class="btn {% if estado_filtro == 'aceptada' %}btn-success{% else %}btn-outline-success{% endif %}">
                     Aceptadas <span class="badge bg-light text-dark">{{ contadores.aceptadas }}</span>
                 </a>
-                <a href="?estado=rechazada{% if query %}&q={{ query }}{% endif %}" 
-                   class="btn {% if estado_filtro == 'rechazada' %}btn-danger{% else %}btn-outline-danger{% endif %}">
+                <a href="?estado=rechazada{% if query %}&q={{ query }}{% endif %}"
+                    class="btn {% if estado_filtro == 'rechazada' %}btn-danger{% else %}btn-outline-danger{% endif %}">
                     Rechazadas <span class="badge bg-light text-dark">{{ contadores.rechazadas }}</span>
                 </a>
             </div>
@@ -47,13 +47,8 @@
         <input type="hidden" name="estado" value="{{ estado_filtro }}">
 
         <div class="col-auto">
-            <input 
-                type="text" 
-                name="q" 
-                class="form-control"
-                placeholder="Buscar por alumno o materia..."
-                value="{{ query|default:'' }}"
-            >
+            <input type="text" name="q" class="form-control" placeholder="Buscar por alumno o materia..."
+                value="{{ query|default:'' }}">
         </div>
 
         <div class="col-auto">
@@ -73,170 +68,264 @@
 
     <!-- Lista de Solicitudes -->
     {% if solicitudes %}
-        <div class="row">
-            {% for solicitud in solicitudes %}
-            <div class="col-md-6 mb-4">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">{{ solicitud.materia.nombre }}</h5>
-                        <span class="badge 
+    <div class="row">
+        {% for solicitud in solicitudes %}
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ solicitud.materia.nombre }}</h5>
+                    <span class="badge 
                             {% if solicitud.estado == 'pendiente' %}bg-warning
                             {% elif solicitud.estado == 'aceptada' %}bg-success
                             {% elif solicitud.estado == 'rechazada' %}bg-danger
                             {% else %}bg-secondary{% endif %}">
-                            {{ solicitud.get_estado_display }}
-                        </span>
-                    </div>
-                    
-                    <div class="card-body">
-                        <!-- Información del Alumno -->
-                        <div class="d-flex align-items-center mb-3">
-                            <div class="bg-light rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
-                                👤
+                        {{ solicitud.get_estado_display }}
+                    </span>
+                </div>
+
+                <div class="card-body">
+                    <!-- Información del Alumno -->
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-light rounded-circle d-flex align-items-center justify-content-center me-3"
+                            style="width: 40px; height: 40px;">
+                            👤
+                        </div>
+                        <div>
+                            <strong>
+                                {{ solicitud.alumno.usuario.get_full_name|default:solicitud.alumno.usuario.username }}
+                            </strong><br>
+
+                            <!-- ⭐ Reputación del alumno -->
+                            {% if solicitud.alumno.promedio_reseñas %}
+                            <div class="mb-1">
+                                {% for i in "12345" %}
+                                {% if forloop.counter <= solicitud.alumno.promedio_reseñas|floatformat:0 %} <i
+                                    class="fa fa-star text-warning"></i>
+                                    {% else %}
+                                    <i class="fa fa-star text-secondary"></i>
+                                    {% endif %}
+                                    {% endfor %}
+                                    <small class="text-muted">
+                                        {{ solicitud.alumno.promedio_reseñas }} / 5
+                                        ({{ solicitud.alumno.total_reseñas }} reseñas)
+                                    </small>
                             </div>
-                            <div>
-                                <strong>{{ solicitud.alumno.usuario.get_full_name|default:solicitud.alumno.usuario.username }}</strong>
-                                <br>
-                                <small class="text-muted">Solicitado: {{ solicitud.fecha_solicitud|date:"d/m/Y H:i" }}</small>
+                            {% else %}
+                            <div class="mb-1">
+                                <small class="text-muted">Alumno sin reseñas todavía</small>
                             </div>
-                        </div>
+                            {% endif %}
 
-                        <!-- Detalles de la Clase -->
-                        <div class="mb-3">
-                            <div class="row">
-                                <div class="col-6">
-                                    <small class="text-muted">⏱️ Duración:</small>
-                                    <br>
-                                    <strong>{{ solicitud.duracion_minutos }} minutos</strong>
-                                </div>
-                                {% if solicitud.monto_acordado %}
-                                <div class="col-6">
-                                    <small class="text-muted">💰 Monto:</small>
-                                    <br>
-                                    <strong>${{ solicitud.monto_acordado }}</strong>
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        {% if solicitud.fecha_clase_propuesta %}
-                        <div class="mb-3">
-                            <small class="text-muted">📅 Fecha propuesta:</small>
-                            <br>
-                            <strong>{{ solicitud.fecha_clase_propuesta|date:"d/m/Y H:i" }}</strong>
-                        </div>
-                        {% endif %}
-
-                        {% if solicitud.mensaje %}
-                        <div class="mb-3">
-                            <small class="text-muted">💬 Mensaje del alumno:</small>
-                            <div class="alert alert-light mt-1">
-                                <em>"{{ solicitud.mensaje }}"</em>
-                            </div>
-                        </div>
-                        {% endif %}
-
-                        {% if solicitud.fecha_clase_confirmada %}
-                        <div class="alert alert-success">
-                            <small>✅ Confirmada para: {{ solicitud.fecha_clase_confirmada|date:"d/m/Y H:i" }}</small>
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <!-- Acciones -->
-                    <div class="card-footer">
-                        {% if solicitud.estado == 'pendiente' %}
-                            <a href="{% url 'proponer_fecha_solicitud' solicitud.id %}" 
-                               class="btn btn-primary btn-sm flex-fill">
-                                📅 Proponer Fecha
-                            </a>
-                            <a href="{% url 'cambiar_estado_solicitud' solicitud.id 'rechazada' %}" 
-                               class="btn btn-danger btn-sm"
-                               onclick="return confirm('¿Rechazar esta solicitud de clase?')">
-                                ❌ Rechazar
-                            </a>
-                        </div>
-                        {% elif solicitud.estado == 'aceptada' and not solicitud.fecha_clase_confirmada %}
-                        <div class="text-center">
                             <small class="text-muted">
-                                ⏳ Esperando confirmación del alumno
+                                Solicitado: {{ solicitud.fecha_solicitud|date:"d/m/Y H:i" }}
                             </small>
-                            <br>
-                            <a href="{% url 'proponer_fecha_solicitud' solicitud.id %}" class="btn btn-outline-primary btn-sm mt-1">
-                                ✏️ Modificar Propuesta
-                            </a>
-                        </div>
-                        {% elif solicitud.estado == 'aceptada' and solicitud.fecha_clase_confirmada %}
-                        <div class="text-center">
-                            <small class="text-success">
-                                ✅ Clase confirmada
-                            </small>
-                        </div>
-                        {% else %}
-                        <div class="text-center">
-                            <small class="text-muted">
-                                Esta solicitud fue {{ solicitud.get_estado_display|lower }}
-                            </small>
-                        </div>
-                        {% endif %}
-
-                        <!-- Botón de conversación siempre visible -->
-                        <div class="mt-2">
-                            <a href="{% url 'iniciar_conversacion' solicitud.alumno.usuario.id %}" 
-                               class="btn btn-outline-secondary btn-sm w-100">
-                                💬 Conversar
-                            </a>
                         </div>
                     </div>
+
+                    {% if solicitud.alumno.reseñas_recibidas.all %}
+                    <button class="btn btn-outline-secondary btn-sm mt-2" data-bs-toggle="modal"
+                        data-bs-target="#historialAlumnoModal-{{ solicitud.alumno.id }}">
+                        📝 Ver historial del alumno
+                    </button>
+                    {% endif %}
+
+                    <!-- Detalles de la Clase -->
+                    <div class="mb-3">
+                        <div class="row">
+                            <div class="col-6">
+                                <small class="text-muted">⏱️ Duración:</small><br>
+                                <strong>{{ solicitud.duracion_minutos }} minutos</strong>
+                            </div>
+                            {% if solicitud.monto_acordado %}
+                            <div class="col-6">
+                                <small class="text-muted">💰 Monto:</small><br>
+                                <strong>${{ solicitud.monto_acordado }}</strong>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if solicitud.fecha_clase_propuesta %}
+                    <div class="mb-3">
+                        <small class="text-muted">📅 Fecha propuesta:</small><br>
+                        <strong>{{ solicitud.fecha_clase_propuesta|date:"d/m/Y H:i" }}</strong>
+                    </div>
+                    {% endif %}
+
+                    {% if solicitud.mensaje %}
+                    <div class="mb-3">
+                        <small class="text-muted">💬 Mensaje del alumno:</small>
+                        <div class="alert alert-light mt-1">
+                            <em>"{{ solicitud.mensaje }}"</em>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if solicitud.fecha_clase_confirmada %}
+                    <div class="alert alert-success">
+                        <small>✅ Confirmada para: {{ solicitud.fecha_clase_confirmada|date:"d/m/Y H:i" }}</small>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Acciones -->
+                <div class="card-footer">
+                    {% if solicitud.estado == 'pendiente' %}
+                    <a href="{% url 'proponer_fecha_solicitud' solicitud.id %}"
+                        class="btn btn-primary btn-sm flex-fill">
+                        📅 Proponer Fecha
+                    </a>
+                    <a href="{% url 'cambiar_estado_solicitud' solicitud.id 'rechazada' %}"
+                        class="btn btn-danger btn-sm" onclick="return confirm('¿Rechazar esta solicitud de clase?')">
+                        ❌ Rechazar
+                    </a>
+                </div>
+
+                {% elif solicitud.estado == 'aceptada' and not solicitud.fecha_clase_confirmada %}
+                <div class="text-center">
+                    <small class="text-muted">
+                        ⏳ Esperando confirmación del alumno
+                    </small><br>
+                    <a href="{% url 'proponer_fecha_solicitud' solicitud.id %}"
+                        class="btn btn-outline-primary btn-sm mt-1">
+                        ✏️ Modificar Propuesta
+                    </a>
+                </div>
+
+                {% elif solicitud.estado == 'aceptada' and solicitud.fecha_clase_confirmada %}
+                <div class="text-center">
+                    <small class="text-success">
+                        ✅ Clase confirmada
+                    </small>
+                </div>
+
+                {% else %}
+                <div class="text-center">
+                    <small class="text-muted">
+                        Esta solicitud fue {{ solicitud.get_estado_display|lower }}
+                    </small>
+                </div>
+                {% endif %}
+
+                <!-- Botón de conversación siempre visible -->
+                <div class="mt-2">
+                    <a href="{% url 'iniciar_conversacion' solicitud.alumno.usuario.id %}"
+                        class="btn btn-outline-secondary btn-sm w-100">
+                        💬 Conversar
+                    </a>
                 </div>
             </div>
-            {% endfor %}
         </div>
-    {% else %}
-        <!-- Estado cuando no hay solicitudes -->
-        <div class="text-center py-5">
-            <div class="mb-4">
-                <span style="font-size: 4rem;">📭</span>
+    </div>
+
+    <!-- Modal Historial Alumno -->
+    <div class="modal fade" id="historialAlumnoModal-{{ solicitud.alumno.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        Historial de {{ solicitud.alumno.usuario.get_full_name|default:solicitud.alumno.usuario.username }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+
+                    {% for rese in solicitud.alumno.reseñas_recibidas.all %}
+                    <div class="mb-3 pb-3 border-bottom">
+                        <!-- estrellas -->
+                        <div class="mb-1">
+                            {% for i in "12345" %}
+                            {% if forloop.counter <= rese.puntuacion %} <i class="fa fa-star text-warning"></i>
+                                {% else %}
+                                <i class="fa fa-star text-secondary"></i>
+                                {% endif %}
+                                {% endfor %}
+                        </div>
+
+                        <!-- comentario -->
+                        <p class="mb-1">
+                            {{ rese.comentario|default:"(Sin comentario)" }}
+                        </p>
+
+                        <!-- fecha -->
+                        <small class="text-muted">
+                            {{ rese.fecha_creacion|date:"d/m/Y H:i" }}
+                        </small>
+
+                        <!-- opcional: aviso de clase -->
+                        <div class="text-muted small">
+                            Clase: {{ rese.solicitud.materia.nombre }}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">Este alumno aún no tiene comentarios de otros maestros.</p>
+                    {% endfor %}
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+                </div>
             </div>
-            <h4 class="text-muted">
-                {% if estado_filtro == 'todas' %}
-                    No tienes solicitudes de clase
-                {% else %}
-                    No hay solicitudes {{ estado_filtro }}s
-                {% endif %}
-            </h4>
-            <p class="text-muted">
-                {% if estado_filtro == 'todas' %}
-                    Cuando los alumnos te envíen solicitudes de clase, aparecerán aquí.
-                {% else %}
-                    Intenta cambiar el filtro para ver más solicitudes.
-                {% endif %}
-            </p>
-            {% if estado_filtro != 'todas' %}
-                <a href="?estado=todas" class="btn btn-primary">Ver todas las solicitudes</a>
-            {% endif %}
         </div>
+    </div>
+
+    {% endfor %}
+</div>
+{% else %}
+<!-- Estado cuando no hay solicitudes -->
+<div class="text-center py-5">
+    <div class="mb-4">
+        <span style="font-size: 4rem;">📭</span>
+    </div>
+    <h4 class="text-muted">
+        {% if estado_filtro == 'todas' %}
+        No tienes solicitudes de clase
+        {% else %}
+        No hay solicitudes {{ estado_filtro }}s
+        {% endif %}
+    </h4>
+    <p class="text-muted">
+        {% if estado_filtro == 'todas' %}
+        Cuando los alumnos te envíen solicitudes de clase, aparecerán aquí.
+        {% else %}
+        Intenta cambiar el filtro para ver más solicitudes.
+        {% endif %}
+    </p>
+    {% if estado_filtro != 'todas' %}
+    <a href="?estado=todas" class="btn btn-primary">Ver todas las solicitudes</a>
     {% endif %}
+</div>
+{% endif %}
 </div>
 
 <style>
-.card {
-    border: none;
-    border-radius: 15px;
-    transition: transform 0.2s;
-}
+    .card {
+        border: none;
+        border-radius: 15px;
+        transition: transform 0.2s;
+    }
 
-.card:hover {
-    transform: translateY(-2px);
-}
+    .card:hover {
+        transform: translateY(-2px);
+    }
 
-.badge {
-    font-size: 0.75em;
-}
+    .badge {
+        font-size: 0.75em;
+    }
 
-.btn-group .btn {
-    border-radius: 8px;
-    margin: 0 2px;
-}
+    .btn-group .btn {
+        border-radius: 8px;
+        margin: 0 2px;
+    }
+
+    /* ⭐ Estrellas reputación alumno */
+    .fa-star {
+        font-size: 0.8rem;
+        margin-right: 1px;
+    }
+
+    .text-warning {
+        color: #FFD43B !important;
+    }
 </style>
 {% endblock %}
