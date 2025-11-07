@@ -524,14 +524,33 @@ class BlocNotasForm(forms.ModelForm):
 class TareaForm(forms.ModelForm):
     class Meta:
         model = Tarea
-        fields = ['titulo', 'descripcion', 'fecha_vencimiento', 'prioridad', 'estado']
+        fields = ['titulo', 'descripcion', 'fecha_vencimiento', 'prioridad']  # Quitamos 'estado'
         widgets = {
-            'titulo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Título de la tarea...'}),
-            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Descripción...'}),
-            'fecha_vencimiento': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
-            'prioridad': forms.Select(attrs={'class': 'form-select'}),
-            'estado': forms.Select(attrs={'class': 'form-select'}),
+            'titulo': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Título de la tarea...',
+                'required': 'required'
+            }),
+            'descripcion': forms.Textarea(attrs={
+                'class': 'form-control', 
+                'rows': 3, 
+                'placeholder': 'Descripción de la tarea...'
+            }),
+            'fecha_vencimiento': forms.DateTimeInput(attrs={
+                'type': 'datetime-local', 
+                'class': 'form-control'
+            }),
+            'prioridad': forms.Select(attrs={
+                'class': 'form-select',
+                'required': 'required'
+            }),
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Hacer que solo el título sea obligatorio
+        self.fields['titulo'].required = True
+        self.fields['prioridad'].required = True
 
 class SesionEstudioForm(forms.ModelForm):
     class Meta:

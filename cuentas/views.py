@@ -892,16 +892,28 @@ def dashboard_maestro(request):
         leida=False
     ).count()
 
+    # Estadísticas de tareas del usuario
+    total_tareas = request.user.tarea_set.count()
+    tareas_pendientes = request.user.tarea_set.filter(completada=False).count()
+    tareas_completadas = request.user.tarea_set.filter(completada=True).count()
+
+
     context = {
-        "solicitudes_pendientes": solicitudes_pendientes,
-        "clases_esta_semana": clases_esta_semana,
-        "clases_hoy": clases_hoy,
-        "ingresos_mes": ingresos_mes,
-        "proximas_clases": proximas_clases,
-        "mensajes_recientes": mensajes_recientes,
-        "mensajes_nuevos": mensajes_nuevos,
-        "notificaciones_no_leidas": notificaciones_no_leidas,
-    }
+    "solicitudes_pendientes": solicitudes_pendientes,
+    "clases_esta_semana": clases_esta_semana,
+    "clases_hoy": clases_hoy,
+    "ingresos_mes": ingresos_mes,
+    "proximas_clases": proximas_clases,
+    "mensajes_recientes": mensajes_recientes,
+    "mensajes_nuevos": mensajes_nuevos,
+    "notificaciones_no_leidas": notificaciones_no_leidas,
+    
+    # ✅ Nuevas métricas para el template
+    "total_tareas": total_tareas,
+    "tareas_pendientes": tareas_pendientes,
+    "tareas_completadas": tareas_completadas,
+}
+
     return render(request, "cuentas/dashboard_maestro.html", context)
 
 def test_geocoding(request):
@@ -2161,17 +2173,41 @@ def gestor_tareas(request):
     if request.method == 'POST':
         form = TareaForm(request.POST)
         if form.is_valid():
-            tarea = form.save(commit=False)
-            tarea.usuario = request.user
-            tarea.save()
-            
+            try:
+                tarea = form.save(commit=False)
+                tarea.usuario = request.user
+                tarea.estado = 'pendiente'  # ✅ ESTABLECER ESTADO POR DEFECTO
+                tarea.completada = False    # ✅ ESTABLECER COMPLETADA POR DEFECTO
+                tarea.save()
+                
+                # Para peticiones AJAX
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'status': 'success', 
+                        'tarea_id': tarea.id,
+                        'message': 'Tarea creada correctamente'
+                    })
+                
+                messages.success(request, 'Tarea creada correctamente.')
+                return redirect('gestor_tareas')
+                
+            except Exception as e:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': f'Error al guardar: {str(e)}'
+                    }, status=400)
+                messages.error(request, f'Error al guardar: {str(e)}')
+        else:
+            # Si el formulario tiene errores
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'status': 'success', 'tarea_id': tarea.id})
-            
-            messages.success(request, 'Tarea creada correctamente.')
-            return redirect('gestor_tareas')
-    else:
-        form = TareaForm()
+                return JsonResponse({
+                    'status': 'error',
+                    'errors': form.errors
+                }, status=400)
+    
+    # Para GET requests
+    form = TareaForm()
     
     # Marcar tareas próximas a vencer
     hoy = timezone.now()
@@ -2197,27 +2233,49 @@ def gestor_tareas(request):
 
 @login_required
 def cambiar_estado_tarea(request, tarea_id):
-    """Cambiar estado de tarea via AJAX"""
+    """Cambiar estado de tarea via AJAX - CORREGIDA"""
     tarea = get_object_or_404(Tarea, id=tarea_id, usuario=request.user)
     
     if request.method == 'POST':
-        nuevo_estado = request.POST.get('estado')
-        if nuevo_estado in ['pendiente', 'en_progreso', 'completada']:
-            tarea.estado = nuevo_estado
-            tarea.completada = (nuevo_estado == 'completada')
-            if nuevo_estado == 'completada':
+        try:
+            completada = request.POST.get('completada') == 'true'
+            tarea.completada = completada
+            
+            if completada:
+                tarea.estado = 'completada'
                 tarea.fecha_completada = timezone.now()
+            else:
+                tarea.estado = 'pendiente'
+                tarea.fecha_completada = None
+            
             tarea.save()
-            return JsonResponse({'status': 'success', 'nuevo_estado': tarea.get_estado_display()})
+            
+            return JsonResponse({
+                'status': 'success', 
+                'nuevo_estado': tarea.estado,
+                'completada': tarea.completada
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            }, status=400)
     
-    return JsonResponse({'status': 'error'})
+    return JsonResponse({'status': 'error', 'message': 'Método no permitido'}, status=405)
 
 @login_required
 def eliminar_tarea(request, tarea_id):
     """Eliminar tarea via AJAX"""
     tarea = get_object_or_404(Tarea, id=tarea_id, usuario=request.user)
-    tarea.delete()
-    return JsonResponse({'status': 'success'})
+    
+    if request.method == 'POST':
+        try:
+            tarea.delete()
+            return JsonResponse({'status': 'success'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+    
+    return JsonResponse({'status': 'error', 'message': 'Método no permitido'}, status=405)
 
 # POMODORO TIMER
 @login_required

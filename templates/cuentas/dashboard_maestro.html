@@ -82,6 +82,73 @@
                 </div>
             </div>
         </div>
+
+        <!-- Agrega esto en el dashboard del maestro -->
+        <div class="col-md-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0">📅 Mis Tareas</h5>
+                    <a href="{% url 'gestor_tareas' %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-plus me-1"></i>Gestionar
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% with tareas_proximas=request.user.tarea_set.all|slice:":3" %}
+                        {% if tareas_proximas %}
+                            <div class="list-group list-group-flush">
+                                {% for tarea in tareas_proximas %}
+                                    <div class="list-group-item px-0 border-0">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-1 {% if tarea.completada %}text-decoration-line-through text-muted{% endif %}">
+                                                    {{ tarea.titulo }}
+                                                </h6>
+                                                {% if tarea.descripcion %}
+                                                    <p class="text-muted small mb-1">{{ tarea.descripcion|truncatewords:10 }}</p>
+                                                {% endif %}
+                                                {% if tarea.fecha_vencimiento %}
+                                                    <small class="text-{% if tarea.esta_proxima %}warning{% else %}muted{% endif %}">
+                                                        <i class="fas fa-clock me-1"></i>
+                                                        {{ tarea.fecha_vencimiento|date:"d/m/Y H:i" }}
+                                                    </small>
+                                                {% endif %}
+                                            </div>
+                                            <span class="badge bg-{% if tarea.prioridad == 'alta' %}danger{% elif tarea.prioridad == 'media' %}warning{% else %}info{% endif %} ms-2">
+                                                {{ tarea.get_prioridad_display }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-3">
+                                <i class="fas fa-tasks fa-2x text-muted mb-2"></i>
+                                <p class="text-muted mb-2">No tienes tareas pendientes</p>
+                                <a href="{% url 'gestor_tareas' %}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-plus me-1"></i>Crear primera tarea
+                                </a>
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+
+                    <!-- Estadísticas rápidas -->
+                    <div class="row text-center mt-3 pt-3 border-top">
+                        <div class="col-4">
+                            <small class="text-muted d-block">Total</small>
+                            <strong>{{ total_tareas }}</strong>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted d-block">Pendientes</small>
+                            <strong>{{ tareas_pendientes }}</strong>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted d-block">Completadas</small>
+                            <strong>{{ tareas_completadas }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Secciones principales en 2 columnas -->

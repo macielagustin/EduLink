@@ -14,35 +14,55 @@
                 </div>
                 <div class="card-body">
                     <!-- Formulario para nueva tarea -->
-                    <div class="mb-4">
-                        <h6 class="fw-bold mb-3">➕ Nueva Tarea</h6>
-                        <form method="post" id="tarea-form">
-                            {% csrf_token %}
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">Título</label>
-                                    {{ form.titulo }}
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label">Prioridad</label>
-                                    {{ form.prioridad }}
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label">Fecha Vencimiento</label>
-                                    {{ form.fecha_vencimiento }}
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Descripción</label>
-                                    {{ form.descripcion }}
-                                </div>
-                                <div class="col-12">
-                                    <button type="submit" class="btn btn-primary" id="submit-btn">
-                                        <i class="fas fa-plus me-1"></i>Agregar Tarea
-                                    </button>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
+                    <!-- En la sección del formulario, verifica que los campos tengan estos IDs -->
+<div class="mb-4">
+    <h6 class="fw-bold mb-3">➕ Nueva Tarea</h6>
+    <form method="post" id="tarea-form">
+        {% csrf_token %}
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Título *</label>
+                <input type="text" class="form-control" id="id_titulo" name="titulo" 
+                       placeholder="Título de la tarea..." required>
+                {% if form.titulo.errors %}
+                    <div class="text-danger small">{{ form.titulo.errors }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Prioridad *</label>
+                <select class="form-select" id="id_prioridad" name="prioridad" required>
+                    <option value="">Seleccionar...</option>
+                    <option value="baja">🔵 Baja</option>
+                    <option value="media" selected>🟡 Media</option>
+                    <option value="alta">🔴 Alta</option>
+                </select>
+                {% if form.prioridad.errors %}
+                    <div class="text-danger small">{{ form.prioridad.errors }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Fecha Vencimiento</label>
+                <input type="datetime-local" class="form-control" id="id_fecha_vencimiento" name="fecha_vencimiento">
+                {% if form.fecha_vencimiento.errors %}
+                    <div class="text-danger small">{{ form.fecha_vencimiento.errors }}</div>
+                {% endif %}
+            </div>
+            <div class="col-12">
+                <label class="form-label">Descripción</label>
+                <textarea class="form-control" id="id_descripcion" name="descripcion" 
+                          rows="3" placeholder="Descripción de la tarea..."></textarea>
+                {% if form.descripcion.errors %}
+                    <div class="text-danger small">{{ form.descripcion.errors }}</div>
+                {% endif %}
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary" id="submit-btn">
+                    <i class="fas fa-plus me-1"></i>Agregar Tarea
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
 
                     <!-- Estadísticas -->
                     <div class="row mb-4">
@@ -138,33 +158,104 @@ document.addEventListener('DOMContentLoaded', function() {
     const tareaForm = document.getElementById('tarea-form');
     const submitBtn = document.getElementById('submit-btn');
     
-    // Enviar formulario de tarea
+    // Función para mostrar notificación
+    function mostrarNotificacion(mensaje, tipo = 'success') {
+        // Eliminar notificaciones existentes
+        document.querySelectorAll('.alert-dismissible').forEach(alert => alert.remove());
+        
+        // Crear elemento de notificación
+        const alerta = document.createElement('div');
+        alerta.className = `alert alert-${tipo === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+        alerta.innerHTML = `
+            ${mensaje}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        // Insertar después del formulario
+        document.querySelector('.mb-4').after(alerta);
+        
+        // Auto-eliminar después de 5 segundos
+        setTimeout(() => {
+            if (alerta.parentElement) {
+                alerta.remove();
+            }
+        }, 5000);
+    }
+    
+    // Enviar formulario de tarea - VERSIÓN DEBUG
     tareaForm.addEventListener('submit', function(e) {
         e.preventDefault();
+        console.log('📝 Enviando formulario...');
         
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Guardando...';
         
-        const formData = new FormData(this);
+        // Crear FormData y agregar campos manualmente para debug
+        const formData = new FormData();
+        formData.append('titulo', document.getElementById('id_titulo').value);
+        formData.append('descripcion', document.getElementById('id_descripcion').value);
+        formData.append('prioridad', document.getElementById('id_prioridad').value);
+        
+        const fechaVencimiento = document.getElementById('id_fecha_vencimiento').value;
+        if (fechaVencimiento) {
+            formData.append('fecha_vencimiento', fechaVencimiento);
+        }
+        
+        // Agregar CSRF token
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        
+        console.log('📤 Datos enviados:', {
+            titulo: document.getElementById('id_titulo').value,
+            prioridad: document.getElementById('id_prioridad').value,
+            fecha_vencimiento: fechaVencimiento
+        });
         
         fetch('{% url "gestor_tareas" %}', {
             method: 'POST',
             body: formData,
             headers: {
-                'X-Requested-With': 'XMLHttpRequest',
+                'X-Requested-With': 'XMLHttpRequest'
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('📥 Respuesta recibida:', response.status);
+            if (!response.ok) {
+                return response.json().then(err => { 
+                    throw err; 
+                });
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('✅ Datos de respuesta:', data);
             if (data.status === 'success') {
-                // Recargar la página para mostrar la nueva tarea
-                location.reload();
+                mostrarNotificacion('✅ Tarea creada correctamente');
+                tareaForm.reset();
+                
+                // Recargar después de 1 segundo
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
             } else {
-                alert('Error al guardar la tarea');
+                throw new Error(data.message || 'Error desconocido');
             }
         })
         .catch(error => {
-            alert('Error de conexión');
+            console.error('❌ Error completo:', error);
+            let mensajeError = 'Error al guardar la tarea';
+            
+            if (error.errors) {
+                // Mostrar errores de validación específicos
+                const errores = [];
+                for (let campo in error.errors) {
+                    errores.push(`${campo}: ${error.errors[campo].join(', ')}`);
+                }
+                mensajeError = 'Errores en el formulario: ' + errores.join('; ');
+            } else if (error.message) {
+                mensajeError = error.message;
+            }
+            
+            mostrarNotificacion('❌ ' + mensajeError, 'error');
         })
         .finally(() => {
             submitBtn.disabled = false;
@@ -172,11 +263,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Marcar tarea como completada
+    // Marcar tarea como completada - VERSIÓN MEJORADA
     document.querySelectorAll('.tarea-checkbox').forEach(checkbox => {
         checkbox.addEventListener('change', function() {
             const tareaId = this.dataset.tareaId;
             const completada = this.checked;
+            const tareaElement = this.closest('.list-group-item');
             
             fetch(`/herramientas/tareas/${tareaId}/cambiar-estado/`, {
                 method: 'POST',
@@ -186,34 +278,79 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 body: `completada=${completada}`
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error en la respuesta del servidor');
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.status === 'success') {
-                    location.reload();
+                    // Actualizar interfaz inmediatamente
+                    const label = tareaElement.querySelector('.form-check-label');
+                    if (completada) {
+                        label.classList.add('text-decoration-line-through', 'text-muted');
+                        mostrarNotificacion('✅ Tarea marcada como completada');
+                    } else {
+                        label.classList.remove('text-decoration-line-through', 'text-muted');
+                        mostrarNotificacion('📝 Tarea marcada como pendiente');
+                    }
+                    
+                    // Actualizar estadísticas
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Revertir el checkbox
+                this.checked = !completada;
+                mostrarNotificacion('❌ Error al actualizar la tarea', 'error');
             });
         });
     });
     
-    // Eliminar tarea
+    // Eliminar tarea - VERSIÓN MEJORADA
     document.querySelectorAll('.eliminar-tarea').forEach(button => {
         button.addEventListener('click', function() {
             const tareaId = this.dataset.tareaId;
+            const tareaElement = this.closest('.list-group-item');
+            const tituloTarea = tareaElement.querySelector('strong').textContent;
             
-            if (confirm('¿Estás seguro de que quieres eliminar esta tarea?')) {
+            if (confirm(`¿Estás seguro de que quieres eliminar la tarea "${tituloTarea}"?`)) {
                 fetch(`/herramientas/tareas/${tareaId}/eliminar/`, {
                     method: 'POST',
                     headers: {
                         'X-CSRFToken': '{{ csrf_token }}',
                     }
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error en la respuesta del servidor');
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.status === 'success') {
-                        // Eliminar el elemento de la lista
-                        document.querySelector(`[data-tarea-id="${tareaId}"]`).remove();
-                        location.reload();
+                        // Animación de eliminación
+                        tareaElement.style.opacity = '0';
+                        tareaElement.style.transition = 'opacity 0.3s';
+                        
+                        setTimeout(() => {
+                            tareaElement.remove();
+                            mostrarNotificacion('🗑️ Tarea eliminada correctamente');
+                            
+                            // Actualizar estadísticas
+                            setTimeout(() => {
+                                location.reload();
+                            }, 1000);
+                        }, 300);
                     }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    mostrarNotificacion('❌ Error al eliminar la tarea', 'error');
                 });
             }
         });
@@ -236,6 +373,34 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     calcularProximasVencer();
+    
+    // Auto-guardar en localStorage mientras se escribe
+    const camposTarea = tareaForm.querySelectorAll('input, textarea, select');
+    camposTarea.forEach(campo => {
+        campo.addEventListener('input', function() {
+            const datosForm = {};
+            camposTarea.forEach(c => {
+                datosForm[c.name] = c.value;
+            });
+            localStorage.setItem('tareaPendiente', JSON.stringify(datosForm));
+        });
+    });
+    
+    // Cargar datos guardados al cargar la página
+    const datosGuardados = localStorage.getItem('tareaPendiente');
+    if (datosGuardados) {
+        const datos = JSON.parse(datosGuardados);
+        camposTarea.forEach(campo => {
+            if (datos[campo.name] !== undefined) {
+                campo.value = datos[campo.name];
+            }
+        });
+    }
+    
+    // Limpiar localStorage al enviar el formulario
+    tareaForm.addEventListener('submit', function() {
+        localStorage.removeItem('tareaPendiente');
+    });
 });
 </script>
 {% endblock %}
