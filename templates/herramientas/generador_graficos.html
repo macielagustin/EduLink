@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Generador de Gráficos - EduLink{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-md-10 mx-auto">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <h4 class="fw-bold mb-0">📊 Generador de Gráficos</h4>
+                    <p class="text-muted mb-0">Crea gráficos a partir de tus datos</p>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Tipo de Gráfico:</label>
+                                <select class="form-select" id="tipo-grafico">
+                                    <option value="bar">Barras</option>
+                                    <option value="line">Líneas</option>
+                                    <option value="pie">Torta</option>
+                                    <option value="doughnut">Dona</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Título:</label>
+                                <input type="text" class="form-control" id="titulo-grafico" placeholder="Mi Gráfico">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Datos (formato: etiqueta,valor):</label>
+                                <textarea class="form-control" id="datos-grafico" rows="6" placeholder="Matemáticas,85
+Ciencias,92
+Historia,78
+Literatura,88
+Arte,95"></textarea>
+                                <small class="text-muted">Un dato por línea: etiqueta,valor</small>
+                            </div>
+                            
+                            <button class="btn btn-primary w-100" id="btn-generar">Generar Gráfico</button>
+                            <button class="btn btn-outline-secondary w-100 mt-2" id="btn-ejemplo">Cargar Ejemplo</button>
+                        </div>
+                        
+                        <div class="col-md-8">
+                            <div class="chart-container">
+                                <canvas id="miGrafico"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let miChart = null;
+    const ctx = document.getElementById('miGrafico').getContext('2d');
+    
+    function generarGrafico() {
+        const tipo = document.getElementById('tipo-grafico').value;
+        const titulo = document.getElementById('titulo-grafico').value;
+        const datosTexto = document.getElementById('datos-grafico').value;
+        
+        // Parsear datos
+        const lineas = datosTexto.split('\n').filter(linea => linea.trim() !== '');
+        const etiquetas = [];
+        const valores = [];
+        const colores = generarColores(lineas.length);
+        
+        lineas.forEach(linea => {
+            const partes = linea.split(',');
+            if (partes.length >= 2) {
+                etiquetas.push(partes[0].trim());
+                valores.push(parseFloat(partes[1].trim()));
+            }
+        });
+        
+        // Destruir gráfico anterior si existe
+        if (miChart) {
+            miChart.destroy();
+        }
+        
+        // Configuración del gráfico
+        const config = {
+            type: tipo,
+            data: {
+                labels: etiquetas,
+                datasets: [{
+                    label: titulo,
+                    data: valores,
+                    backgroundColor: colores,
+                    borderColor: tipo === 'line' ? '#0d6efd' : colores,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: titulo
+                    }
+                }
+            }
+        };
+        
+        miChart = new Chart(ctx, config);
+    }
+    
+    function generarColores(cantidad) {
+        const colores = [];
+        const baseColores = [
+            '#0d6efd', '#dc3545', '#198754', '#ffc107', '#6f42c1',
+            '#fd7e14', '#20c997', '#e83e8c', '#6c757d', '#0dcaf0'
+        ];
+        
+        for (let i = 0; i < cantidad; i++) {
+            colores.push(baseColores[i % baseColores.length]);
+        }
+        
+        return colores;
+    }
+    
+    function cargarEjemplo() {
+        document.getElementById('titulo-grafico').value = 'Calificaciones del Semestre';
+        document.getElementById('datos-grafico').value = `Matemáticas,85
+Ciencias,92
+Historia,78
+Literatura,88
+Arte,95
+Educación Física,90`;
+        generarGrafico();
+    }
+    
+    document.getElementById('btn-generar').addEventListener('click', generarGrafico);
+    document.getElementById('btn-ejemplo').addEventListener('click', cargarEjemplo);
+    document.getElementById('tipo-grafico').addEventListener('change', generarGrafico);
+    
+    // Generar gráfico inicial
+    cargarEjemplo();
+});
+</script>
+
+<style>
+.chart-container {
+    position: relative;
+    height: 400px;
+    width: 100%;
+}
+</style>
+{% endblock %}

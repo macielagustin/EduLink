@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Gestor de Tareas - EduLink{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-md-10 mx-auto">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <h4 class="fw-bold mb-0">✅ Gestor de Tareas</h4>
+                    <p class="text-muted mb-0">Organiza tus tareas y proyectos</p>
+                </div>
+                <div class="card-body">
+                    <!-- Formulario para nueva tarea -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold mb-3">➕ Nueva Tarea</h6>
+                        <form method="post" id="tarea-form">
+                            {% csrf_token %}
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Título</label>
+                                    {{ form.titulo }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Prioridad</label>
+                                    {{ form.prioridad }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Fecha Vencimiento</label>
+                                    {{ form.fecha_vencimiento }}
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Descripción</label>
+                                    {{ form.descripcion }}
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary" id="submit-btn">
+                                        <i class="fas fa-plus me-1"></i>Agregar Tarea
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Estadísticas -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body text-center">
+                                    <h4 class="mb-0">{{ total_tareas }}</h4>
+                                    <small>Total Tareas</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-warning text-dark">
+                                <div class="card-body text-center">
+                                    <h4 class="mb-0">{{ tareas_pendientes }}</h4>
+                                    <small>Pendientes</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body text-center">
+                                    <h4 class="mb-0">{{ tareas_completadas }}</h4>
+                                    <small>Completadas</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body text-center">
+                                    <h4 class="mb-0" id="proximas-vencer">0</h4>
+                                    <small>Próximas a vencer</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lista de tareas -->
+                    <div class="tareas-container">
+                        <h6 class="fw-bold mb-3">📋 Tus Tareas</h6>
+                        
+                        {% if tareas %}
+                        <div class="list-group" id="lista-tareas">
+                            {% for tarea in tareas %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center" data-tarea-id="{{ tarea.id }}">
+                                <div class="flex-grow-1">
+                                    <div class="form-check">
+                                        <input class="form-check-input tarea-checkbox" type="checkbox" 
+                                               data-tarea-id="{{ tarea.id }}"
+                                               {% if tarea.completada %}checked{% endif %}>
+                                        <label class="form-check-label {% if tarea.completada %}text-decoration-line-through text-muted{% endif %}">
+                                            <strong>{{ tarea.titulo }}</strong>
+                                            {% if tarea.descripcion %}
+                                            <br><small class="text-muted">{{ tarea.descripcion }}</small>
+                                            {% endif %}
+                                            {% if tarea.fecha_vencimiento %}
+                                            <br><small class="{% if tarea.esta_proxima %}text-warning{% else %}text-muted{% endif %}">
+                                                <i class="fas fa-calendar me-1"></i>
+                                                Vence: {{ tarea.fecha_vencimiento|date:"d/m/Y H:i" }}
+                                            </small>
+                                            {% endif %}
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-{% if tarea.prioridad == 'alta' %}danger{% elif tarea.prioridad == 'media' %}warning{% else %}info{% endif %}">
+                                        {{ tarea.get_prioridad_display }}
+                                    </span>
+                                    <button class="btn btn-sm btn-outline-danger eliminar-tarea" data-tarea-id="{{ tarea.id }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No tienes tareas registradas.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tareaForm = document.getElementById('tarea-form');
+    const submitBtn = document.getElementById('submit-btn');
+    
+    // Enviar formulario de tarea
+    tareaForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Guardando...';
+        
+        const formData = new FormData(this);
+        
+        fetch('{% url "gestor_tareas" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Recargar la página para mostrar la nueva tarea
+                location.reload();
+            } else {
+                alert('Error al guardar la tarea');
+            }
+        })
+        .catch(error => {
+            alert('Error de conexión');
+        })
+        .finally(() => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-plus me-1"></i>Agregar Tarea';
+        });
+    });
+    
+    // Marcar tarea como completada
+    document.querySelectorAll('.tarea-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const tareaId = this.dataset.tareaId;
+            const completada = this.checked;
+            
+            fetch(`/herramientas/tareas/${tareaId}/cambiar-estado/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `completada=${completada}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    location.reload();
+                }
+            });
+        });
+    });
+    
+    // Eliminar tarea
+    document.querySelectorAll('.eliminar-tarea').forEach(button => {
+        button.addEventListener('click', function() {
+            const tareaId = this.dataset.tareaId;
+            
+            if (confirm('¿Estás seguro de que quieres eliminar esta tarea?')) {
+                fetch(`/herramientas/tareas/${tareaId}/eliminar/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Eliminar el elemento de la lista
+                        document.querySelector(`[data-tarea-id="${tareaId}"]`).remove();
+                        location.reload();
+                    }
+                });
+            }
+        });
+    });
+    
+    // Calcular tareas próximas a vencer
+    function calcularProximasVencer() {
+        const hoy = new Date();
+        const tareas = document.querySelectorAll('.list-group-item');
+        let proximas = 0;
+        
+        tareas.forEach(tarea => {
+            const fechaElement = tarea.querySelector('.text-warning');
+            if (fechaElement) {
+                proximas++;
+            }
+        });
+        
+        document.getElementById('proximas-vencer').textContent = proximas;
+    }
+    
+    calcularProximasVencer();
+});
+</script>
+{% endblock %}

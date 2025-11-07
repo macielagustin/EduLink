@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
-from .models import Usuario, Alumno, Maestro, Provincia, Departamento, Municipio, Localidad, Idioma, NivelEducativo, Disponibilidad, SolicitudClase, Mensaje, Reseña, DisponibilidadUsuario, ReseñaAlumno
+from .models import Usuario, Alumno, Maestro, Provincia, Departamento, Municipio, Localidad, Idioma, NivelEducativo, Disponibilidad, SolicitudClase, Mensaje, Reseña, DisponibilidadUsuario, ReseñaAlumno, BlocNotas, Tarea, SesionEstudio
 from catalogo.models import Materia
 
 
@@ -506,4 +506,38 @@ class ReseñaAlumnoForm(forms.ModelForm):
                 'placeholder': 'Comentario sobre el alumno (opcional)...',
                 'class': 'form-control',
             }),
+        }
+
+# ===== HERRAMIENTAS INTEGRADAS =====
+class BlocNotasForm(forms.ModelForm):
+    class Meta:
+        model = BlocNotas
+        fields = ['contenido']
+        widgets = {
+            'contenido': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 15,
+                'placeholder': 'Escribe tus notas aquí... Puedes usar markdown básico: **negrita**, *cursiva*, listas con -, etc.'
+            }),
+        }
+
+class TareaForm(forms.ModelForm):
+    class Meta:
+        model = Tarea
+        fields = ['titulo', 'descripcion', 'fecha_vencimiento', 'prioridad', 'estado']
+        widgets = {
+            'titulo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Título de la tarea...'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Descripción...'}),
+            'fecha_vencimiento': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'prioridad': forms.Select(attrs={'class': 'form-select'}),
+            'estado': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+class SesionEstudioForm(forms.ModelForm):
+    class Meta:
+        model = SesionEstudio
+        fields = ['tipo', 'descripcion']
+        widgets = {
+            'tipo': forms.Select(attrs={'class': 'form-select'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': '¿Qué vas a estudiar?'}),
         }

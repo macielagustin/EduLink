@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Calculadora Científica - EduLink{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <h4 class="fw-bold mb-0">🧮 Calculadora Científica</h4>
+                    <p class="text-muted mb-0">Calculadora avanzada para tus ejercicios matemáticos</p>
+                </div>
+                <div class="card-body">
+                    <!-- Calculadora -->
+                    <div class="calculator-container bg-light rounded-3 p-4 mb-4">
+                        <div class="calculator-display bg-white rounded-2 p-3 mb-3 text-end fs-3 fw-bold" id="display">
+                            0
+                        </div>
+                        <div class="calculator-buttons row g-2">
+                            <div class="col-3">
+                                <button class="btn btn-secondary w-100 py-3" onclick="clearDisplay()">C</button>
+                            </div>
+                            <div class="col-3">
+                                <button class="btn btn-secondary w-100 py-3" onclick="deleteLast()">⌫</button>
+                            </div>
+                            <div class="col-3">
+                                <button class="btn btn-warning w-100 py-3" onclick="appendToDisplay('/')">/</button>
+                            </div>
+                            <div class="col-3">
+                                <button class="btn btn-warning w-100 py-3" onclick="appendToDisplay('*')">×</button>
+                            </div>
+                            
+                            <div class="col-3">
+                                <button class="btn btn-light w-100 py-3" onclick="appendToDisplay('7')">7</button>
+                            </div>
+                            <div class="col-3">
+                                <button class="btn btn-light w-100 py-3" onclick="appendToDisplay('8')">8</button>
+                            </div>
+                            <div class="col-3">
+                                <button class="btn btn-light w-100 py-3" onclick="appendToDisplay('9')">9</button>
+                            </div>
+                            <div class="col-3">
+                                <button class="btn btn-warning w-100 py-3" onclick="appendToDisplay('-')">-</button>
+                            </div>
+                            
+                            <div class="col-3">
+                                <button class="btn btn-light w-100 py-3" onclick="appendToDisplay('4')">4</button>
+                            </div>
+                            <div class="col-3">
+                                <button class="btn btn-light w-100 py-3" onclick="appendToDisplay('5')">5</button>
+                            </div>
+                            <div class="col-3">
+                                <button class="btn btn-light w-100 py-3" onclick="appendToDisplay('6')">6</button>
+                            </div>
+                            <div class="col-3">
+                                <button class="btn btn-warning w-100 py-3" onclick="appendToDisplay('+')">+</button>
+                            </div>
+                            
+                            <div class="col-3">
+                                <button class="btn btn-light w-100 py-3" onclick="appendToDisplay('1')">1</button>
+                            </div>
+                            <div class="col-3">
+                                <button class="btn btn-light w-100 py-3" onclick="appendToDisplay('2')">2</button>
+                            </div>
+                            <div class="col-3">
+                                <button class="btn btn-light w-100 py-3" onclick="appendToDisplay('3')">3</button>
+                            </div>
+                            <div class="col-3">
+                                <button class="btn btn-warning w-100 py-3" onclick="appendToDisplay('.')">.</button>
+                            </div>
+                            
+                            <div class="col-3">
+                                <button class="btn btn-light w-100 py-3" onclick="appendToDisplay('0')">0</button>
+                            </div>
+                            <div class="col-3">
+                                <button class="btn btn-light w-100 py-3" onclick="appendToDisplay('(')">(</button>
+                            </div>
+                            <div class="col-3">
+                                <button class="btn btn-light w-100 py-3" onclick="appendToDisplay(')')">)</button>
+                            </div>
+                            <div class="col-3">
+                                <button class="btn btn-success w-100 py-3" onclick="calculate()">=</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Funciones científicas -->
+                    <div class="scientific-functions">
+                        <h6 class="fw-bold mb-3">Funciones Científicas</h6>
+                        <div class="row g-2">
+                            <div class="col-2">
+                                <button class="btn btn-outline-primary w-100" onclick="appendToDisplay('Math.sin(')">sin</button>
+                            </div>
+                            <div class="col-2">
+                                <button class="btn btn-outline-primary w-100" onclick="appendToDisplay('Math.cos(')">cos</button>
+                            </div>
+                            <div class="col-2">
+                                <button class="btn btn-outline-primary w-100" onclick="appendToDisplay('Math.tan(')">tan</button>
+                            </div>
+                            <div class="col-2">
+                                <button class="btn btn-outline-primary w-100" onclick="appendToDisplay('Math.log(')">log</button>
+                            </div>
+                            <div class="col-2">
+                                <button class="btn btn-outline-primary w-100" onclick="appendToDisplay('Math.sqrt(')">√</button>
+                            </div>
+                            <div class="col-2">
+                                <button class="btn btn-outline-primary w-100" onclick="appendToDisplay('Math.PI')">π</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let display = document.getElementById('display');
+let currentExpression = '';
+
+function appendToDisplay(value) {
+    if (display.innerText === '0' && value !== '.') {
+        display.innerText = value;
+    } else {
+        display.innerText += value;
+    }
+    currentExpression = display.innerText;
+}
+
+function clearDisplay() {
+    display.innerText = '0';
+    currentExpression = '';
+}
+
+function deleteLast() {
+    if (display.innerText.length > 1) {
+        display.innerText = display.innerText.slice(0, -1);
+    } else {
+        display.innerText = '0';
+    }
+    currentExpression = display.innerText;
+}
+
+function calculate() {
+    try {
+        // Reemplazar símbolos para evaluación segura
+        let expression = currentExpression.replace(/×/g, '*').replace(/÷/g, '/');
+        let result = eval(expression);
+        display.innerText = result;
+        currentExpression = result.toString();
+    } catch (error) {
+        display.innerText = 'Error';
+        currentExpression = '';
+    }
+}
+</script>
+{% endblock %}

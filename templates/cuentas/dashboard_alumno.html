@@ -85,6 +85,53 @@
                 </div>
             </div>
         </div>
+
+        <!-- Agrega esto en tu dashboard existente -->
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0">
+                    <h5 class="fw-bold mb-0">📅 Tareas Próximas</h5>
+                </div>
+                <div class="card-body">
+                    {% with tareas_proximas=user.tarea_set.all|slice:":5" %}
+                        {% if tareas_proximas %}
+                            <div class="list-group list-group-flush">
+                                {% for tarea in tareas_proximas %}
+                                    <div class="list-group-item px-0">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <h6 class="mb-1 {% if tarea.completada %}text-decoration-line-through text-muted{% endif %}">
+                                                    {{ tarea.titulo }}
+                                                </h6>
+                                                {% if tarea.fecha_vencimiento %}
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-clock me-1"></i>
+                                                        {{ tarea.fecha_vencimiento|date:"d/m/Y H:i" }}
+                                                    </small>
+                                                {% endif %}
+                                            </div>
+                                            <span class="badge bg-{% if tarea.prioridad == 'alta' %}danger{% elif tarea.prioridad == 'media' %}warning{% else %}info{% endif %}">
+                                                {{ tarea.get_prioridad_display }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-3">
+                                <i class="fas fa-tasks fa-2x text-muted mb-2"></i>
+                                <p class="text-muted mb-0">No hay tareas próximas</p>
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+                    <div class="text-center mt-3">
+                        <a href="{% url 'gestor_tareas' %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-plus me-1"></i>Gestionar Tareas
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Secciones principales -->

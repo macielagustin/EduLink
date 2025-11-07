@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Kit de Herramientas - EduLink{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h2 fw-bold text-primary">
+                🛠️ Kit de Herramientas EduLink
+            </h1>
+            <p class="text-muted mb-0">
+                Todo lo que necesitas para hacer tu aprendizaje más efectivo, en un solo lugar
+            </p>
+        </div>
+    </div>
+
+    <!-- Estadísticas rápidas -->
+    <!-- En la sección de estadísticas, reemplaza con: -->
+<div class="row mb-4">
+    <div class="col-md-3 col-6 mb-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h4 class="mb-0">{{ total_tareas }}</h4>
+                <small>Total Tareas</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="card bg-warning text-dark">
+            <div class="card-body text-center">
+                <h4 class="mb-0">{{ tareas_pendientes }}</h4>
+                <small>Pendientes</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h4 class="mb-0">{{ tareas_completadas }}</h4>
+                <small>Completadas</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <h4 class="mb-0">{{ tareas_proximas }}</h4>
+                <small>Próximas</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- Grid de herramientas -->
+    <div class="row g-4">
+        <!-- Calculadora -->
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card tool-card border-0 shadow-sm h-100">
+                <div class="card-body text-center p-4">
+                    <div class="tool-icon bg-primary bg-opacity-10 rounded-circle p-3 mb-3 mx-auto">
+                        <i class="fas fa-calculator fa-2x text-primary"></i>
+                    </div>
+                    <h5 class="fw-bold">Calculadora Científica</h5>
+                    <p class="text-muted small mb-3">
+                        Calculadora avanzada con funciones matemáticas complejas
+                    </p>
+                    <a href="{% url 'calculadora' %}" class="btn btn-primary btn-sm">Abrir</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bloc de Notas -->
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card tool-card border-0 shadow-sm h-100">
+                <div class="card-body text-center p-4">
+                    <div class="tool-icon bg-success bg-opacity-10 rounded-circle p-3 mb-3 mx-auto">
+                        <i class="fas fa-sticky-note fa-2x text-success"></i>
+                    </div>
+                    <h5 class="fw-bold">Bloc de Notas</h5>
+                    <p class="text-muted small mb-3">
+                        Toma notas durante tus clases y guárdalas permanentemente
+                    </p>
+                    <a href="{% url 'bloc_notas' %}" class="btn btn-success btn-sm">Abrir</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gestor de Tareas -->
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card tool-card border-0 shadow-sm h-100">
+                <div class="card-body text-center p-4">
+                    <div class="tool-icon bg-warning bg-opacity-10 rounded-circle p-3 mb-3 mx-auto">
+                        <i class="fas fa-tasks fa-2x text-warning"></i>
+                    </div>
+                    <h5 class="fw-bold">Gestor de Tareas</h5>
+                    <p class="text-muted small mb-3">
+                        Organiza tus tareas, proyectos y fechas de entrega
+                    </p>
+                    <a href="{% url 'gestor_tareas' %}" class="btn btn-warning btn-sm">Abrir</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pomodoro Timer -->
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card tool-card border-0 shadow-sm h-100">
+                <div class="card-body text-center p-4">
+                    <div class="tool-icon bg-danger bg-opacity-10 rounded-circle p-3 mb-3 mx-auto">
+                        <i class="fas fa-clock fa-2x text-danger"></i>
+                    </div>
+                    <h5 class="fw-bold">Pomodoro Timer</h5>
+                    <p class="text-muted small mb-3">
+                        Técnica de estudio para mejorar tu productividad
+                    </p>
+                    <a href="{% url 'pomodoro_timer' %}" class="btn btn-danger btn-sm">Abrir</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conversor de Unidades -->
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card tool-card border-0 shadow-sm h-100">
+                <div class="card-body text-center p-4">
+                    <div class="tool-icon bg-info bg-opacity-10 rounded-circle p-3 mb-3 mx-auto">
+                        <i class="fas fa-ruler-combined fa-2x text-info"></i>
+                    </div>
+                    <h5 class="fw-bold">Conversor de Unidades</h5>
+                    <p class="text-muted small mb-3">
+                        Convierte entre diferentes sistemas de medida
+                    </p>
+                    <a href="{% url 'conversor_unidades' %}" class="btn btn-info btn-sm">Abrir</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Generador de Gráficos -->
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card tool-card border-0 shadow-sm h-100">
+                <div class="card-body text-center p-4">
+                    <div class="tool-icon bg-purple bg-opacity-10 rounded-circle p-3 mb-3 mx-auto">
+                        <i class="fas fa-chart-bar fa-2x text-purple"></i>
+                    </div>
+                    <h5 class="fw-bold">Generador de Gráficos</h5>
+                    <p class="text-muted small mb-3">
+                        Crea gráficos a partir de datos matemáticos
+                    </p>
+                    <a href="{% url 'generador_graficos' %}" class="btn btn-purple btn-sm">Abrir</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Próximas herramientas -->
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card tool-card border-0 shadow-sm h-100">
+                <div class="card-body text-center p-4">
+                    <div class="tool-icon bg-secondary bg-opacity-10 rounded-circle p-3 mb-3 mx-auto">
+                        <i class="fas fa-book fa-2x text-secondary"></i>
+                    </div>
+                    <h5 class="fw-bold">Biblioteca de Fórmulas</h5>
+                    <p class="text-muted small mb-3">
+                        Acceso rápido a fórmulas matemáticas (Próximamente)
+                    </p>
+                    <button class="btn btn-outline-secondary btn-sm" disabled>Próximamente</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card tool-card border-0 shadow-sm h-100">
+                <div class="card-body text-center p-4">
+                    <div class="tool-icon bg-secondary bg-opacity-10 rounded-circle p-3 mb-3 mx-auto">
+                        <i class="fas fa-language fa-2x text-secondary"></i>
+                    </div>
+                    <h5 class="fw-bold">Diccionario/Translator</h5>
+                    <p class="text-muted small mb-3">
+                        Traductor integrado y diccionario (Próximamente)
+                    </p>
+                    <button class="btn btn-outline-secondary btn-sm" disabled>Próximamente</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.tool-card {
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+}
+
+.tool-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.15) !important;
+    border-color: #0d6efd;
+}
+
+.tool-icon {
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bg-purple {
+    background-color: #6f42c1 !important;
+}
+
+.text-purple {
+    color: #6f42c1 !important;
+}
+
+.btn-purple {
+    background-color: #6f42c1;
+    border-color: #6f42c1;
+    color: white;
+}
+
+.btn-purple:hover {
+    background-color: #5a32a3;
+    border-color: #5a32a3;
+    color: white;
+}
+</style>
+{% endblock %}

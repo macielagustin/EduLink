@@ -134,4 +134,18 @@ urlpatterns = [
     # Ruta temporal para corregir datos (eliminar después de usar)
     path("corregir-pagos/", views.corregir_estados_pago, name="corregir_estados_pago"),
 
+
+
+    # Herramientas integradas
+    path("herramientas/", views.herramientas, name="herramientas"),
+    path("herramientas/calculadora/", views.calculadora, name="calculadora"),
+    path("herramientas/bloc-notas/", views.bloc_notas, name="bloc_notas"),
+    path("herramientas/tareas/", views.gestor_tareas, name="gestor_tareas"),
+    path("herramientas/tareas/<int:tarea_id>/cambiar-estado/", views.cambiar_estado_tarea, name="cambiar_estado_tarea"),
+    path("herramientas/tareas/<int:tarea_id>/eliminar/", views.eliminar_tarea, name="eliminar_tarea"),
+    path("herramientas/pomodoro/", views.pomodoro_timer, name="pomodoro_timer"),
+    path("herramientas/pomodoro/finalizar-sesion/", views.finalizar_sesion_estudio, name="finalizar_sesion_estudio"),
+    path("herramientas/conversor/", views.conversor_unidades, name="conversor_unidades"),
+    path("herramientas/graficos/", views.generador_graficos, name="generador_graficos"),
+
 ]

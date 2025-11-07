@@ -337,3 +337,54 @@ class ReseñaAlumno(models.Model):
         verbose_name = "Reseña de Alumno"
         verbose_name_plural = "Reseñas de Alumnos"
         ordering = ['-fecha_creacion']
+
+
+# HERRAMIENTAS
+# Modelos para las herramientas
+class BlocNotas(models.Model):
+    usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE)
+    contenido = models.TextField(blank=True, null=True)
+    ultima_actualizacion = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"Bloc de {self.usuario.username}"
+
+class Tarea(models.Model):
+    PRIORIDAD_CHOICES = [
+        ('baja', '🔵 Baja'),
+        ('media', '🟡 Media'),
+        ('alta', '🔴 Alta'),
+    ]
+    
+    ESTADO_CHOICES = [
+        ('pendiente', '⏳ Pendiente'),
+        ('en_progreso', '🔄 En Progreso'),
+        ('completada', '✅ Completada'),
+    ]
+    
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+    titulo = models.CharField(max_length=200)
+    descripcion = models.TextField(blank=True, null=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_vencimiento = models.DateTimeField(null=True, blank=True)
+    prioridad = models.CharField(max_length=10, choices=PRIORIDAD_CHOICES, default='media')
+    estado = models.CharField(max_length=15, choices=ESTADO_CHOICES, default='pendiente')
+    completada = models.BooleanField(default=False)
+    fecha_completada = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-fecha_creacion']
+    
+    def __str__(self):
+        return f"{self.titulo} - {self.usuario.username}"
+
+class SesionEstudio(models.Model):
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+    fecha_inicio = models.DateTimeField(auto_now_add=True)
+    fecha_fin = models.DateTimeField(null=True, blank=True)
+    duracion_minutos = models.IntegerField(default=0)
+    tipo = models.CharField(max_length=20, choices=[('pomodoro', 'Pomodoro'), ('estudio_libre', 'Estudio Libre')])
+    descripcion = models.TextField(blank=True, null=True)
+    
+    def __str__(self):
+        return f"Sesión de {self.usuario.username} - {self.duracion_minutos}min"

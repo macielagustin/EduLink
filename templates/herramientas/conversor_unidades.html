@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Conversor de Unidades - EduLink{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <h4 class="fw-bold mb-0">🔄 Conversor de Unidades</h4>
+                    <p class="text-muted mb-0">Convierte entre diferentes sistemas de medida</p>
+                </div>
+                <div class="card-body">
+                    <div class="row g-4">
+                        <!-- Selección de categoría -->
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">📊 Categoría de Unidades:</label>
+                            <select class="form-select" id="categoria-unidad">
+                                <option value="longitud">📏 Longitud</option>
+                                <option value="peso">⚖️ Peso/Masa</option>
+                                <option value="temperatura">🌡️ Temperatura</option>
+                                <option value="volumen">🧪 Volumen</option>
+                                <option value="velocidad">🚀 Velocidad</option>
+                            </select>
+                        </div>
+
+                        <!-- Panel de conversión -->
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">DE</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Valor:</label>
+                                        <input type="number" class="form-control form-control-lg" id="valor-origen" value="1" step="any">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Unidad de origen:</label>
+                                        <select class="form-select" id="unidad-origen">
+                                            <!-- Se llena dinámicamente -->
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">A</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Resultado:</label>
+                                        <input type="text" class="form-control form-control-lg" id="valor-destino" readonly style="background-color: #f8f9fa;">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Unidad destino:</label>
+                                        <select class="form-select" id="unidad-destino">
+                                            <!-- Se llena dinámicamente -->
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botón de conversión -->
+                        <div class="col-12">
+                            <button class="btn btn-primary btn-lg w-100" id="btn-convertir">
+                                <i class="fas fa-sync-alt me-2"></i>Convertir Unidades
+                            </button>
+                        </div>
+
+                        <!-- Información de la categoría -->
+                        <div class="col-12">
+                            <div class="alert alert-info" id="info-categoria">
+                                <small>
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    <span id="info-text">Selecciona una categoría para comenzar</span>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const categorias = {
+        longitud: {
+            nombre: "Longitud",
+            info: "Conversión entre metros, kilómetros, centímetros, pulgadas, pies, etc.",
+            unidades: {
+                metros: { nombre: "Metros (m)", factor: 1 },
+                kilometros: { nombre: "Kilómetros (km)", factor: 0.001 },
+                centimetros: { nombre: "Centímetros (cm)", factor: 100 },
+                milimetros: { nombre: "Milímetros (mm)", factor: 1000 },
+                pulgadas: { nombre: "Pulgadas (in)", factor: 39.3701 },
+                pies: { nombre: "Pies (ft)", factor: 3.28084 },
+                yardas: { nombre: "Yardas (yd)", factor: 1.09361 },
+                millas: { nombre: "Millas (mi)", factor: 0.000621371 }
+            }
+        },
+        peso: {
+            nombre: "Peso/Masa", 
+            info: "Conversión entre kilogramos, gramos, libras, onzas, etc.",
+            unidades: {
+                kilogramos: { nombre: "Kilogramos (kg)", factor: 1 },
+                gramos: { nombre: "Gramos (g)", factor: 1000 },
+                libras: { nombre: "Libras (lb)", factor: 2.20462 },
+                onzas: { nombre: "Onzas (oz)", factor: 35.274 },
+                toneladas: { nombre: "Toneladas (t)", factor: 0.001 }
+            }
+        },
+        temperatura: {
+            nombre: "Temperatura",
+            info: "Conversión entre Celsius, Fahrenheit y Kelvin",
+            unidades: {
+                celsius: { nombre: "Celsius (°C)", factor: 'celsius' },
+                fahrenheit: { nombre: "Fahrenheit (°F)", factor: 'fahrenheit' },
+                kelvin: { nombre: "Kelvin (K)", factor: 'kelvin' }
+            }
+        },
+        volumen: {
+            nombre: "Volumen",
+            info: "Conversión entre litros, mililitros, galones, metros cúbicos, etc.",
+            unidades: {
+                litros: { nombre: "Litros (L)", factor: 1 },
+                mililitros: { nombre: "Mililitros (mL)", factor: 1000 },
+                galones: { nombre: "Galones (gal)", factor: 0.264172 },
+                metros_cubicos: { nombre: "Metros cúbicos (m³)", factor: 0.001 },
+                pintas: { nombre: "Pintas (pt)", factor: 2.11338 }
+            }
+        },
+        velocidad: {
+            nombre: "Velocidad",
+            info: "Conversión entre km/h, m/s, mph, nudos, etc.",
+            unidades: {
+                kmh: { nombre: "Kilómetros por hora (km/h)", factor: 1 },
+                ms: { nombre: "Metros por segundo (m/s)", factor: 0.277778 },
+                mph: { nombre: "Millas por hora (mph)", factor: 0.621371 },
+                nudos: { nombre: "Nudos (kn)", factor: 0.539957 }
+            }
+        }
+    };
+
+    const categoriaSelect = document.getElementById('categoria-unidad');
+    const unidadOrigenSelect = document.getElementById('unidad-origen');
+    const unidadDestinoSelect = document.getElementById('unidad-destino');
+    const btnConvertir = document.getElementById('btn-convertir');
+    const infoText = document.getElementById('info-text');
+
+    function actualizarUnidades() {
+        const categoria = categoriaSelect.value;
+        const unidades = categorias[categoria].unidades;
+        
+        // Actualizar información
+        infoText.textContent = categorias[categoria].info;
+        
+        // Limpiar selects
+        unidadOrigenSelect.innerHTML = '';
+        unidadDestinoSelect.innerHTML = '';
+        
+        // Llenar selects con las unidades
+        Object.keys(unidades).forEach(clave => {
+            const unidad = unidades[clave];
+            
+            const optionOrigen = document.createElement('option');
+            optionOrigen.value = clave;
+            optionOrigen.textContent = unidad.nombre;
+            unidadOrigenSelect.appendChild(optionOrigen);
+            
+            const optionDestino = document.createElement('option');
+            optionDestino.value = clave;
+            optionDestino.textContent = unidad.nombre;
+            unidadDestinoSelect.appendChild(optionDestino);
+        });
+        
+        // Seleccionar unidades por defecto diferentes
+        const claves = Object.keys(unidades);
+        if (claves.length >= 2) {
+            unidadOrigenSelect.selectedIndex = 0;
+            unidadDestinoSelect.selectedIndex = 1;
+        }
+        
+        // Convertir automáticamente
+        convertirUnidades();
+    }
+
+    function convertirTemperatura(valor, desde, hacia) {
+        // Convertir a Celsius primero
+        let celsius;
+        switch(desde) {
+            case 'fahrenheit':
+                celsius = (valor - 32) * 5/9;
+                break;
+            case 'kelvin':
+                celsius = valor - 273.15;
+                break;
+            default:
+                celsius = valor;
+        }
+
+        // Convertir desde Celsius al destino
+        switch(hacia) {
+            case 'fahrenheit':
+                return (celsius * 9/5) + 32;
+            case 'kelvin':
+                return celsius + 273.15;
+            default:
+                return celsius;
+        }
+    }
+
+    function convertirUnidades() {
+        const valor = parseFloat(document.getElementById('valor-origen').value);
+        const categoria = categoriaSelect.value;
+        const unidadOrigen = unidadOrigenSelect.value;
+        const unidadDestino = unidadDestinoSelect.value;
+        
+        if (isNaN(valor)) {
+            document.getElementById('valor-destino').value = 'Ingresa un número válido';
+            return;
+        }
+        
+        const unidades = categorias[categoria].unidades;
+        const factorOrigen = unidades[unidadOrigen].factor;
+        const factorDestino = unidades[unidadDestino].factor;
+        
+        let resultado;
+        
+        if (categoria === 'temperatura') {
+            resultado = convertirTemperatura(valor, unidadOrigen, unidadDestino);
+        } else {
+            // Conversión lineal
+            const valorEnBase = valor / factorOrigen;
+            resultado = valorEnBase * factorDestino;
+        }
+        
+        // Formatear resultado
+        if (Math.abs(resultado) < 0.0001 && resultado !== 0) {
+            document.getElementById('valor-destino').value = resultado.toExponential(4);
+        } else if (Math.abs(resultado) > 1000000) {
+            document.getElementById('valor-destino').value = resultado.toExponential(4);
+        } else {
+            document.getElementById('valor-destino').value = resultado.toFixed(6).replace(/\.?0+$/, '');
+        }
+    }
+
+    // Event listeners
+    categoriaSelect.addEventListener('change', actualizarUnidades);
+    unidadOrigenSelect.addEventListener('change', convertirUnidades);
+    unidadDestinoSelect.addEventListener('change', convertirUnidades);
+    btnConvertir.addEventListener('click', convertirUnidades);
+    document.getElementById('valor-origen').addEventListener('input', convertirUnidades);
+    
+    // Inicializar
+    actualizarUnidades();
+});
+</script>
+{% endblock %}

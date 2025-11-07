@@ -5,8 +5,8 @@ from django.contrib.auth.views import LoginView
 from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
 from django.http import JsonResponse
-from .forms import RegistroPersonaForm, RegistroAlumnoForm, RegistroMaestroForm, ReseñaForm, LoginForm, UsuarioForm, AlumnoForm, ConfirmarFechaForm, DisponibilidadForm, ReseñaAlumnoForm
-from .models import Departamento, Municipio, Localidad, Provincia, Maestro, Alumno, Usuario, DisponibilidadUsuario
+from .forms import RegistroPersonaForm, RegistroAlumnoForm, RegistroMaestroForm, ReseñaForm, LoginForm, UsuarioForm, AlumnoForm, ConfirmarFechaForm, DisponibilidadForm, ReseñaAlumnoForm, BlocNotasForm, TareaForm, SesionEstudioForm
+from .models import Departamento, Municipio, Localidad, Provincia, Maestro, Alumno, Usuario, DisponibilidadUsuario, BlocNotas, Tarea, SesionEstudio
 from catalogo.models import Materia
 import math
 
@@ -2088,3 +2088,186 @@ def corregir_estados_pago(request):
     
     return redirect('home')
 
+
+
+# ===== HERRAMIENTAS INTEGRADAS =====
+
+@login_required
+def herramientas(request):
+    """Vista principal del kit de herramientas con estadísticas reales"""
+    # Obtener estadísticas REALES del usuario
+    tareas_usuario = Tarea.objects.filter(usuario=request.user)
+    total_tareas = tareas_usuario.count()
+    tareas_pendientes = tareas_usuario.filter(completada=False).count()
+    tareas_completadas = tareas_usuario.filter(completada=True).count()
+    
+    sesiones_usuario = SesionEstudio.objects.filter(usuario=request.user)
+    total_sesiones = sesiones_usuario.count()
+    
+    # Tareas próximas a vencer (próximos 2 días)
+    hoy = timezone.now()
+    proximas_48_horas = hoy + timedelta(days=2)
+    tareas_proximas = tareas_usuario.filter(
+        fecha_vencimiento__gte=hoy,
+        fecha_vencimiento__lte=proximas_48_horas,
+        completada=False
+    ).count()
+    
+    # Minutos estudiados hoy
+    hoy_inicio = hoy.replace(hour=0, minute=0, second=0, microsecond=0)
+    minutos_hoy = sesiones_usuario.filter(
+        fecha_inicio__gte=hoy_inicio
+    ).aggregate(Sum('duracion_minutos'))['duracion_minutos__sum'] or 0
+
+    context = {
+        'total_tareas': total_tareas,
+        'tareas_pendientes': tareas_pendientes,
+        'tareas_completadas': tareas_completadas,
+        'tareas_proximas': tareas_proximas,
+        'total_sesiones': total_sesiones,
+        'minutos_hoy': minutos_hoy,
+    }
+    return render(request, 'herramientas/herramientas.html', context)
+
+# CALCULADORA
+@login_required
+def calculadora(request):
+    return render(request, 'herramientas/calculadora.html')
+
+# BLOC DE NOTAS
+@login_required
+def bloc_notas(request):
+    # Obtener o crear el bloc de notas del usuario
+    bloc, created = BlocNotas.objects.get_or_create(usuario=request.user)
+    
+    if request.method == 'POST':
+        form = BlocNotasForm(request.POST, instance=bloc)
+        if form.is_valid():
+            form.save()
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'status': 'success', 'message': 'Notas guardadas'})
+            messages.success(request, 'Notas guardadas correctamente.')
+            return redirect('bloc_notas')
+    else:
+        form = BlocNotasForm(instance=bloc)
+    
+    return render(request, 'herramientas/bloc_notas.html', {'form': form})
+
+# GESTOR DE TAREAS
+@login_required
+def gestor_tareas(request):
+    tareas = Tarea.objects.filter(usuario=request.user).order_by('-fecha_creacion')
+    
+    if request.method == 'POST':
+        form = TareaForm(request.POST)
+        if form.is_valid():
+            tarea = form.save(commit=False)
+            tarea.usuario = request.user
+            tarea.save()
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'status': 'success', 'tarea_id': tarea.id})
+            
+            messages.success(request, 'Tarea creada correctamente.')
+            return redirect('gestor_tareas')
+    else:
+        form = TareaForm()
+    
+    # Marcar tareas próximas a vencer
+    hoy = timezone.now()
+    for tarea in tareas:
+        if tarea.fecha_vencimiento:
+            diferencia = tarea.fecha_vencimiento - hoy
+            tarea.esta_proxima = diferencia.days <= 2 and diferencia.days >= 0
+    
+    # Estadísticas
+    total_tareas = tareas.count()
+    tareas_pendientes = tareas.filter(completada=False).count()
+    tareas_completadas = tareas.filter(completada=True).count()
+    
+    context = {
+        'tareas': tareas,
+        'form': form,
+        'total_tareas': total_tareas,
+        'tareas_pendientes': tareas_pendientes,
+        'tareas_completadas': tareas_completadas,
+    }
+    
+    return render(request, 'herramientas/gestor_tareas.html', context)
+
+@login_required
+def cambiar_estado_tarea(request, tarea_id):
+    """Cambiar estado de tarea via AJAX"""
+    tarea = get_object_or_404(Tarea, id=tarea_id, usuario=request.user)
+    
+    if request.method == 'POST':
+        nuevo_estado = request.POST.get('estado')
+        if nuevo_estado in ['pendiente', 'en_progreso', 'completada']:
+            tarea.estado = nuevo_estado
+            tarea.completada = (nuevo_estado == 'completada')
+            if nuevo_estado == 'completada':
+                tarea.fecha_completada = timezone.now()
+            tarea.save()
+            return JsonResponse({'status': 'success', 'nuevo_estado': tarea.get_estado_display()})
+    
+    return JsonResponse({'status': 'error'})
+
+@login_required
+def eliminar_tarea(request, tarea_id):
+    """Eliminar tarea via AJAX"""
+    tarea = get_object_or_404(Tarea, id=tarea_id, usuario=request.user)
+    tarea.delete()
+    return JsonResponse({'status': 'success'})
+
+# POMODORO TIMER
+@login_required
+def pomodoro_timer(request):
+    if request.method == 'POST':
+        form = SesionEstudioForm(request.POST)
+        if form.is_valid():
+            sesion = form.save(commit=False)
+            sesion.usuario = request.user
+            sesion.save()
+            return JsonResponse({'status': 'success', 'sesion_id': sesion.id})
+    
+    # Obtener estadísticas de estudio
+    sesiones_hoy = SesionEstudio.objects.filter(
+        usuario=request.user,
+        fecha_inicio__date=timezone.now().date()
+    )
+    total_minutos_hoy = sum(s.duracion_minutos for s in sesiones_hoy)
+    
+    context = {
+        'total_minutos_hoy': total_minutos_hoy,
+        'sesiones_hoy': sesiones_hoy.count(),
+    }
+    
+    return render(request, 'herramientas/pomodoro_timer.html', context)
+
+@login_required
+def finalizar_sesion_estudio(request):
+    """Finalizar sesión de estudio via AJAX"""
+    if request.method == 'POST':
+        sesion_id = request.POST.get('sesion_id')
+        duracion = request.POST.get('duracion')
+        
+        try:
+            sesion = SesionEstudio.objects.get(id=sesion_id, usuario=request.user)
+            sesion.fecha_fin = timezone.now()
+            sesion.duracion_minutos = int(duracion)
+            sesion.save()
+            return JsonResponse({'status': 'success'})
+        except SesionEstudio.DoesNotExist:
+            return JsonResponse({'status': 'error'})
+    
+    return JsonResponse({'status': 'error'})
+
+# CONVERSOR DE UNIDADES
+@login_required
+def conversor_unidades(request):
+    return render(request, 'herramientas/conversor_unidades.html')
+
+# GENERADOR DE GRÁFICOS
+@login_required
+def generador_graficos(request):
+    return render(request, 'herramientas/generador_graficos.html')
