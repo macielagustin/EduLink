@@ -1,14 +1,15 @@
 from django.contrib import messages
-from django.contrib.auth import login, logout, authenticate
+from django.contrib.auth import login, logout, authenticate, get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
 from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseForbidden
 from .forms import RegistroPersonaForm, RegistroAlumnoForm, RegistroMaestroForm, ReseñaForm, LoginForm, UsuarioForm, AlumnoForm, ConfirmarFechaForm, DisponibilidadForm, ReseñaAlumnoForm, BlocNotasForm, TareaForm, SesionEstudioForm
 from .models import Departamento, Municipio, Localidad, Provincia, Maestro, Alumno, Usuario, DisponibilidadUsuario, BlocNotas, Tarea, SesionEstudio
 from catalogo.models import Materia
 import math
+from django.db.models.functions import Coalesce
 
 from .utils import enviar_email
 from django.contrib.auth.forms import PasswordResetForm
@@ -21,7 +22,7 @@ from .models import Conversacion, Mensaje
 from .forms import SolicitudClaseForm, MensajeForm, ProponerFechaForm
 
 from django.http import JsonResponse
-from django.db.models import Count, Avg, Q, Sum
+from django.db.models import Count, Avg, Q, Sum, Exists, OuterRef
 from .models import Notificacion, Reseña
 import json
 from datetime import datetime, timedelta
@@ -623,17 +624,22 @@ from .models import SolicitudClase, Conversacion, Mensaje  # ajusta el import se
 @login_required
 def dashboard_alumno(request):
     usuario = request.user
-    alumno = usuario.alumno  # suponiendo que Usuario tiene relación OneToOne con Alumno
+
+    # 🔹 Obtenemos el perfil del alumno (OneToOne con Usuario)
+    try:
+        alumno = usuario.alumno
+    except Alumno.DoesNotExist:
+        messages.error(request, "No tienes un perfil de alumno.")
+        return redirect("home")
 
     ahora = timezone.now()
 
-    # Solicitudes pendientes
+    # 🔹 Estadísticas principales
     solicitudes_pendientes = SolicitudClase.objects.filter(
         alumno=alumno,
         estado="pendiente"
     ).count()
 
-    # Clases esta semana (aceptadas con fecha en los próximos 7 días)
     fin_semana = ahora + timezone.timedelta(days=7)
     clases_esta_semana = SolicitudClase.objects.filter(
         alumno=alumno,
@@ -642,17 +648,78 @@ def dashboard_alumno(request):
         fecha_clase_propuesta__lte=fin_semana
     ).count()
 
-    # Materias activas (materias distintas con clases aceptadas)
     materias_activas = SolicitudClase.objects.filter(
         alumno=alumno,
         estado="aceptada"
     ).values("materia").distinct().count()
 
-    # Próximas clases (las 5 más cercanas, aceptadas)
-    proximas_clases = SolicitudClase.objects.filter(
+    # 🔹 Total gastado (solo clases pagadas)
+    total_gastado = SolicitudClase.objects.filter(
         alumno=alumno,
-        estado__in=["aceptada", "completada"]
-    ).order_by("fecha_clase_propuesta")[:5]
+        estado_pago="pagado"
+    ).aggregate(Sum("monto_acordado"))["monto_acordado__sum"] or 0
+
+    # 🔹 Próximas clases (usando Coalesce y Exists)
+    resena_exists = Reseña.objects.filter(solicitud=OuterRef("pk"))
+
+    proximas_clases = (
+        SolicitudClase.objects
+        .filter(alumno=alumno)
+        .annotate(
+            tiene_resena=Exists(resena_exists),
+            fecha_orden=Coalesce("fecha_clase_confirmada", "fecha_clase_propuesta")
+        )
+        .filter(
+            Q(estado__in=["pendiente", "propuesta", "aceptada"], fecha_orden__gte=ahora)
+            | Q(estado="completada", tiene_resena=False)
+        )
+        .exclude(fecha_orden__isnull=True)
+        .order_by("fecha_orden")[:5]
+    )
+
+    # 🔹 Solicitudes sin fecha (por confirmar)
+    por_confirmar = (
+        SolicitudClase.objects
+        .filter(
+            alumno=alumno,
+            estado__in=["pendiente", "propuesta"],
+            fecha_clase_propuesta__isnull=True,
+            fecha_clase_confirmada__isnull=True
+        )
+        .order_by("-fecha_solicitud")[:5]
+    )
+
+    # 🔹 Conversaciones recientes
+    conversaciones = Conversacion.objects.filter(alumno=alumno).prefetch_related("mensajes")
+    mensajes_recientes = []
+    mensajes_nuevos = 0
+    for conv in conversaciones:
+        ultimo = conv.mensajes.order_by("-fecha_envio").first()
+        if ultimo:
+            if not ultimo.leido and ultimo.remitente != request.user:
+                mensajes_nuevos += 1
+            mensajes_recientes.append((conv, ultimo))
+
+    # 🔹 Notificaciones no leídas
+    notificaciones_no_leidas = Notificacion.objects.filter(
+        usuario=request.user,
+        leida=False
+    ).count()
+
+    # 🔹 Render final
+    context = {
+        "solicitudes_pendientes": solicitudes_pendientes,
+        "clases_esta_semana": clases_esta_semana,
+        "materias_activas": materias_activas,
+        "total_gastado": total_gastado,
+        "proximas_clases": proximas_clases,
+        "por_confirmar": por_confirmar,
+        "mensajes_recientes": mensajes_recientes,
+        "mensajes_nuevos": mensajes_nuevos,
+        "notificaciones_no_leidas": notificaciones_no_leidas,
+    }
+
+    return render(request, "cuentas/dashboard_alumno.html", context)
 
 
     # Conversaciones y mensajes recientes
@@ -701,6 +768,7 @@ def dashboard_alumno(request):
         "total_pendiente": total_pendiente,  # ← Y esto también
     }
     return render(request, "cuentas/dashboard_alumno.html", context)
+
 
 
 def haversine(lat1, lon1, lat2, lon2):
@@ -866,12 +934,26 @@ def dashboard_maestro(request):
         fecha_clase_propuesta__year=año_actual
     ).aggregate(Sum('monto_acordado'))['monto_acordado__sum'] or 0
 
-    # Próximas clases (5 más cercanas)
-    proximas_clases = SolicitudClase.objects.filter(
-        maestro=perfil_maestro,
-        estado__in=["aceptada", "completada"],
-        #fecha_clase_propuesta__gte=ahora
-    ).order_by('fecha_clase_propuesta')[:5]
+    resena_exists = ReseñaAlumno.objects.filter(solicitud=OuterRef('pk'))
+    ahora = timezone.now()
+
+    proximas_clases = (
+        SolicitudClase.objects
+        .filter(maestro=perfil_maestro)
+        .annotate(
+            tiene_resena=Exists(resena_exists),
+            # Usamos confirmada si existe; si no, propuesta
+            fecha_orden=Coalesce('fecha_clase_confirmada', 'fecha_clase_propuesta')
+        )
+        .filter(
+            # 1) futuras en pendiente/propuesta/aceptada
+            Q(estado__in=['pendiente', 'propuesta', 'aceptada'], fecha_orden__gte=ahora)
+            # 2) completadas SIN reseña (para poder calificar)
+            | Q(estado='completada', tiene_resena=False)
+        )
+        .exclude(fecha_orden__isnull=True)   # evitamos las que no tienen fecha
+        .order_by('fecha_orden')[:5]         # orden por la fecha que definimos
+    )
 
 
     # Mensajes recientes
@@ -943,6 +1025,101 @@ def editar_perfil_maestro(request):
 
     return render(request, "maestro/editar_perfil_maestro.html", {"form": form})
 
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponseForbidden, Http404
+from django.shortcuts import get_object_or_404, render
+from django.db.models import Q, Avg, Count
+from django.contrib.auth import get_user_model
+
+from .permissions import puede_ver_perfil_alumno
+from .models import SolicitudClase  # ReseñaAlumno lo manejamos abajo de forma flexible
+
+Usuario = get_user_model()
+
+# Importa tus modelos Maestro/Alumno
+from .models import Alumno  # existe en tu código
+
+# --- utilidades ---
+
+def _rol(u):
+    return str(getattr(u, "rol", "")).upper()
+
+def _get_alumno_user_or_404(alumno_id: int) -> Usuario:
+    """
+    Acepta tanto Usuario.id como Alumno.id y devuelve siempre el Usuario.
+    """
+    # 1) ¿es un Usuario.id?
+    usuario = Usuario.objects.filter(pk=alumno_id).first()
+    if usuario:
+        return usuario
+    # 2) ¿es un Alumno.id?
+    alumno_obj = Alumno.objects.filter(pk=alumno_id).select_related("usuario").first()
+    if alumno_obj:
+        return alumno_obj.usuario
+    raise Http404("Alumno no encontrado")
+
+# --- vista ---
+
+@login_required
+def perfil_alumno(request, alumno_id):
+    """
+    Perfil del Alumno para que un Maestro (con relación) lo vea.
+    También puede verlo el propio alumno y admin.
+    """
+    # Siempre resolvemos a Usuario
+    alumno_user = _get_alumno_user_or_404(alumno_id)
+
+    # Traer objeto Alumno (para bio/teléfono si lo usás ahí)
+    alumno_obj = Alumno.objects.filter(usuario=alumno_user).first()
+
+    # Permisos
+    if not puede_ver_perfil_alumno(request.user, alumno_user):
+        return HttpResponseForbidden("No tenés permisos para ver este perfil.")
+
+    # --- Reseñas ---
+    # Tu Alumno tiene related_name "reseñas_recibidas", así que lo habitual es que
+    # ReseñaAlumno.alumno apunte a Alumno. Por si acaso contemplamos ambos casos.
+    try:
+        from .models import ReseñaAlumno  # si existe en tu app
+        reseñas_qs = ReseñaAlumno.objects.filter(
+            Q(alumno=alumno_obj) | Q(alumno__usuario=alumno_user)
+        ).select_related()
+        promedio = reseñas_qs.aggregate(prom=Avg("puntuacion"))["prom"] or 0
+        total_resenas = reseñas_qs.aggregate(c=Count("id"))["c"]
+        reseñas = list(reseñas_qs[:10])
+    except Exception:
+        # Si no tenés el modelo aún, que no rompa
+        promedio, total_resenas, reseñas = 0, 0, []
+    
+    # --- Historial con el maestro logueado ---
+    es_maestro = _rol(request.user) in ("MAESTRO", "PROFESOR")
+    historial_con_este_maestro = []
+    if es_maestro:
+        historial_con_este_maestro = SolicitudClase.objects.filter(
+            Q(maestro__usuario=request.user) &
+            Q(alumno__usuario=alumno_user) &
+            Q(estado="aceptada")
+        ).order_by("-fecha_solicitud")[:10]
+
+    # --- Contacto visible sólo si hay clase aceptada ---
+    mostrar_contacto = False
+    if es_maestro:
+        mostrar_contacto = SolicitudClase.objects.filter(
+            Q(maestro__usuario=request.user) &
+            Q(alumno__usuario=alumno_user) &
+            Q(estado="aceptada")
+        ).exists()
+
+    ctx = {
+        "alumno": alumno_obj,               # Alumno (puede ser None si faltara)
+        "alumno_user": alumno_user,         # Usuario (siempre)
+        "reseñas": reseñas,
+        "promedio": round(promedio, 2) if promedio else 0,
+        "total_resenas": total_resenas,
+        "historial_con_este_maestro": historial_con_este_maestro,
+        "mostrar_contacto": mostrar_contacto,
+    }
+    return render(request, "maestro/perfil_alumno.html", ctx)
 
 
 from django.db.models import Q  # 👈 importante arriba del archivo

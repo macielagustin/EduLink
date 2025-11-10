@@ -54,7 +54,7 @@ urlpatterns = [
     #Maestro
      # Nueva ruta para editar perfil de maestro
     path("maestro/editar-perfil/", editar_perfil_maestro, name="editar_perfil_maestro"),
-
+    path("maestro/alumno/<int:alumno_id>/", views.perfil_alumno, name="perfil_alumno"),
 
      # Solicitudes para maestros
     path("maestro/solicitudes/", views.solicitudes_para_maestro, name="solicitudes_para_maestro"),

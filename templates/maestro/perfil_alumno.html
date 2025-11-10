@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Perfil del Alumno{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h2>👤 {{ alumno_user.nombre }} {{ alumno_user.apellido }}</h2>
+      <p class="text-muted mb-0">@{{ alumno_user.username }}</p>
+      {% if total_resenas %}
+        <small class="text-muted">⭐ {{ promedio }} ({{ total_resenas }} reseñas)</small>
+      {% endif %}
+    </div>
+    <a href="{% url 'dashboard_maestro' %}" class="btn btn-secondary">↩️ Volver</a>
+  </div>
+
+  <div class="row g-3">
+    <!-- Columna izquierda -->
+    <div class="col-lg-8">
+      <div class="card mb-3">
+        <div class="card-body">
+          <h5 class="card-title">Biografía</h5>
+          {% if alumno and alumno.bio %}
+            <p class="mb-0">{{ alumno.bio }}</p>
+          {% else %}
+            <p class="mb-0">{{ alumno_user.biografia|default:"El alumno aún no cargó su biografía." }}</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-body">
+          <h5 class="card-title">Reseñas recibidas</h5>
+          {% if reseñas %}
+            <ul class="list-group list-group-flush">
+              {% for r in reseñas %}
+                <li class="list-group-item">
+                  <div class="d-flex justify-content-between">
+                    <strong>⭐ {{ r.puntuacion }}/5</strong>
+                    <small class="text-muted">{{ r.creada|date:"d/m/Y H:i" }}</small>
+                  </div>
+                  <div class="small text-muted">por {{ r.maestro.username }}</div>
+                  <div>{{ r.comentario|default:"(Sin comentario)" }}</div>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="text-muted">Sin reseñas por ahora.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if historial_con_este_maestro %}
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Historial con vos</h5>
+          <ul class="list-group list-group-flush">
+            {% for s in historial_con_este_maestro %}
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                  <div class="fw-semibold">{{ s.materia }}</div>
+                  <small class="text-muted">Aceptada el {{ s.creada|date:"d/m/Y H:i" }}</small>
+                </div>
+                <span class="badge bg-success text-uppercase">{{ s.estado }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Columna derecha -->
+    <div class="col-lg-4">
+      <div class="card mb-3">
+        <div class="card-body">
+          <h5 class="card-title">Contacto</h5>
+          {% if mostrar_contacto %}
+            <p class="mb-1">📧 {{ alumno_user.email }}</p>
+            <p class="mb-0">📞 {% if alumno and alumno.telefono %}{{ alumno.telefono }}{% else %}{{ alumno_user.telefono|default:"(sin teléfono)" }}{% endif %}</p>
+            <small class="text-muted">Los datos se muestran porque ya tienen una clase aceptada.</small>
+          {% else %}
+            <p class="text-muted">Los datos de contacto se habilitan cuando hay una clase aceptada entre ambos.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if alumno_user.provincia or alumno_user.localidad %}
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Ubicación</h5>
+          <p class="mb-0">
+            {{ alumno_user.provincia|default:"Provincia no indicada" }}
+            {% if alumno_user.localidad %}- {{ alumno_user.localidad }}{% endif %}
+          </p>
+          <small class="text-muted">La dirección exacta no se muestra por privacidad.</small>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

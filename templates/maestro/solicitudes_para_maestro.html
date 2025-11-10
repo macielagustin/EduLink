@@ -81,6 +81,9 @@
                             {% else %}bg-secondary{% endif %}">
                         {{ solicitud.get_estado_display }}
                     </span>
+                    <a href="{% url 'perfil_alumno' solicitud.alumno.usuario.id %}"
+                        class="btn btn-outline-primary btn-sm">👤 Ver perfil</a>
+
                 </div>
 
                 <div class="card-body">
@@ -224,7 +227,8 @@
             <div class="modal-content border-0 shadow">
                 <div class="modal-header">
                     <h5 class="modal-title">
-                        Historial de {{ solicitud.alumno.usuario.get_full_name|default:solicitud.alumno.usuario.username }}
+                        Historial de {{ solicitud.alumno.usuario.get_full_name|default:solicitud.alumno.usuario.username
+                        }}
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>

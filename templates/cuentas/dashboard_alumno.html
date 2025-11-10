@@ -9,8 +9,7 @@
     <div class="row align-items-center mb-4">
         <div class="col-md-8">
             <h1 class="h2 fw-bold text-primary">
-                👋 ¡Hola, {{ request.user.get_full_name|default:request.user.username }}!
-            </h1>
+                👋 ¡Hola, {{ request.user.get_full_name|default:request.user.username }}!  </h1>
             <p class="text-muted mb-0">
                 Bienvenido a tu panel de aprendizaje. Encuentra maestros y gestiona tus clases.
             </p>
@@ -94,35 +93,37 @@
                 </div>
                 <div class="card-body">
                     {% with tareas_proximas=user.tarea_set.all|slice:":5" %}
-                        {% if tareas_proximas %}
-                            <div class="list-group list-group-flush">
-                                {% for tarea in tareas_proximas %}
-                                    <div class="list-group-item px-0">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div>
-                                                <h6 class="mb-1 {% if tarea.completada %}text-decoration-line-through text-muted{% endif %}">
-                                                    {{ tarea.titulo }}
-                                                </h6>
-                                                {% if tarea.fecha_vencimiento %}
-                                                    <small class="text-muted">
-                                                        <i class="fas fa-clock me-1"></i>
-                                                        {{ tarea.fecha_vencimiento|date:"d/m/Y H:i" }}
-                                                    </small>
-                                                {% endif %}
-                                            </div>
-                                            <span class="badge bg-{% if tarea.prioridad == 'alta' %}danger{% elif tarea.prioridad == 'media' %}warning{% else %}info{% endif %}">
-                                                {{ tarea.get_prioridad_display }}
-                                            </span>
-                                        </div>
-                                    </div>
-                                {% endfor %}
+                    {% if tareas_proximas %}
+                    <div class="list-group list-group-flush">
+                        {% for tarea in tareas_proximas %}
+                        <div class="list-group-item px-0">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6
+                                        class="mb-1 {% if tarea.completada %}text-decoration-line-through text-muted{% endif %}">
+                                        {{ tarea.titulo }}
+                                    </h6>
+                                    {% if tarea.fecha_vencimiento %}
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>
+                                        {{ tarea.fecha_vencimiento|date:"d/m/Y H:i" }}
+                                    </small>
+                                    {% endif %}
+                                </div>
+                                <span
+                                    class="badge bg-{% if tarea.prioridad == 'alta' %}danger{% elif tarea.prioridad == 'media' %}warning{% else %}info{% endif %}">
+                                    {{ tarea.get_prioridad_display }}
+                                </span>
                             </div>
-                        {% else %}
-                            <div class="text-center py-3">
-                                <i class="fas fa-tasks fa-2x text-muted mb-2"></i>
-                                <p class="text-muted mb-0">No hay tareas próximas</p>
-                            </div>
-                        {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-tasks fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">No hay tareas próximas</p>
+                    </div>
+                    {% endif %}
                     {% endwith %}
                     <div class="text-center mt-3">
                         <a href="{% url 'gestor_tareas' %}" class="btn btn-outline-primary btn-sm">
@@ -143,17 +144,17 @@
                 <div class="card-header bg-white border-0 py-3">
                     <h5 class="fw-bold mb-0">📅 Próximas Clases</h5>
                 </div>
+
                 <div class="card-body">
                     {% if proximas_clases %}
                     <div class="list-group list-group-flush">
-                        {% if proximas_clases %}
                         {% for clase in proximas_clases %}
                         <div class="list-group-item d-flex justify-content-between align-items-center px-0">
                             <div>
                                 <h6 class="mb-1">{{ clase.materia.nombre }}</h6>
                                 <small class="text-muted">
-                                    Prof. {{ clase.maestro.usuario.get_full_name }} -
-                                    {{ clase.fecha_clase_propuesta|date:"l d/m H:i" }}
+                                    Prof. {{ clase.maestro.usuario.get_full_name }} —
+                                    {{ clase.fecha_orden|date:"l d/m H:i" }}
                                 </small>
                             </div>
 
@@ -167,24 +168,28 @@
                                 {% else %}
                                 <span class="text-success small fw-bold">Reseña enviada ✅</span>
                                 {% endif %}
+
                                 {% elif clase.estado == "aceptada" %}
                                 <span class="badge bg-success">Aceptada</span>
+
+                                {% elif clase.estado == "propuesta" %}
+                                <span class="badge bg-info text-dark">Propuesta</span>
+
                                 {% elif clase.estado == "pendiente" %}
                                 <span class="badge bg-warning text-dark">Pendiente</span>
+
                                 {% elif clase.estado == "rechazada" %}
                                 <span class="badge bg-danger">Rechazada</span>
+
+                                {% elif clase.estado == "cancelada" %}
+                                <span class="badge bg-secondary">Cancelada</span>
+
                                 {% else %}
-                                <span class="badge bg-secondary">{{ clase.estado|title }}</span>
+                                <span class="badge bg-light text-dark">{{ clase.estado|title }}</span>
                                 {% endif %}
                             </div>
                         </div>
                         {% endfor %}
-
-                        {% else %}
-                        <div class="list-group-item text-muted">
-                            No tienes clases programadas.
-                        </div>
-                        {% endif %}
                     </div>
                     {% else %}
                     <p class="text-muted text-center py-3">No tienes clases programadas.</p>
@@ -192,132 +197,135 @@
                 </div>
             </div>
 
-            <!-- Mensajes recientes REALES -->
-            <div class="card border-0 shadow-sm mt-4">
-                <div class="card-header bg-white border-0 py-3">
-                    <h5 class="fw-bold mb-0">💬 Conversaciones Recientes</h5>
-                </div>
-                <div class="card-body">
-                    {% if conversaciones_recientes %}
-                    <div class="list-group list-group-flush">
-                        {% if mensajes_recientes %}
-                        {% for conv, ultimo in mensajes_recientes %}
-                        <a href="{% url 'ver_conversacion' conv.id %}"
-                            class="list-group-item list-group-item-action d-flex align-items-center px-0">
-                            <div class="flex-shrink-0">
-                                <img src="{{ conv.maestro.usuario.foto_url }}" alt="Avatar" class="rounded-circle"
-                                    width="40" height="40">
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-1">{{ conv.maestro.usuario.get_full_name }}</h6>
-                                <p class="mb-1 text-muted small">{{ ultimo.contenido|truncatechars:80 }}</p>
-                                <small class="text-muted">{{ ultimo.fecha_envio|timesince }} atrás</small>
-                            </div>
-                            {% if not ultimo.leido and ultimo.remitente != request.user %}
-                            <span class="badge bg-primary rounded-pill">Nuevo</span>
-                            {% endif %}
-                        </a>
-                        {% endfor %}
-                        {% else %}
-                        <p class="text-muted">No tienes mensajes recientes.</p>
-                        {% endif %}
-                    </div>
-                    {% else %}
-                    <p class="text-muted text-center py-3">No tienes conversaciones activas.</p>
-                    {% endif %}
-                    <div class="text-center mt-3">
-                        <a href="{% url 'lista_conversaciones' %}" class="btn btn-outline-primary btn-sm">Ver Todas las
-                            Conversaciones</a>
-                    </div>
-                </div>
-            </div>
         </div>
 
-        <!-- Columna derecha -->
-        <div class="col-lg-4">
-            <!-- Acciones rápidas -->
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white border-0 py-3">
-                    <h5 class="fw-bold mb-0">⚡ Acciones Rápidas</h5>
-                </div>
-                <div class="card-body">
-                    <div class="d-grid gap-2">
-                        <a href="{% url 'buscar_clases' %}"
-                            class="btn btn-primary btn-lg d-flex align-items-center justify-content-start">
-                            <i class="fas fa-search me-2"></i>
-                            Buscar Maestros
-                        </a>
-                        <a href="{% url 'mis_solicitudes_alumno' %}"
-                            class="btn btn-outline-primary btn-lg d-flex align-items-center justify-content-start">
-                            <i class="fas fa-list me-2"></i>
-                            Mis Solicitudes
-                            {% if solicitudes_pendientes > 0 %}
-                            <span class="badge bg-primary text-white ms-auto">{{ solicitudes_pendientes }}</span>
-                            {% endif %}
-                        </a>
-                        <a href="{% url 'lista_conversaciones' %}"
-                            class="btn btn-outline-secondary btn-lg d-flex align-items-center justify-content-start">
-                            <i class="fas fa-comments me-2"></i>
-                            Mensajes
-                            {% if mensajes_nuevos > 0 %}
-                            <span class="badge bg-primary text-white ms-auto">{{ mensajes_nuevos }}</span>
-                            {% endif %}
-                        </a>
-                        <a href="{% url 'perfil_alumno' %}"
-                            class="btn btn-outline-secondary btn-lg d-flex align-items-center justify-content-start">
-                            <i class="fas fa-user-edit me-2"></i>
-                            Editar Perfil
-                        </a>
-                        <a href="{% url 'perfil_publico' %}"
-                            class="btn btn-outline-info btn-lg d-flex align-items-center justify-content-start">
-                            <i class="fas fa-eye me-2"></i>
-                            Ver Perfil Público
-                        </a>
-                    </div>
-                </div>
+        <!-- Mensajes recientes REALES -->
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="fw-bold mb-0">💬 Conversaciones Recientes</h5>
             </div>
-
-             <!-- Control de Gastos -->
-            <div class="card border-0 shadow-sm mt-4">
-                <div class="card-header bg-white border-0 py-3">
-                    <h5 class="fw-bold mb-0">💰 Control de Gastos</h5>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="flex-shrink-0 bg-primary bg-opacity-10 p-3 rounded">
-                            <i class="fas fa-chart-line text-primary fs-4"></i>
+            <div class="card-body">
+                {% if conversaciones_recientes %}
+                <div class="list-group list-group-flush">
+                    {% if mensajes_recientes %}
+                    {% for conv, ultimo in mensajes_recientes %}
+                    <a href="{% url 'ver_conversacion' conv.id %}"
+                        class="list-group-item list-group-item-action d-flex align-items-center px-0">
+                        <div class="flex-shrink-0">
+                            <img src="{{ conv.maestro.usuario.foto_url }}" alt="Avatar" class="rounded-circle"
+                                width="40" height="40">
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h6 class="card-title text-muted mb-1">Total Gastado</h6>
-                            <h4 class="mb-0 fw-bold">${{ total_gastado|default:0 }}</h4>
+                            <h6 class="mb-1">{{ conv.maestro.usuario.get_full_name }}</h6>
+                            <p class="mb-1 text-muted small">{{ ultimo.contenido|truncatechars:80 }}</p>
+                            <small class="text-muted">{{ ultimo.fecha_envio|timesince }} atrás</small>
                         </div>
-                    </div>
-                    <div class="d-grid gap-2">
-                        <a href="{% url 'control_gastos_alumno' %}" class="btn btn-outline-primary btn-lg d-flex align-items-center justify-content-start">
-                            <i class="fas fa-chart-pie me-2"></i>
-                            Ver Control Completo
-                        </a>
-                    </div>
+                        {% if not ultimo.leido and ultimo.remitente != request.user %}
+                        <span class="badge bg-primary rounded-pill">Nuevo</span>
+                        {% endif %}
+                    </a>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-muted">No tienes mensajes recientes.</p>
+                    {% endif %}
                 </div>
-            </div>
-
-            <!-- Notificaciones -->
-            <div class="card border-0 shadow-sm mt-4">
-                <div class="card-header bg-white border-0 py-3">
-                    <h5 class="fw-bold mb-0">🔔 Notificaciones Recientes</h5>
-                </div>
-                <div class="card-body">
-                    <div id="notificaciones-container">
-                        <!-- Las notificaciones se cargarán aquí via JavaScript -->
-                    </div>
-                    <div class="text-center mt-3">
-                        <a href="#" class="btn btn-outline-primary btn-sm" id="ver-todas-notificaciones">Ver Todas las
-                            Notificaciones</a>
-                    </div>
+                {% else %}
+                <p class="text-muted text-center py-3">No tienes conversaciones activas.</p>
+                {% endif %}
+                <div class="text-center mt-3">
+                    <a href="{% url 'lista_conversaciones' %}" class="btn btn-outline-primary btn-sm">Ver Todas las
+                        Conversaciones</a>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Columna derecha -->
+    <div class="col-lg-4">
+        <!-- Acciones rápidas -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="fw-bold mb-0">⚡ Acciones Rápidas</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'buscar_clases' %}"
+                        class="btn btn-primary btn-lg d-flex align-items-center justify-content-start">
+                        <i class="fas fa-search me-2"></i>
+                        Buscar Maestros
+                    </a>
+                    <a href="{% url 'mis_solicitudes_alumno' %}"
+                        class="btn btn-outline-primary btn-lg d-flex align-items-center justify-content-start">
+                        <i class="fas fa-list me-2"></i>
+                        Mis Solicitudes
+                        {% if solicitudes_pendientes > 0 %}
+                        <span class="badge bg-primary text-white ms-auto">{{ solicitudes_pendientes }}</span>
+                        {% endif %}
+                    </a>
+                    <a href="{% url 'lista_conversaciones' %}"
+                        class="btn btn-outline-secondary btn-lg d-flex align-items-center justify-content-start">
+                        <i class="fas fa-comments me-2"></i>
+                        Mensajes
+                        {% if mensajes_nuevos > 0 %}
+                        <span class="badge bg-primary text-white ms-auto">{{ mensajes_nuevos }}</span>
+                        {% endif %}
+                    </a>
+                    <a href="{% url 'perfil_alumno' %}"
+                        class="btn btn-outline-secondary btn-lg d-flex align-items-center justify-content-start">
+                        <i class="fas fa-user-edit me-2"></i>
+                        Editar Perfil
+                    </a>
+                    <a href="{% url 'perfil_publico' %}"
+                        class="btn btn-outline-info btn-lg d-flex align-items-center justify-content-start">
+                        <i class="fas fa-eye me-2"></i>
+                        Ver Perfil Público
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Control de Gastos -->
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="fw-bold mb-0">💰 Control de Gastos</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="flex-shrink-0 bg-primary bg-opacity-10 p-3 rounded">
+                        <i class="fas fa-chart-line text-primary fs-4"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h6 class="card-title text-muted mb-1">Total Gastado</h6>
+                        <h4 class="mb-0 fw-bold">${{ total_gastado|default:0 }}</h4>
+                    </div>
+                </div>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'control_gastos_alumno' %}"
+                        class="btn btn-outline-primary btn-lg d-flex align-items-center justify-content-start">
+                        <i class="fas fa-chart-pie me-2"></i>
+                        Ver Control Completo
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notificaciones -->
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="fw-bold mb-0">🔔 Notificaciones Recientes</h5>
+            </div>
+            <div class="card-body">
+                <div id="notificaciones-container">
+                    <!-- Las notificaciones se cargarán aquí via JavaScript -->
+                </div>
+                <div class="text-center mt-3">
+                    <a href="#" class="btn btn-outline-primary btn-sm" id="ver-todas-notificaciones">Ver Todas las
+                        Notificaciones</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 </div>
 {% endblock %}
 
