@@ -152,38 +152,70 @@
             </div>
         </div>
 
-        <!-- Próximas herramientas -->
+        <!-- Biblioteca de fórmulas -->
         <div class="col-xl-3 col-lg-4 col-md-6">
             <div class="card tool-card border-0 shadow-sm h-100">
                 <div class="card-body text-center p-4">
-                    <div class="tool-icon bg-secondary bg-opacity-10 rounded-circle p-3 mb-3 mx-auto">
-                        <i class="fas fa-book fa-2x text-secondary"></i>
+                    <div class="tool-icon bg-info bg-opacity-10 rounded-circle p-3 mb-3 mx-auto">
+                        <i class="fas fa-square-root-alt fa-2x text-info"></i>
                     </div>
                     <h5 class="fw-bold">Biblioteca de Fórmulas</h5>
                     <p class="text-muted small mb-3">
-                        Acceso rápido a fórmulas matemáticas (Próximamente)
+                        Fórmulas matemáticas organizadas por categoría
                     </p>
-                    <button class="btn btn-outline-secondary btn-sm" disabled>Próximamente</button>
+                    <a href="{% url 'biblioteca_formulas' %}" class="btn btn-info btn-sm">Abrir</a>
                 </div>
             </div>
         </div>
 
+        <!-- Tabla periódica -->
         <div class="col-xl-3 col-lg-4 col-md-6">
             <div class="card tool-card border-0 shadow-sm h-100">
                 <div class="card-body text-center p-4">
-                    <div class="tool-icon bg-secondary bg-opacity-10 rounded-circle p-3 mb-3 mx-auto">
-                        <i class="fas fa-language fa-2x text-secondary"></i>
+                    <div class="tool-icon bg-warning bg-opacity-10 rounded-circle p-3 mb-3 mx-auto">
+                        <i class="fas fa-atom fa-2x text-warning"></i>
                     </div>
-                    <h5 class="fw-bold">Diccionario/Translator</h5>
+                    <h5 class="fw-bold">Tabla Periódica</h5>
                     <p class="text-muted small mb-3">
-                        Traductor integrado y diccionario (Próximamente)
+                        Tabla periódica interactiva de elementos químicos
                     </p>
-                    <button class="btn btn-outline-secondary btn-sm" disabled>Próximamente</button>
+                    <a href="{% url 'tabla_periodica' %}" class="btn btn-warning btn-sm">Abrir</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Traductor automático -->
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card tool-card border-0 shadow-sm h-100">
+                <div class="card-body text-center p-4">
+                    <div class="tool-icon bg-success bg-opacity-10 rounded-circle p-3 mb-3 mx-auto">
+                        <i class="fas fa-language fa-2x text-success"></i>
+                    </div>
+                    <h5 class="fw-bold">Traductor Automático</h5>
+                    <p class="text-muted small mb-3">
+                        Traduce texto entre múltiples idiomas
+                    </p>
+                    <a href="{% url 'traductor_automatico' %}" class="btn btn-success btn-sm">Abrir</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Diccionario integrado -->
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card tool-card border-0 shadow-sm h-100">
+                <div class="card-body text-center p-4">
+                    <div class="tool-icon bg-primary bg-opacity-10 rounded-circle p-3 mb-3 mx-auto">
+                        <i class="fas fa-book fa-2x text-primary"></i>
+                    </div>
+                    <h5 class="fw-bold">Diccionario Integrado</h5>
+                    <p class="text-muted small mb-3">
+                        Busca definiciones, sinónimos y antónimos
+                    </p>
+                    <a href="{% url 'diccionario_integrado' %}" class="btn btn-primary btn-sm">Abrir</a>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}
 
 {% block extra_css %}
