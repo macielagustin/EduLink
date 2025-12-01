@@ -210,6 +210,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let totalMinutesStudied = 0;
     let cyclesCompleted = 0;
     
+    // Cargar estado guardado
+    cargarEstado();
+     
     // Inicializar
     updateDisplay();
     
@@ -360,19 +363,36 @@ function cargarEstado() {
         updateDisplay();
     }
     
-    function switchMode() {
-        isStudyTime = !isStudyTime;
-        if (isStudyTime) {
-            setTimerTime(parseInt(studyTimeInput.value));
-            timerMode.textContent = 'Tiempo de Estudio';
-            cyclesCompleted++;
-            cyclesCompletedElement.textContent = cyclesCompleted;
-        } else {
-            setTimerTime(parseInt(breakTimeInput.value));
-            timerMode.textContent = 'Tiempo de Descanso';
-        }
+    // En switchMode, detener la repetición cuando cambie el modo
+function switchMode() {
+    // Detener cualquier audio en loop
+    Object.values(alarmSounds).forEach(alarm => {
+        alarm.loop = false;
+        alarm.pause();
+    });
+    
+    isStudyTime = !isStudyTime;
+    if (isStudyTime) {
+        minutes = parseInt(document.getElementById('study-time').value);
+        timerMode.textContent = 'Tiempo de Estudio';
+        timerMode.className = 'h5 text-primary';
+        cyclesCompleted++;
+        cyclesCompletedElement.textContent = cyclesCompleted;
+    } else {
+        minutes = parseInt(document.getElementById('break-time').value);
+        timerMode.textContent = 'Tiempo de Descanso';
+        timerMode.className = 'h5 text-success';
+    }
+    seconds = 0;
+    currentTime = minutes * 60;
+    totalTime = currentTime;
+    updateDisplay();
+    guardarEstado();
+    
+    if (autoStart.checked) {
         startTimer();
     }
+}
     
     // Event Listeners
     startBtn.addEventListener('click', startTimer);

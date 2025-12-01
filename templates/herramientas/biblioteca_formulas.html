@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Biblioteca de Fórmulas | EduLink{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h2 fw-bold text-primary">
+                📚 Biblioteca de Fórmulas Matemáticas
+            </h1>
+            <p class="text-muted">
+                Fórmulas organizadas por categoría para consulta rápida
+            </p>
+        </div>
+    </div>
+
+    <!-- Buscador de fórmulas -->
+    <div class="row mb-4">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-body">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="buscar-formula" 
+                               placeholder="Buscar fórmula por nombre o categoría...">
+                        <button class="btn btn-primary" onclick="buscarFormula()">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fórmulas por categoría -->
+    <div class="row" id="formulas-container">
+        {% for categoria, formulas in formulas_por_categoria.items %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">{{ categoria }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for formula in formulas %}
+                        <div class="list-group-item border-0 px-0">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">{{ formula.nombre }}</h6>
+                                    <code class="text-primary d-block mt-2">{{ formula.formula }}</code>
+                                </div>
+                                <button class="btn btn-sm btn-outline-primary" 
+                                        onclick="copiarFormula('{{ formula.formula }}')">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+function buscarFormula() {
+    const busqueda = document.getElementById('buscar-formula').value.toLowerCase();
+    const tarjetas = document.querySelectorAll('.col-md-6.col-lg-4.mb-4');
+    
+    tarjetas.forEach(tarjeta => {
+        const contenido = tarjeta.textContent.toLowerCase();
+        if (contenido.includes(busqueda) || busqueda === '') {
+            tarjeta.style.display = 'block';
+        } else {
+            tarjeta.style.display = 'none';
+        }
+    });
+}
+
+function copiarFormula(formula) {
+    navigator.clipboard.writeText(formula).then(() => {
+        alert('Fórmula copiada al portapapeles: ' + formula);
+    });
+}
+</script>
+{% endblock %}

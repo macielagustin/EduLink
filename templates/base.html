@@ -112,7 +112,7 @@
           <!-- BOTÓN VOLVER AL DASHBOARD -->
           <li class="nav-item me-2">
             <a class="btn btn-dashboard btn-sm" 
-               href="{% if request.user.rol == 'ALUMNO' %}{% url 'dashboard_alumno' %}{% elif request.user.rol == 'MAESTRO' %}{% url 'dashboard_maestro' %}{% else %}{% url 'home' %}{% endif %}">
+               href="{% if request.user.rol == 'ALUMNO' %}{% url 'dashboard_alumno' %}{% elif request.user.rol == 'MAESTRO' %}{% url 'dashboard_maestro' %}{% elif request.user.rol == 'ADMIN' %}{% url 'dashboard_admin' %}{% else %}{% url 'home' %}{% endif %}">
               <i class="fas fa-tachometer-alt me-1"></i>
               Mi Dashboard
             </a>

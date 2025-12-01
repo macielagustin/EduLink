@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Ingresos Detallados - EduLink{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="fw-bold mb-0">💰 Ingresos Detallados</h4>
+                            <p class="text-muted mb-0">Seguimiento de tus ganancias como maestro</p>
+                        </div>
+                        <div class="d-flex gap-2">
+
+                            <!-- FILTRO MES (1–12) -->
+                            <select class="form-select form-select-sm" id="filtro-mes" style="width: auto;">
+                                <option value="">Todos</option>
+                                {% for numero, nombre in meses_nombres_full %}
+                                    <option value="{{ numero }}" {% if numero|stringformat:"i" == mes_filtro %}selected{% endif %}>
+                                        {{ nombre }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+
+                            <!-- FILTRO AÑO -->
+                            <select class="form-select form-select-sm" id="filtro-año" style="width: auto;">
+                                {% for año in años_disponibles %}
+                                    <option value="{{ año }}" {% if año|stringformat:"i" == año_filtro|stringformat:"i" %}selected{% endif %}>{{ año }}</option>
+                                {% endfor %}
+                            </select>
+
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    
+                    <!-- TARJETAS DE RESUMEN -->
+                    <div class="row mb-4">
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body text-center py-3">
+                                    <h5 class="card-title mb-2">Total</h5>
+                                    <h2 class="mb-0">${{ total_ingresos }}</h2>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body text-center py-3">
+                                    <h5 class="card-title mb-2">Clases Dictadas</h5>
+                                    <h2 class="mb-0">{{ total_clases }}</h2>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body text-center py-3">
+                                    <h5 class="card-title mb-2">Promedio por Clase</h5>
+                                    <h2 class="mb-0">${{ promedio_por_clase }}</h2>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="card bg-warning text-dark">
+                                <div class="card-body text-center py-3">
+                                    <h5 class="card-title mb-2">Materias Activas</h5>
+                                    <h2 class="mb-0">{{ materias_con_datos|length }}</h2>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- GRÁFICO Y MATERIAS -->
+                        <div class="col-md-8">
+
+                            <div class="card mb-4">
+                                <div class="card-header bg-white">
+                                    <h6 class="fw-bold mb-0">📈 Ingresos Mensuales - {{ año_filtro }}</h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="graficoIngresos" height="250"></canvas>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header bg-white">
+                                    <h6 class="fw-bold mb-0">📚 Ingresos por Materia</h6>
+                                </div>
+                                <div class="card-body">
+                                    {% if materias_con_datos %}
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-hover">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>Materia</th>
+                                                        <th class="text-end">Ingresos</th>
+                                                        <th class="text-end">Porcentaje</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for materia in materias_con_datos %}
+                                                    <tr>
+                                                        <td>{{ materia.nombre }}</td>
+                                                        <td class="text-end fw-bold">${{ materia.monto }}</td>
+                                                        <td class="text-end">{{ materia.porcentaje }}%</td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    {% else %}
+                                        <p class="text-muted text-center">No hay ingresos.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ALUMNOS Y MÉTODOS DE PAGO -->
+                        <div class="col-md-4">
+                            <div class="card mb-4">
+                                <div class="card-header bg-white">
+                                    <h6 class="fw-bold mb-0">👥 Top Alumnos</h6>
+                                </div>
+                                <div class="card-body">
+                                    {% if alumnos_con_datos %}
+                                        <div class="list-group list-group-flush">
+                                            {% for alumno in alumnos_con_datos %}
+                                                <div class="list-group-item px-0">
+                                                    <div class="d-flex justify-content-between align-items-start">
+                                                        <div>
+                                                            <h6 class="mb-1">{{ alumno.nombre }}</h6>
+                                                            <small class="text-muted">{{ alumno.clases }} clases</small>
+                                                        </div>
+                                                        <span class="badge bg-success fs-6">${{ alumno.monto }}</span>
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <p class="text-muted text-center">Sin datos.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header bg-white">
+                                    <h6 class="fw-bold mb-0">💳 Métodos de Pago</h6>
+                                </div>
+                                <div class="card-body">
+                                    {% if metodos_pago %}
+                                        {% for metodo, cantidad in metodos_pago.items %}
+                                        <div class="d-flex justify-content-between border-bottom py-2">
+                                            <span>{{ metodo }}</span>
+                                            <span class="badge bg-primary">{{ cantidad }}</span>
+                                        </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <p class="text-muted text-center">Sin datos.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TABLA CLASES -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header bg-white d-flex justify-content-between">
+                                    <h6 class="fw-bold mb-0">📋 Todas las Clases</h6>
+                                    <span class="badge bg-primary">Total: ${{ total_ingresos }}</span>
+                                </div>
+
+                                <div class="card-body">
+                                    {% if clases_pagadas %}
+                                        <div class="table-responsive">
+                                            <table class="table table-striped table-hover">
+                                                <thead class="table-dark">
+                                                    <tr>
+                                                        <th>Fecha Pago</th>
+                                                        <th>Alumno</th>
+                                                        <th>Materia</th>
+                                                        <th>Duración</th>
+                                                        <th>Método Pago</th>
+                                                        <th class="text-end">Monto</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for clase in clases_pagadas %}
+                                                    <tr>
+                                                        <td>{{ clase.fecha_pago|date:"d/m/Y H:i" }}</td>
+                                                        <td>{{ clase.alumno.usuario.get_full_name|default:clase.alumno.usuario.username }}</td>
+                                                        <td>{{ clase.materia.nombre }}</td>
+                                                        <td>{{ clase.duracion_minutos }} min</td>
+                                                        <td>{{ clase.get_metodo_pago_display }}</td>
+                                                        <td class="text-end fw-bold">${{ clase.monto_acordado }}</td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    {% else %}
+                                        <p class="text-muted text-center py-4">No hay clases pagadas.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div><!-- card-body -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+    // Filtros
+    document.getElementById('filtro-mes').addEventListener('change', aplicarFiltros);
+    document.getElementById('filtro-año').addEventListener('change', aplicarFiltros);
+
+    function aplicarFiltros() {
+        const mes = document.getElementById('filtro-mes').value;
+        const año = document.getElementById('filtro-año').value;
+
+        let url = `{% url 'ingresos_detallados' %}?mes=${mes}&año=${año}`;
+        window.location.href = url;
+    }
+
+    // Chart
+    const ctx = document.getElementById('graficoIngresos').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: {{ meses_nombres|safe }},
+            datasets: [{
+                label: 'Ingresos ($)',
+                data: {{ ingresos_mensuales|safe }},
+                backgroundColor: 'rgba(54, 162, 235, 0.8)',
+            }]
+        },
+        options: { responsive: true }
+    });
+
+});
+</script>
+
+{% endblock %}
+
+{% block extra_css %}
+
+<style>
+.card {
+    border-radius: 10px;
+}
+.table th {
+    border-top: none;
+    font-weight: 600;
+}
+.list-group-item {
+    border: none;
+    padding: 0.75rem 0;
+}
+</style>
+{% endblock %}

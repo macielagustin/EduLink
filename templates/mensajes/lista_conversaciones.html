@@ -1,60 +1,240 @@
 {% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+
 {% block title %}Mensajes | EduLink{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container-fluid py-4">
     <div class="row">
-        <div class="col-md-12">
-            <h2>💬 Mis Conversaciones</h2>
-            
-            {% if conversaciones %}
-                <div class="list-group">
-                    {% for conversacion in conversaciones %}
-                    <a href="{% url 'ver_conversacion' conversacion.id %}" class="list-group-item list-group-item-action">
-                        <div class="d-flex w-100 justify-content-between align-items-center">
-                            <div class="d-flex align-items-center">
-                                {% if request.user.rol == 'ALUMNO' %}
-                                <img src="{{ conversacion.maestro.usuario.foto_perfil.url|default:'/static/images/avatar-default.png' }}" 
-                                     alt="{{ conversacion.maestro.usuario.get_full_name }}" 
-                                     class="rounded-circle me-3" width="50" height="50">
-                                <div>
-                                    <h6 class="mb-1">{{ conversacion.maestro.usuario.get_full_name }}</h6>
-                                    <p class="mb-1 text-muted">Maestro - {{ conversacion.maestro.materias.all|join:", " }}</p>
-                                </div>
-                                {% else %}
-                                <img src="{{ conversacion.alumno.usuario.foto_perfil.url|default:'/static/images/avatar-default.png' }}" 
-                                     alt="{{ conversacion.alumno.usuario.get_full_name }}" 
-                                     class="rounded-circle me-3" width="50" height="50">
-                                <div>
-                                    <h6 class="mb-1">{{ conversacion.alumno.usuario.get_full_name }}</h6>
-                                    <p class="mb-1 text-muted">Alumno</p>
-                                </div>
-                                {% endif %}
-                            </div>
-                            <div class="text-end">
-                                <small class="text-muted">{{ conversacion.ultimo_mensaje|timesince }}</small>
-                                {% with ultimo_mensaje=conversacion.mensajes.last %}
-                                    {% if ultimo_mensaje and not ultimo_mensaje.leido and ultimo_mensaje.remitente != request.user %}
-                                    <span class="badge bg-primary rounded-pill">Nuevo</span>
-                                    {% endif %}
-                                {% endwith %}
-                            </div>
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <!-- Header -->
+                <div class="card-header bg-white border-0 py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="fw-bold mb-0">💬 Mensajes</h4>
+                            <p class="text-muted mb-0">Comunícate con tus estudiantes o profesores</p>
                         </div>
-                    </a>
-                    {% endfor %}
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" 
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-filter me-1"></i>Filtrar
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="?filtro=todos">Todos</a></li>
+                                <li><a class="dropdown-item" href="?filtro=no_leidos">No leídos</a></li>
+                                <li><a class="dropdown-item" href="?filtro=archivados">Archivados</a></li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
-            {% else %}
-                <div class="text-center py-5">
-                    <i class="fas fa-comments fa-3x text-muted mb-3"></i>
-                    <h4 class="text-muted">No hay conversaciones</h4>
-                    {% if request.user.rol == 'ALUMNO' %}
-                      <p class="text-muted">Todavía no tienes mensajes con ningún maestro.</p>
-                    {% else %}
-                      <p class="text-muted">Todavía no tienes mensajes con ningún alumno.</p>
-                    {% endif %}
+
+                <div class="card-body p-0">
+                    <div class="row g-0">
+                        <!-- Lista de conversaciones -->
+                        <div class="col-md-12">
+                            {% if conversaciones %}
+                                <div class="list-group list-group-flush">
+                                    {% for conversacion in conversaciones %}
+                                        <a href="{% url 'ver_conversacion' conversacion.id %}" 
+                                           class="list-group-item list-group-item-action border-0 py-3 px-4 hover-bg">
+                                            <div class="row align-items-center">
+                                                <!-- Avatar -->
+                                                <div class="col-auto">
+                                                    <div class="position-relative">
+                                                        {% if request.user.rol == 'ALUMNO' %}
+                                                            <img src="{{ conversacion.maestro.usuario.foto_perfil.url|default:'/static/images/avatar-default.png' }}" 
+                                                                 alt="{{ conversacion.maestro.usuario.get_full_name }}" 
+                                                                 class="rounded-circle" width="56" height="56">
+                                                            {% if conversacion.maestro.usuario.verificado %}
+                                                                <span class="position-absolute bottom-0 end-0 bg-primary rounded-circle p-1" 
+                                                                      style="width: 16px; height: 16px;" 
+                                                                      title="Usuario verificado">
+                                                                    <i class="fas fa-check text-white" style="font-size: 10px;"></i>
+                                                                </span>
+                                                            {% endif %}
+                                                        {% else %}
+                                                            <img src="{{ conversacion.alumno.usuario.foto_perfil.url|default:'/static/images/avatar-default.png' }}" 
+                                                                 alt="{{ conversacion.alumno.usuario.get_full_name }}" 
+                                                                 class="rounded-circle" width="56" height="56">
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+
+                                                <!-- Información -->
+                                                <div class="col">
+                                                    <div class="d-flex justify-content-between align-items-start">
+                                                        <div>
+                                                            <h6 class="fw-bold mb-1">
+                                                                {% if request.user.rol == 'ALUMNO' %}
+                                                                    {{ conversacion.maestro.usuario.get_full_name|default:conversacion.maestro.usuario.username }}
+                                                                {% else %}
+                                                                    {{ conversacion.alumno.usuario.get_full_name|default:conversacion.alumno.usuario.username }}
+                                                                {% endif %}
+                                                            </h6>
+                                                            <p class="text-muted small mb-1">
+                                                                {% if request.user.rol == 'ALUMNO' %}
+                                                                    Maestro
+                                                                    {% if conversacion.maestro.materias.exists %}
+                                                                        • {{ conversacion.maestro.materias.all|join:", "|truncatewords:2 }}
+                                                                    {% endif %}
+                                                                {% else %}
+                                                                    Alumno
+                                                                    {% if conversacion.alumno.nivel_educativo %}
+                                                                        • {{ conversacion.alumno.nivel_educativo.nombre }}
+                                                                    {% endif %}
+                                                                {% endif %}
+                                                            </p>
+                                                            
+                                                            <!-- Último mensaje -->
+                                                            {% with ultimo_mensaje=conversacion.mensajes.last %}
+                                                                {% if ultimo_mensaje %}
+                                                                    <p class="mb-0 text-truncate" style="max-width: 400px;">
+                                                                        {% if ultimo_mensaje.remitente == request.user %}
+                                                                            <strong>Tú:</strong>
+                                                                        {% endif %}
+                                                                        
+                                                                        {% if ultimo_mensaje.tipo == 'imagen' %}
+                                                                            <i class="fas fa-image me-1"></i>Imagen
+                                                                        {% elif ultimo_mensaje.tipo == 'archivo' %}
+                                                                            <i class="fas fa-file me-1"></i>Archivo
+                                                                        {% else %}
+                                                                            {{ ultimo_mensaje.contenido|truncatewords:10 }}
+                                                                        {% endif %}
+                                                                    </p>
+                                                                {% endif %}
+                                                            {% endwith %}
+                                                        </div>
+
+                                                        <!-- Indicadores -->
+                                                        <div class="text-end">
+                                                            <small class="text-muted d-block">
+                                                                {{ conversacion.ultimo_mensaje|timesince }}
+                                                            </small>
+                                                            {% with ultimo_mensaje=conversacion.mensajes.last %}
+                                                                {% if ultimo_mensaje and not ultimo_mensaje.leido and ultimo_mensaje.remitente != request.user %}
+                                                                    <span class="badge bg-primary rounded-pill mt-1">Nuevo</span>
+                                                                {% endif %}
+                                                            {% endwith %}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <!-- Estado vacío -->
+                                <div class="text-center py-5">
+                                    <div class="mb-4">
+                                        <i class="fas fa-comments fa-4x text-muted"></i>
+                                    </div>
+                                    <h4 class="text-muted mb-3">No hay conversaciones</h4>
+                                    <p class="text-muted mb-4">
+                                        {% if request.user.rol == 'ALUMNO' %}
+                                            ¡Comienza a conversar con tus profesores!
+                                        {% else %}
+                                            ¡Comienza a conversar con tus estudiantes!
+                                        {% endif %}
+                                    </p>
+                                    {% if request.user.rol == 'ALUMNO' %}
+                                        <a href="{% url 'buscar_clases' %}" class="btn btn-primary">
+                                            <i class="fas fa-search me-1"></i>Buscar Profesores
+                                        </a>
+                                    {% else %}
+                                        <a href="{% url 'solicitudes_para_maestro' %}" class="btn btn-primary">
+                                            <i class="fas fa-users me-1"></i>Ver Solicitudes
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
-            {% endif %}
+
+                <!-- Footer con estadísticas -->
+                <div class="card-footer bg-white border-0 py-3">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <h5 class="mb-0">{{ conversaciones.count }}</h5>
+                            <small class="text-muted">Conversaciones</small>
+                        </div>
+                        <div class="col-4">
+                            <h5 class="mb-0">{{ total_mensajes_no_leidos }}</h5>
+                            <small class="text-muted">No leídos</small>
+                        </div>
+                        <div class="col-4">
+                            <h5 class="mb-0">{{ total_archivos }}</h5>
+                            <small class="text-muted">Archivos</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Actualizar notificaciones periódicamente
+    function actualizarNotificaciones() {
+        fetch('/notificaciones/', {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Actualizar contador de notificaciones si existe
+            const badge = document.querySelector('.badge.bg-primary');
+            if (badge && data.length > 0) {
+                badge.textContent = data.length;
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+    
+    // Actualizar cada 30 segundos
+    setInterval(actualizarNotificaciones, 30000);
+});
+</script>
+
+<style>
+.hover-bg:hover {
+    background-color: #f8f9fa !important;
+}
+
+.list-group-item {
+    transition: background-color 0.2s ease;
+    border-bottom: 1px solid #f1f1f1 !important;
+}
+
+.list-group-item:last-child {
+    border-bottom: none !important;
+}
+
+.badge {
+    font-size: 0.75em;
+    padding: 0.25em 0.5em;
+}
+
+.card-footer {
+    border-top: 1px solid rgba(0,0,0,.125);
+}
+
+/* Animación para nuevos mensajes */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.badge.bg-primary {
+    animation: pulse 2s infinite;
+}
+</style>
 {% endblock %}

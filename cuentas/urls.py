@@ -4,7 +4,7 @@ from .views import (
     registro_persona, elegir_rol, registro_alumno, registro_maestro,
     CustomLoginView, logout_view,
     dashboard_alumno, dashboard_maestro,
-    load_departamentos, load_municipios, load_localidades, test_geocoding, buscar_clases, detalle_maestro, perfil_alumno,perfil_publico,
+    load_departamentos, load_municipios, load_localidades, test_geocoding, buscar_clases, detalle_maestro, perfil_alumno, editar_perfil_alumno, perfil_publico,
 )
 
 from .views import editar_perfil_maestro  # Agrega esta importación
@@ -47,7 +47,7 @@ urlpatterns = [
     #Alumno
     path("alumno/buscar/", buscar_clases, name="buscar_clases"),
     path("alumno/maestro/<int:maestro_id>/", detalle_maestro, name="detalle_maestro"),
-    path("alumno/perfil", perfil_alumno, name="perfil_alumno"),
+    path("alumno/perfil/", editar_perfil_alumno, name="perfil_alumno"),
     path("alumno/perfil/publico/", perfil_publico, name="perfil_publico"),
 
 
@@ -139,7 +139,13 @@ urlpatterns = [
     # Herramientas integradas
     path("herramientas/", views.herramientas, name="herramientas"),
     path("herramientas/calculadora/", views.calculadora, name="calculadora"),
+    
+    # URLs mejoradas de bloc de notas
     path("herramientas/bloc-notas/", views.bloc_notas, name="bloc_notas"),
+    path("herramientas/nota/nueva/", views.crear_nota, name="crear_nota"),
+    path("herramientas/nota/<int:nota_id>/editar/", views.editar_nota, name="editar_nota"),
+    path("herramientas/nota/<int:nota_id>/eliminar/", views.eliminar_nota, name="eliminar_nota"),
+
     path("herramientas/tareas/", views.gestor_tareas, name="gestor_tareas"),
     path("herramientas/tareas/<int:tarea_id>/cambiar-estado/", views.cambiar_estado_tarea, name="cambiar_estado_tarea"),
     path("herramientas/tareas/<int:tarea_id>/eliminar/", views.eliminar_tarea, name="eliminar_tarea"),
@@ -147,5 +153,31 @@ urlpatterns = [
     path("herramientas/pomodoro/finalizar-sesion/", views.finalizar_sesion_estudio, name="finalizar_sesion_estudio"),
     path("herramientas/conversor/", views.conversor_unidades, name="conversor_unidades"),
     path("herramientas/graficos/", views.generador_graficos, name="generador_graficos"),
+
+    # Agregar estas rutas a las herramientas existentes
+    path("herramientas/formulas/", views.biblioteca_formulas, name="biblioteca_formulas"),
+    path("herramientas/tabla-periodica/", views.tabla_periodica, name="tabla_periodica"),
+    path("herramientas/traductor/", views.traductor_automatico, name="traductor_automatico"),
+    path("herramientas/diccionario/", views.diccionario_integrado, name="diccionario_integrado"),
+    path("herramientas/sinonimos/", views.sinonimos_antonimos, name="sinonimos_antonimos"),
+
+
+
+    path("maestro/ingresos/", views.ingresos_detallados, name="ingresos_detallados"),
+
+
+    # URLs de administrador
+    path("admin/dashboard/", views.dashboard_admin, name="dashboard_admin"),
+    #path("admin/estadisticas/", views.estadisticas_detalladas, name="estadisticas_detalladas"),
+    #path("admin/promociones/", views.gestion_promociones, name="gestion_promociones"),
+    #path("admin/vouchers/", views.gestion_vouchers, name="gestion_vouchers"),
+
+    # URLs para aplicar promociones
+    #path("solicitud/<int:solicitud_id>/aplicar-promocion/", views.aplicar_promocion, name="aplicar_promocion"),
+
+
+    # URLs de exportación
+    path("alumno/gastos/exportar-pdf/", views.exportar_gastos_pdf, name="exportar_gastos_pdf"),
+    #path("maestro/ingresos/exportar-pdf/", views.exportar_ingresos_pdf, name="exportar_ingresos_pdf"),
 
 ]

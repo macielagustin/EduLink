@@ -1,68 +1,878 @@
 {% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+
 {% block title %}Conversación | EduLink{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        {% if request.user.rol == 'ALUMNO' %}
-                        💬 Conversación con {{ conversacion.maestro.usuario.get_full_name }}
-                        {% else %}
-                        💬 Conversación con {{ conversacion.alumno.usuario.get_full_name }}
-                        {% endif %}
-                    </h5>
-                    <a href="{% url 'lista_conversaciones' %}" class="btn btn-light btn-sm">
-                        <i class="fas fa-arrow-left me-1"></i>Volver
-                    </a>
+<div class="container-fluid py-4">
+    <div class="row">
+        <!-- Sidebar con información del contacto -->
+        <div class="col-md-3">
+            <!-- Información del contacto -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="fw-bold mb-0">👤 Información</h5>
                 </div>
-                
-                <div class="card-body" style="height: 400px; overflow-y: auto;" id="chat-messages">
-                    {% for mensaje in mensajes %}
-                    <div class="mb-3 {% if mensaje.remitente == request.user %}text-end{% endif %}">
-                        <div class="d-flex {% if mensaje.remitente == request.user %}justify-content-end{% endif %}">
-                            <div class="{% if mensaje.remitente == request.user %}bg-primary text-white{% else %}bg-light{% endif %} rounded p-3" style="max-width: 70%;">
-                                <p class="mb-1">{{ mensaje.contenido }}</p>
-                                <small class="{% if mensaje.remitente == request.user %}text-white-50{% else %}text-muted{% endif %}">
-                                    {{ mensaje.fecha_envio|date:"H:i" }}
-                                    {% if mensaje.remitente == request.user and mensaje.leido %}
-                                    <i class="fas fa-check-double ms-1"></i>
+                <div class="card-body text-center">
+                    {% if request.user.rol == 'ALUMNO' %}
+                        <img src="{{ conversacion.maestro.usuario.foto_perfil.url|default:'/static/images/avatar-default.png' }}" 
+                             alt="{{ conversacion.maestro.usuario.get_full_name }}" 
+                             class="rounded-circle mb-3" width="100" height="100">
+                        <h5>{{ conversacion.maestro.usuario.get_full_name|default:conversacion.maestro.usuario.username }}</h5>
+                        <p class="text-muted">
+                            <i class="fas fa-chalkboard-teacher me-1"></i>Maestro
+                        </p>
+                        
+                        <div class="text-start small">
+                            {% if conversacion.maestro.materias.exists %}
+                                <p class="mb-1">
+                                    <strong>Materias:</strong><br>
+                                    {% for materia in conversacion.maestro.materias.all|slice:":3" %}
+                                        <span class="badge bg-light text-dark mb-1">{{ materia.nombre }}</span>
+                                    {% endfor %}
+                                    {% if conversacion.maestro.materias.count > 3 %}
+                                        <span class="badge bg-light text-dark">+{{ conversacion.maestro.materias.count|add:"-3" }}</span>
                                     {% endif %}
-                                </small>
-                            </div>
+                                </p>
+                            {% endif %}
+                            
+                            {% if conversacion.maestro.precio_hora %}
+                                <p class="mb-1">
+                                    <strong>Precio:</strong> ${{ conversacion.maestro.precio_hora }}/hora
+                                </p>
+                            {% endif %}
+                        </div>
+                        
+                        <a href="{% url 'perfil_maestro_publico' conversacion.maestro.id %}" 
+                           class="btn btn-outline-primary btn-sm mt-2">
+                            <i class="fas fa-external-link-alt me-1"></i>Ver perfil completo
+                        </a>
+                    {% else %}
+                        <img src="{{ conversacion.alumno.usuario.foto_perfil.url|default:'/static/images/avatar-default.png' }}" 
+                             alt="{{ conversacion.alumno.usuario.get_full_name }}" 
+                             class="rounded-circle mb-3" width="100" height="100">
+                        <h5>{{ conversacion.alumno.usuario.get_full_name|default:conversacion.alumno.usuario.username }}</h5>
+                        <p class="text-muted">
+                            <i class="fas fa-user-graduate me-1"></i>Alumno
+                        </p>
+                        
+                        <div class="text-start small">
+                            {% if conversacion.alumno.nivel_educativo %}
+                                <p class="mb-1">
+                                    <strong>Nivel:</strong> {{ conversacion.alumno.nivel_educativo.nombre }}
+                                </p>
+                            {% endif %}
+                            
+                            {% if conversacion.alumno.objetivo %}
+                                <p class="mb-1">
+                                    <strong>Objetivo:</strong> {{ conversacion.alumno.objetivo|truncatewords:10 }}
+                                </p>
+                            {% endif %}
+                        </div>
+                        
+                        <a href="#" class="btn btn-outline-primary btn-sm mt-2">
+                            <i class="fas fa-external-link-alt me-1"></i>Ver perfil
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Archivos compartidos -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <h6 class="fw-bold mb-0">📎 Archivos Compartidos</h6>
+                </div>
+                <div class="card-body">
+                    {% if archivos_compartidos %}
+                        <div class="list-group list-group-flush">
+                            {% for mensaje in archivos_compartidos|slice:":5" %}
+                                {% if mensaje.tipo == 'imagen' %}
+                                    <a href="{{ mensaje.imagen.url }}" target="_blank" 
+                                       class="list-group-item list-group-item-action border-0 px-0 py-2">
+                                        <div class="d-flex align-items-center">
+                                            <div class="flex-shrink-0">
+                                                <div class="bg-primary text-white rounded p-2">
+                                                    <i class="fas fa-image"></i>
+                                                </div>
+                                            </div>
+                                            <div class="flex-grow-1 ms-3">
+                                                <small class="d-block text-truncate">{{ mensaje.nombre_archivo }}</small>
+                                                <small class="text-muted">{{ mensaje.formatear_tamano }}</small>
+                                            </div>
+                                        </div>
+                                    </a>
+                                {% elif mensaje.tipo == 'archivo' %}
+                                    <a href="{{ mensaje.archivo.url }}" target="_blank" 
+                                       class="list-group-item list-group-item-action border-0 px-0 py-2">
+                                        <div class="d-flex align-items-center">
+                                            <div class="flex-shrink-0">
+                                                <div class="bg-info text-white rounded p-2">
+                                                    <i class="fas fa-file"></i>
+                                                </div>
+                                            </div>
+                                            <div class="flex-grow-1 ms-3">
+                                                <small class="d-block text-truncate">{{ mensaje.nombre_archivo }}</small>
+                                                <small class="text-muted">{{ mensaje.formatear_tamano }}</small>
+                                            </div>
+                                        </div>
+                                    </a>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        {% if archivos_compartidos.count > 5 %}
+                            <a href="#ver-todos-archivos" class="btn btn-sm btn-outline-secondary w-100 mt-2">
+                                Ver todos ({{ archivos_compartidos.count }})
+                            </a>
+                        {% endif %}
+                    {% else %}
+                        <p class="text-muted small mb-0 text-center">
+                            <i class="fas fa-folder-open me-1"></i>No hay archivos compartidos
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Área principal del chat -->
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <!-- Header del chat -->
+                <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <a href="{% url 'lista_conversaciones' %}" class="btn btn-outline-secondary btn-sm me-3">
+                            <i class="fas fa-arrow-left"></i>
+                        </a>
+                        <div>
+                            <h5 class="fw-bold mb-0">
+                                {% if request.user.rol == 'ALUMNO' %}
+                                    {{ conversacion.maestro.usuario.get_full_name|default:conversacion.maestro.usuario.username }}
+                                {% else %}
+                                    {{ conversacion.alumno.usuario.get_full_name|default:conversacion.alumno.usuario.username }}
+                                {% endif %}
+                            </h5>
+                            <small class="text-muted">
+                                {% if request.user.rol == 'ALUMNO' %}
+                                    <i class="fas fa-circle text-success small"></i> En línea
+                                {% else %}
+                                    <i class="fas fa-circle text-success small"></i> En línea
+                                {% endif %}
+                            </small>
                         </div>
                     </div>
-                    {% empty %}
-                    <div class="text-center text-muted py-4">
-                        <i class="fas fa-comments fa-2x mb-2"></i>
-                        <p>No hay mensajes aún. ¡Envía el primero!</p>
+                    
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" 
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item" href="#">
+                                    <i class="fas fa-user-circle me-2"></i>Ver perfil
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#">
+                                    <i class="fas fa-bell-slash me-2"></i>Silenciar notificaciones
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item text-danger" href="#">
+                                    <i class="fas fa-trash me-2"></i>Eliminar conversación
+                                </a>
+                            </li>
+                        </ul>
                     </div>
-                    {% endfor %}
                 </div>
-                
-                <div class="card-footer">
-                    <form method="post" id="mensaje-form">
+
+                <!-- Mensajes -->
+                <div class="card-body p-0 position-relative">
+                    <div class="chat-messages p-4" id="chat-messages" 
+                         style="height: 500px; overflow-y: auto;">
+                        
+                        {% for mensaje in mensajes %}
+                            <!-- Mensaje recibido -->
+                            {% if mensaje.remitente != request.user %}
+                                <div class="chat-message-left mb-4">
+                                    <div class="d-flex">
+                                        <img src="{{ mensaje.remitente.foto_perfil.url|default:'/static/images/avatar-default.png' }}" 
+                                             class="rounded-circle me-3" alt="{{ mensaje.remitente.get_full_name }}" 
+                                             width="40" height="40">
+                                        <div>
+                                            <!-- Burbuja de mensaje -->
+                                            <div class="bg-light rounded-3 p-3 mb-1">
+                                                <!-- Nombre del remitente -->
+                                                <small class="fw-bold d-block mb-1">
+                                                    {{ mensaje.remitente.get_full_name|default:mensaje.remitente.username }}
+                                                </small>
+                                                
+                                                <!-- Contenido del mensaje -->
+                                                {% if mensaje.contenido %}
+                                                    <p class="mb-2">{{ mensaje.contenido }}</p>
+                                                {% endif %}
+                                                
+                                                <!-- Imagen adjunta -->
+                                                {% if mensaje.imagen %}
+                                                    <div class="mb-2">
+                                                        <img src="{{ mensaje.imagen.url }}" 
+                                                             alt="Imagen" 
+                                                             class="img-fluid rounded" 
+                                                             style="max-height: 200px; cursor: pointer;"
+                                                             onclick="ampliarImagen(this)">
+                                                    </div>
+                                                {% endif %}
+                                                
+                                                <!-- Archivo adjunto -->
+                                                {% if mensaje.archivo and not mensaje.imagen %}
+                                                    <div class="mb-2">
+                                                        <div class="card border">
+                                                            <div class="card-body py-2">
+                                                                <div class="d-flex align-items-center">
+                                                                    <div class="flex-shrink-0">
+                                                                        <i class="fas fa-file text-primary fa-2x"></i>
+                                                                    </div>
+                                                                    <div class="flex-grow-1 ms-3">
+                                                                        <h6 class="mb-1">{{ mensaje.nombre_archivo }}</h6>
+                                                                        <small class="text-muted">{{ mensaje.formatear_tamano }}</small>
+                                                                    </div>
+                                                                    <div class="flex-shrink-0 ms-3">
+                                                                        <a href="{{ mensaje.archivo.url }}" 
+                                                                           target="_blank" 
+                                                                           class="btn btn-sm btn-outline-primary">
+                                                                            <i class="fas fa-download"></i>
+                                                                        </a>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                {% endif %}
+                                                
+                                                <!-- Hora del mensaje -->
+                                                <small class="text-muted d-block text-end">
+                                                    {{ mensaje.fecha_envio|date:"H:i" }}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            
+                            <!-- Mensaje enviado -->
+                            {% else %}
+                                <div class="chat-message-right mb-4">
+                                    <div class="d-flex flex-row-reverse">
+                                        <img src="{{ mensaje.remitente.foto_perfil.url|default:'/static/images/avatar-default.png' }}" 
+                                             class="rounded-circle ms-3" alt="{{ mensaje.remitente.get_full_name }}" 
+                                             width="40" height="40">
+                                        <div class="text-end">
+                                            <!-- Burbuja de mensaje -->
+                                            <div class="bg-primary text-white rounded-3 p-3 mb-1">
+                                                <!-- Contenido del mensaje -->
+                                                {% if mensaje.contenido %}
+                                                    <p class="mb-2">{{ mensaje.contenido }}</p>
+                                                {% endif %}
+                                                
+                                                <!-- Imagen adjunta -->
+                                                {% if mensaje.imagen %}
+                                                    <div class="mb-2">
+                                                        <img src="{{ mensaje.imagen.url }}" 
+                                                             alt="Imagen" 
+                                                             class="img-fluid rounded" 
+                                                             style="max-height: 200px; cursor: pointer;"
+                                                             onclick="ampliarImagen(this)">
+                                                    </div>
+                                                {% endif %}
+                                                
+                                                <!-- Archivo adjunto -->
+                                                {% if mensaje.archivo and not mensaje.imagen %}
+                                                    <div class="mb-2">
+                                                        <div class="card border-0 bg-white bg-opacity-25">
+                                                            <div class="card-body py-2">
+                                                                <div class="d-flex align-items-center">
+                                                                    <div class="flex-shrink-0">
+                                                                        <i class="fas fa-file text-white fa-2x"></i>
+                                                                    </div>
+                                                                    <div class="flex-grow-1 ms-3 text-start">
+                                                                        <h6 class="mb-1 text-white">{{ mensaje.nombre_archivo }}</h6>
+                                                                        <small class="text-white">{{ mensaje.formatear_tamano }}</small>
+                                                                    </div>
+                                                                    <div class="flex-shrink-0 ms-3">
+                                                                        <a href="{{ mensaje.archivo.url }}" 
+                                                                           target="_blank" 
+                                                                           class="btn btn-sm btn-light">
+                                                                            <i class="fas fa-download"></i>
+                                                                        </a>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                {% endif %}
+                                                
+                                                <!-- Hora y estado de lectura -->
+                                                <small class="text-white-50 d-block">
+                                                    {{ mensaje.fecha_envio|date:"H:i" }}
+                                                    {% if mensaje.leido %}
+                                                        <i class="fas fa-check-double ms-1"></i>
+                                                    {% else %}
+                                                        <i class="fas fa-check ms-1"></i>
+                                                    {% endif %}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% empty %}
+                            <!-- Estado vacío -->
+                            <div class="text-center py-5">
+                                <div class="mb-3">
+                                    <i class="fas fa-comments fa-4x text-muted"></i>
+                                </div>
+                                <h4 class="text-muted">No hay mensajes</h4>
+                                <p class="text-muted">¡Envía el primer mensaje!</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Formulario de mensaje -->
+                <div class="card-footer bg-white border-0 pt-3">
+                    <form method="post" id="mensaje-form" enctype="multipart/form-data">
                         {% csrf_token %}
+                        
+                        <!-- Previsualización de archivos -->
+                        <div class="mb-2" id="preview-container" style="display: none;">
+                            <div class="card border">
+                                <div class="card-body py-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center">
+                                            <div class="flex-shrink-0 me-3">
+                                                <i class="fas fa-file text-primary fa-2x" id="preview-icon"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <small class="d-block" id="preview-filename"></small>
+                                                <small class="text-muted" id="preview-size"></small>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                onclick="eliminarAdjunto()">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Inputs ocultos para archivos -->
+                        <div class="d-none">
+                            {{ form.archivo }}
+                            {{ form.imagen }}
+                        </div>
+                        
+                        <!-- Área de entrada -->
                         <div class="input-group">
+                            <button class="btn btn-outline-secondary" type="button" id="btn-adjuntar">
+                                <i class="fas fa-paperclip"></i>
+                            </button>
+                            
                             {{ form.contenido }}
-                            <button type="submit" class="btn btn-primary">
+                            
+                            <button class="btn btn-outline-secondary" type="button" id="btn-emojis">
+                                <i class="fas fa-smile"></i>
+                            </button>
+                            
+                            <button type="submit" class="btn btn-primary" id="btn-enviar">
                                 <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Botones de acción rápida -->
+                        <div class="d-flex justify-content-start gap-2 mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" 
+                                    onclick="adjuntarArchivo()">
+                                <i class="fas fa-file me-1"></i>Documento
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" 
+                                    onclick="adjuntarImagen()">
+                                <i class="fas fa-image me-1"></i>Imagen
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
+
+        <!-- Sidebar derecha (información adicional) -->
+        <div class="col-md-3">
+            <!-- Clases programadas -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-0 py-3">
+                    <h6 class="fw-bold mb-0">📅 Clases Programadas</h6>
+                </div>
+                <div class="card-body">
+                    {% if request.user.rol == 'ALUMNO' %}
+                        {% with clases=conversacion.alumno.solicitudclase_set.filter|slice:":3" %}
+                            {% if clases %}
+                                {% for clase in clases %}
+                                    <div class="border-bottom pb-2 mb-2">
+                                        <small class="d-block fw-bold">{{ clase.materia.nombre }}</small>
+                                        <small class="text-muted">
+                                            {{ clase.fecha_clase_confirmada|date:"d/m H:i"|default:"Sin fecha" }}
+                                        </small>
+                                    </div>
+                                {% endfor %}
+                                <a href="{% url 'mis_solicitudes_alumno' %}" class="btn btn-sm btn-outline-primary w-100 mt-2">
+                                    Ver todas
+                                </a>
+                            {% else %}
+                                <p class="text-muted small mb-0 text-center">
+                                    No hay clases programadas
+                                </p>
+                            {% endif %}
+                        {% endwith %}
+                    {% else %}
+                        {% with clases=conversacion.maestro.solicitudclase_set.filter|slice:":3" %}
+                            {% if clases %}
+                                {% for clase in clases %}
+                                    <div class="border-bottom pb-2 mb-2">
+                                        <small class="d-block fw-bold">{{ clase.materia.nombre }}</small>
+                                        <small class="text-muted">
+                                            {{ clase.fecha_clase_confirmada|date:"d/m H:i"|default:"Sin fecha" }}
+                                        </small>
+                                    </div>
+                                {% endfor %}
+                                <a href="{% url 'solicitudes_para_maestro' %}" class="btn btn-sm btn-outline-primary w-100 mt-2">
+                                    Ver todas
+                                </a>
+                            {% else %}
+                                <p class="text-muted small mb-0 text-center">
+                                    No hay clases programadas
+                                </p>
+                            {% endif %}
+                        {% endwith %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Información rápida -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <h6 class="fw-bold mb-0">ℹ️ Información Rápida</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 mb-3">
+                            <div class="bg-light rounded p-2">
+                                <h5 class="mb-0 text-primary">{{ mensajes.count }}</h5>
+                                <small class="text-muted">Mensajes</small>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="bg-light rounded p-2">
+                                <h5 class="mb-0 text-success">{{ archivos_compartidos.count }}</h5>
+                                <small class="text-muted">Archivos</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info small">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Puedes adjuntar imágenes y archivos (PDF, Word, Excel, etc.)
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
+<!-- Modal para ampliar imágenes -->
+<div class="modal fade" id="imagenModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Imagen</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img src="" id="imagen-ampliada" class="img-fluid" alt="Imagen ampliada">
+            </div>
+            <div class="modal-footer">
+                <a href="#" id="descargar-imagen" class="btn btn-primary" download>
+                    <i class="fas fa-download me-1"></i>Descargar
+                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-// Auto-scroll to bottom of chat
 document.addEventListener('DOMContentLoaded', function() {
     const chatMessages = document.getElementById('chat-messages');
+    
+    // Auto-scroll al final del chat
     chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+    // Variables para el formulario
+    const form = document.getElementById('mensaje-form');
+    const contenidoInput = document.getElementById('mensaje-contenido');
+    const archivoInput = document.getElementById('archivo-input');
+    const imagenInput = document.getElementById('imagen-input');
+    const previewContainer = document.getElementById('preview-container');
+    const previewIcon = document.getElementById('preview-icon');
+    const previewFilename = document.getElementById('preview-filename');
+    const previewSize = document.getElementById('preview-size');
+
+    // Conectar botón de emojis
+    const btnEmojis = document.getElementById('btn-emojis');
+    if (btnEmojis) {
+        btnEmojis.addEventListener('click', mostrarEmojis);
+    }
+
+
+    // Conectar botón de adjuntar archivo para abrir el menú de opciones
+    const btnAdjuntar = document.getElementById('btn-adjuntar');
+    if (btnAdjuntar) {
+        btnAdjuntar.addEventListener('click', function(e) {
+            e.preventDefault();
+            // Crear menú de opciones
+            const menu = document.createElement('div');
+            menu.className = 'dropdown-menu show';
+            menu.style.position = 'absolute';
+            menu.style.zIndex = '1000';
+            menu.innerHTML = `
+                <a class="dropdown-item" href="#" onclick="adjuntarArchivo(); return false;">
+                    <i class="fas fa-file me-2"></i>Documento
+                </a>
+                <a class="dropdown-item" href="#" onclick="adjuntarImagen(); return false;">
+                    <i class="fas fa-image me-2"></i>Imagen
+                </a>
+            `;
+            
+            const rect = btnAdjuntar.getBoundingClientRect();
+            menu.style.top = (rect.bottom + window.scrollY) + 'px';
+            menu.style.left = (rect.left + window.scrollX) + 'px';
+            
+            document.body.appendChild(menu);
+            
+            // Cerrar al hacer clic fuera
+            setTimeout(() => {
+                const closeMenu = function(e) {
+                    if (!menu.contains(e.target) && e.target !== btnAdjuntar) {
+                        document.body.removeChild(menu);
+                        document.removeEventListener('click', closeMenu);
+                    }
+                };
+                document.addEventListener('click', closeMenu);
+            }, 100);
+        });
+    }
+
+
+    let archivoSeleccionado = null;
+    let tipoArchivo = null;
+    
+    // Función para adjuntar archivo
+    window.adjuntarArchivo = function() {
+        archivoInput.click();
+    };
+
+    // Función para mostrar emojis (corregida)
+    window.mostrarEmojis = function() {
+        // Crear un selector de emojis simple
+        const emojis = ['😀', '😂', '😊', '🤔', '👍', '❤️', '🎓', '📚', '✏️', '✅'];
+        const emojiContainer = document.createElement('div');
+        emojiContainer.className = 'emoji-picker bg-white border rounded shadow p-2';
+        emojiContainer.style.position = 'absolute';
+        emojiContainer.style.zIndex = '1000';
+        emojiContainer.style.bottom = '60px';
+        emojiContainer.style.right = '60px';
+    
+        emojis.forEach(emoji => {
+            const span = document.createElement('span');
+            span.textContent = emoji;
+            span.style.fontSize = '1.5rem';
+            span.style.cursor = 'pointer';
+            span.style.margin = '5px';
+            span.onclick = function() {
+                const textarea = document.getElementById('mensaje-contenido');
+                textarea.value += emoji;
+                textarea.focus();
+                document.body.removeChild(emojiContainer);
+            };
+            emojiContainer.appendChild(span);
+        });
+    
+    // Cerrar al hacer clic fuera
+    setTimeout(() => {
+        const closePicker = function(e) {
+            if (!emojiContainer.contains(e.target)) {
+                document.body.removeChild(emojiContainer);
+                document.removeEventListener('click', closePicker);
+            }
+        };
+        document.addEventListener('click', closePicker);
+    }, 100);
+    
+    document.body.appendChild(emojiContainer);
+};
+    
+    // Función para adjuntar imagen
+    window.adjuntarImagen = function() {
+        imagenInput.click();
+    };
+    
+    // Función para eliminar adjunto
+    window.eliminarAdjunto = function() {
+        archivoSeleccionado = null;
+        tipoArchivo = null;
+        archivoInput.value = '';
+        imagenInput.value = '';
+        previewContainer.style.display = 'none';
+    };
+    
+    // Función para ampliar imagen
+    window.ampliarImagen = function(imgElement) {
+        const modal = new bootstrap.Modal(document.getElementById('imagenModal'));
+        const imagenAmpliada = document.getElementById('imagen-ampliada');
+        const descargarBtn = document.getElementById('descargar-imagen');
+        
+        imagenAmpliada.src = imgElement.src;
+        descargarBtn.href = imgElement.src;
+        modal.show();
+    };
+    
+    // Manejar selección de archivo
+    archivoInput.addEventListener('change', function(e) {
+        if (this.files.length > 0) {
+            archivoSeleccionado = this.files[0];
+            tipoArchivo = 'archivo';
+            mostrarPreview(archivoSeleccionado);
+        }
+    });
+    
+    // Manejar selección de imagen
+    imagenInput.addEventListener('change', function(e) {
+        if (this.files.length > 0) {
+            archivoSeleccionado = this.files[0];
+            tipoArchivo = 'imagen';
+            mostrarPreview(archivoSeleccionado);
+        }
+    });
+    
+    // Mostrar previsualización del archivo
+    function mostrarPreview(file) {
+        previewFilename.textContent = file.name;
+        
+        // Calcular tamaño formateado
+        let size = file.size;
+        let sizeFormatted;
+        if (size < 1024) {
+            sizeFormatted = size + ' B';
+        } else if (size < 1024 * 1024) {
+            sizeFormatted = (size / 1024).toFixed(1) + ' KB';
+        } else {
+            sizeFormatted = (size / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+        previewSize.textContent = sizeFormatted;
+        
+        // Cambiar icono según tipo
+        if (file.type.startsWith('image/')) {
+            previewIcon.className = 'fas fa-image text-primary fa-2x';
+        } else if (file.name.toLowerCase().endsWith('.pdf')) {
+            previewIcon.className = 'fas fa-file-pdf text-danger fa-2x';
+        } else if (file.name.toLowerCase().endsWith('.doc') || file.name.toLowerCase().endsWith('.docx')) {
+            previewIcon.className = 'fas fa-file-word text-primary fa-2x';
+        } else if (file.name.toLowerCase().endsWith('.xls') || file.name.toLowerCase().endsWith('.xlsx')) {
+            previewIcon.className = 'fas fa-file-excel text-success fa-2x';
+        } else {
+            previewIcon.className = 'fas fa-file text-primary fa-2x';
+        }
+        
+        previewContainer.style.display = 'block';
+    }
+    
+    // Enviar formulario con AJAX
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const btnEnviar = document.getElementById('btn-enviar');
+        const originalHTML = btnEnviar.innerHTML;
+        
+        // Mostrar estado de carga
+        btnEnviar.disabled = true;
+        btnEnviar.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        
+        const formData = new FormData(this);
+        
+        // Agregar archivo si hay uno seleccionado
+        if (archivoSeleccionado && tipoArchivo === 'archivo') {
+            formData.append('archivo', archivoSeleccionado);
+        } else if (archivoSeleccionado && tipoArchivo === 'imagen') {
+            formData.append('imagen', archivoSeleccionado);
+        }
+        
+        fetch(window.location.href, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Limpiar formulario
+                contenidoInput.value = '';
+                eliminarAdjunto();
+                
+                // Recargar la página para mostrar el nuevo mensaje
+                setTimeout(() => {
+                    location.reload();
+                }, 500);
+            } else {
+                alert('Error al enviar el mensaje: ' + JSON.stringify(data.errors));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error de conexión');
+        })
+        .finally(() => {
+            btnEnviar.disabled = false;
+            btnEnviar.innerHTML = originalHTML;
+        });
+    });
+    
+    // Enfoque automático en el campo de texto
+    contenidoInput.focus();
+    
+    // Enviar mensaje con Enter (Shift+Enter para nueva línea)
+    contenidoInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            form.dispatchEvent(new Event('submit'));
+        }
+    });
 });
 </script>
+
+<style>
+
+/* Agregar estilos para el chat mejorado */
+.emoji-picker {
+    display: flex;
+    flex-wrap: wrap;
+    width: 200px;
+}
+
+.dropdown-menu {
+    animation: fadeIn 0.2s ease-in;
+}
+
+
+.chat-messages {
+    background-color: #f8f9fa;
+    background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23e9ecef' fill-opacity='0.2' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.chat-message-left, .chat-message-right {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.chat-message-right .bg-primary {
+    border-bottom-right-radius: 0 !important;
+}
+
+.chat-message-left .bg-light {
+    border-bottom-left-radius: 0 !important;
+}
+
+#mensaje-contenido {
+    resize: none;
+    border: 1px solid #ced4da;
+    border-left: none;
+    border-right: none;
+}
+
+#mensaje-contenido:focus {
+    box-shadow: none;
+    border-color: #ced4da;
+}
+
+
+/* Mejorar la apariencia de los botones del chat */
+#btn-adjuntar:hover, #btn-emojis:hover {
+    background-color: #e9ecef;
+}
+
+
+#btn-adjuntar, #btn-emojis {
+    border-radius: 50% !important;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#btn-enviar {
+    border-radius: 50% !important;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+/* Estilo para cuando hay archivo adjunto */
+#preview-container {
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+
+.dropdown-menu {
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+/* Scrollbar personalizada */
+#chat-messages::-webkit-scrollbar {
+    width: 6px;
+}
+
+#chat-messages::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+#chat-messages::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+
+#chat-messages::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+</style>
 {% endblock %}

@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
-from .models import Usuario, Alumno, Maestro, Provincia, Departamento, Municipio, Localidad, Idioma, NivelEducativo, Disponibilidad, SolicitudClase, Mensaje, Reseña, DisponibilidadUsuario, ReseñaAlumno, BlocNotas, Tarea, SesionEstudio
+from .models import Usuario, Alumno, Maestro, Provincia, Departamento, Municipio, Localidad, Idioma, NivelEducativo, Disponibilidad, SolicitudClase, Mensaje, Reseña, DisponibilidadUsuario, ReseñaAlumno, BlocNotas, Tarea, SesionEstudio, Institucion, Promocion, Voucher, Nota
 from catalogo.models import Materia
 
 
@@ -17,6 +17,13 @@ class RegistroPersonaForm(UserCreationForm):
         widget=forms.Textarea(attrs={"rows": 3}),
         required=False,
         label="Descripción"
+    )
+
+    institucion = forms.ModelChoiceField(
+    queryset=Institucion.objects.filter(activa=True),
+    required=False,
+    widget=forms.Select(attrs={'class': 'form-select'}),
+    label="Institución/Escuela"
     )
 
     # Campos de geolocalización (extras, no del modelo)
@@ -378,17 +385,54 @@ class SolicitudClaseForm(forms.ModelForm):
 
 
 class MensajeForm(forms.ModelForm):
+    archivo = forms.FileField(
+        required=False,
+        widget=forms.FileInput(attrs={
+            'class': 'form-control d-none',
+            'id': 'archivo-input',
+            'accept': '.pdf,.doc,.docx,.txt,.zip,.rar,.7z'
+        })
+    )
+    
+    imagen = forms.ImageField(
+        required=False,
+        widget=forms.FileInput(attrs={
+            'class': 'form-control d-none',
+            'id': 'imagen-input',
+            'accept': 'image/*'
+        })
+    )
+
     class Meta:
         model = Mensaje
-        fields = ['contenido']
+        fields = ['contenido', 'archivo', 'imagen']
         widgets = {
             'contenido': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 3,
                 'placeholder': 'Escribe tu mensaje...',
                 'id': 'mensaje-contenido'
-            })
+            }),
         }
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        contenido = cleaned_data.get('contenido')
+        archivo = cleaned_data.get('archivo')
+        imagen = cleaned_data.get('imagen')
+        
+        # Validar que al menos haya contenido o un archivo
+        if not contenido and not archivo and not imagen:
+            raise forms.ValidationError('Debes escribir un mensaje o adjuntar un archivo/imagen.')
+        
+        # Validar tamaño máximo de archivos (10MB)
+        max_size = 10 * 1024 * 1024  # 10MB
+        if archivo and archivo.size > max_size:
+            raise forms.ValidationError(f'El archivo es demasiado grande. Máximo: 10MB.')
+        if imagen and imagen.size > max_size:
+            raise forms.ValidationError(f'La imagen es demasiado grande. Máximo: 10MB.')
+        
+        return cleaned_data
 
 
 """
@@ -512,14 +556,8 @@ class ReseñaAlumnoForm(forms.ModelForm):
 class BlocNotasForm(forms.ModelForm):
     class Meta:
         model = BlocNotas
-        fields = ['contenido']
-        widgets = {
-            'contenido': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 15,
-                'placeholder': 'Escribe tus notas aquí... Puedes usar markdown básico: **negrita**, *cursiva*, listas con -, etc.'
-            }),
-        }
+        fields = []  # No hay campos editables
+
 
 class TareaForm(forms.ModelForm):
     class Meta:
@@ -560,3 +598,67 @@ class SesionEstudioForm(forms.ModelForm):
             'tipo': forms.Select(attrs={'class': 'form-select'}),
             'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': '¿Qué vas a estudiar?'}),
         }
+
+
+
+class InstitucionForm(forms.ModelForm):
+    class Meta:
+        model = Institucion
+        fields = ['nombre', 'direccion', 'telefono', 'email']
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
+            'direccion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'telefono': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+        }
+
+class PromocionForm(forms.ModelForm):
+    class Meta:
+        model = Promocion
+        fields = ['nombre', 'tipo', 'valor', 'descripcion', 'fecha_inicio', 'fecha_fin', 'max_usos']
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
+            'tipo': forms.Select(attrs={'class': 'form-select'}),
+            'valor': forms.NumberInput(attrs={'class': 'form-control'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            'fecha_inicio': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'fecha_fin': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'max_usos': forms.NumberInput(attrs={'class': 'form-control'}),
+        }
+
+class VoucherForm(forms.ModelForm):
+    class Meta:
+        model = Voucher
+        fields = ['codigo', 'promocion', 'alumno', 'maestro']
+        widgets = {
+            'codigo': forms.TextInput(attrs={'class': 'form-control'}),
+            'promocion': forms.Select(attrs={'class': 'form-select'}),
+            'alumno': forms.Select(attrs={'class': 'form-select'}),
+            'maestro': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+class NotaForm(forms.ModelForm):
+    class Meta:
+        model = Nota
+        fields = ['titulo', 'contenido']
+        widgets = {
+            'titulo': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Título de la nota...'
+            }),
+            'contenido': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 15,
+                'placeholder': 'Escribe tu nota aquí... Puedes usar markdown básico.'
+            }),
+        }
+
+# Modificar el RegistroPersonaForm para incluir institución
+# Agregar este campo al formulario existente:
+# institucion = forms.ModelChoiceField(
+#     queryset=Institucion.objects.filter(activa=True),
+#     required=False,
+#     widget=forms.Select(attrs={'class': 'form-select'}),
+#     label="Institución/Escuela"
+# )
+

@@ -1,0 +1,182 @@
+{% extends "admin/base_admin.html" %}
+{% load static %}
+
+{% block admin_content %}
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <h1 class="h2 fw-bold text-primary">👑 Panel de Administración</h1>
+        <p class="text-muted mb-0">Estadísticas completas del sistema EduLink</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <span class="badge bg-danger fs-6">ADMINISTRADOR</span>
+    </div>
+</div>
+
+<!-- Estadísticas principales -->
+<div class="row g-3 mb-4">
+    <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="bg-primary bg-opacity-10 p-3 rounded-circle d-inline-flex mb-3">
+                    <i class="fas fa-users text-primary fs-4"></i>
+                </div>
+                <h6 class="card-title text-muted mb-1">Total Usuarios</h6>
+                <h4 class="mb-0 fw-bold text-primary">{{ total_usuarios }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="bg-success bg-opacity-10 p-3 rounded-circle d-inline-flex mb-3">
+                    <i class="fas fa-user-graduate text-success fs-4"></i>
+                </div>
+                <h6 class="card-title text-muted mb-1">Alumnos</h6>
+                <h4 class="mb-0 fw-bold text-success">{{ total_alumnos }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="bg-info bg-opacity-10 p-3 rounded-circle d-inline-flex mb-3">
+                    <i class="fas fa-chalkboard-teacher text-info fs-4"></i>
+                </div>
+                <h6 class="card-title text-muted mb-1">Maestros</h6>
+                <h4 class="mb-0 fw-bold text-info">{{ total_maestros }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="bg-warning bg-opacity-10 p-3 rounded-circle d-inline-flex mb-3">
+                    <i class="fas fa-book text-warning fs-4"></i>
+                </div>
+                <h6 class="card-title text-muted mb-1">Total Clases</h6>
+                <h4 class="mb-0 fw-bold text-warning">{{ total_clases }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="bg-danger bg-opacity-10 p-3 rounded-circle d-inline-flex mb-3">
+                    <i class="fas fa-dollar-sign text-danger fs-4"></i>
+                </div>
+                <h6 class="card-title text-muted mb-1">Ingresos Totales</h6>
+                <h4 class="mb-0 fw-bold text-danger">${{ ingresos_totales }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-2 col-md-4 col-sm-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="bg-secondary bg-opacity-10 p-3 rounded-circle d-inline-flex mb-3">
+                    <i class="fas fa-user-plus text-secondary fs-4"></i>
+                </div>
+                <h6 class="card-title text-muted mb-1">Nuevos Este Mes</h6>
+                <h4 class="mb-0 fw-bold text-secondary">{{ nuevos_usuarios_mes }}</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Columna izquierda -->
+    <div class="col-lg-8">
+        <!-- Materias más populares -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="fw-bold mb-0">📊 Materias Más Populares</h5>
+            </div>
+            <div class="card-body">
+                {% if materias_populares %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Materia</th>
+                                <th>Total Clases</th>
+                                <th>Profesores</th>
+                                <th>Popularidad</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for materia in materias_populares %}
+                            <tr>
+                                <td>
+                                    <strong>{{ materia.nombre }}</strong>
+                                </td>
+                                <td>{{ materia.total_clases }}</td>
+                                <td>{{ materia.total_maestros }}</td>
+                                <td>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar bg-primary" style="width: {% widthratio materia.total_clases materias_populares.0.total_clases 100 %}%"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center">No hay datos de materias populares</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Columna derecha -->
+    <div class="col-lg-4">
+        <!-- Acciones rápidas -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="fw-bold mb-0">⚡ Acciones Rápidas</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'admin:index' %}" class="btn btn-primary">
+                        <i class="fas fa-cog me-2"></i>Django Admin
+                    </a>
+                    <a href="#" class="btn btn-outline-primary">
+                        <i class="fas fa-chart-bar me-2"></i>Estadísticas Detalladas
+                    </a>
+                    <a href="#" class="btn btn-outline-primary">
+                        <i class="fas fa-tag me-2"></i>Gestionar Promociones
+                    </a>
+                    <a href="#" class="btn btn-outline-primary">
+                        <i class="fas fa-ticket-alt me-2"></i>Gestionar Vouchers
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Clases por estado -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0 py-3">
+                <h5 class="fw-bold mb-0">📈 Clases por Estado</h5>
+            </div>
+            <div class="card-body">
+                {% if clases_por_estado %}
+                {% for estado in clases_por_estado %}
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                    <div>
+                        <h6 class="mb-1 text-capitalize">{{ estado.estado }}</h6>
+                    </div>
+                    <span class="badge bg-primary rounded-pill">{{ estado.total }}</span>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p class="text-muted text-center">No hay datos de clases</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

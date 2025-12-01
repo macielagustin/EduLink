@@ -1,0 +1,47 @@
+[33mb8bd857[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Actualización dashboards de alumno y maestro: reseñas automáticas, próximas clases dinámicas y sincronización completa
+[33mc6f94e5[m[33m ([m[1;32mantes-de-pull-al-main-de-maciel-12-11-2025[m[33m)[m Arregle lo del gestor de tareas. Funciona todo bien en las herramientas.
+[33m30703d2[m Agregue algunas herramientas para el profesor y para el alumno, falta implementar la biblioteca de formulas y el diccionario/translator, el gestor de tareas me da conflicto aun, no se guarda y me sale error de conexion.
+[33m59933b0[m Merge de main con resolución de conflictos. Despues de presentar en seminario. 29-10-2025.
+[33mcf56931[m[33m ([m[1;32mrespaldo-antes-del-pull-despues-de-presentar[m[33m)[m Subo como quedo en la antiultima presentacion de seminario. Para mi falta 95% de 100%. No queda nadaaaaaaaaaaaa.
+[33m921a2a8[m[33m ([m[1;32mrespaldo-nelson[m[33m)[m Agregue el control de gastos para alumno. Modifique el control de gasto para el alumno
+[33m24dd1ff[m Agregue reseñas para alumno
+[33m3ab28dc[m Merge branch 'main' of https://github.com/macielagustin/EduLink
+[33maa08a6d[m Agregue el control de gastos para alumno.
+[33mee5313b[m Buscador en solicutdes de alumno y maestro
+[33m990948a[m A partir de acá, ya me deja trabajar bien, sin conflictos en las migraciones, hay un archivo que tiene un bloque con error, no afecta al funcionamiento del sistema.
+[33m4aced87[m Modifique el views.py de cuentas, despues del utlimo push de maciel. Ya presentado.
+[33maeedd11[m Merge branch 'main' of https://github.com/macielagustin/EduLink se hizo el merge con lo de maciel, reseñas y el ultimo commit mio.
+[33mc07f7fd[m Modifique el views.py de cuentas, daba error para ingresar al dashboard del maestro.
+[33m780e116[m Reseñas
+[33mded03f5[m Modifique el calendario, agenda y agregue algunos filtros. Ahora si funciona todo. Habia problemas con el GET, estaba mal formulado. Ya me muestra en el calendario los eventos cargados. GOOOOOOODDDDD.
+[33m0bce19a[m Modifique el calendario, agenda y agregue algunos filtros
+[33ma6d5c28[m Modifique el home, para que salga los nuevos en la plataforma, las materiar mas populares, el profesor mas solicitado, etc.
+[33m5a8d8b1[m Resuelto conflicto final en mis_solicitudes.html
+[33m98cebb9[m Flujo de solicutd de clase funcionando
+[33m33dba61[m Corregí algunas cosas, sigue sin funcionar como corresponde el calendario para ambos roles, el proponer fecha lo mismo. No puedo seguir para ver si funciona el flujo completo, por ejemplo el metodo de pago.
+[33m32e44cb[m Agregue archivos para que funcione mejor el calendario. Mejoras en UX. Nuevo flujo - propone fecha - estado cambia a propuesta - alumno confirma - estado cambia a aceptada - alumno elige metodo de pago - genera QR de pago. TODO TENDRIA QUE FUNCIONAR BIEN, AUN NO LO PROBE COMPLETO.
+[33m1778331[m Merge branch 'main' of https://github.com/macielagustin/EduLink PONER
+[33m4a87249[m Corrigiendo partes del calendario y forma de pago, aun falta.
+[33mb38b9b2[m Actualizacion con mails
+[33mc9a285a[m Subioendo cambios. Falta corregir algunas cosas.
+[33mf687aed[m Subiendo los cambios despues de presentar el 5to sprint, 01/10/2025.
+[33m603ed34[m Fusionando cambios de maciel y mios. Sin probar si hay confilctos o errores en en la pagina
+[33mf407283[m[33m ([m[1;32mrama-nelson-antes-de-cambios-de-maciel[m[33m)[m Guardando antes de bajar rama main maciel, donde hay conflictos porque hicimos casi lo mismo. Avances antes de separar rama
+[33m391f23d[m Actualizado el dashboard de alumnos, editar perfil de ambos roles, etc
+[33m713f28e[m Resuelvo conflictos por archivos .pyc eliminados en remoto
+[33mbad3b51[m Limpieza completa: eliminar __pycache__ y pyc del repo
+[33m0ee2981[m Agrego/actualizo .gitignore para ignorar __pycache__
+[33m8192098[m Limpieza de archivos ignorados (__pycache__, pyc, etc.)
+[33m5f029d8[m Ignorar archivos __pycache__ y .pyc
+[33m642b9d5[m Mis cambios locales
+[33m735c556[m[33m ([m[1;32mrama-nelson[m[33m)[m Logré la conexion entre alumno y profesor. Funcionalidad andando solicitud de profesor y mensajes en ambos roles.
+[33mf730174[m Mis cambios de maestro, movi los archivos al nuevo template, maestro. cambie en como se los llama desde las views. Añadí la agenda, editar el perfil, la vista de previa de como se veria el perfil publicamente en la plataforma, las solicitudes de alumnos.
+[33mdef2db4[m Mis cambios de maestro, perfil y solicitudes.
+[33m959344b[m Mis cambios de maestro, primero para ver si andan las conexiones.
+[33m38be5bc[m Dashboard de alumno
+[33mcc5f8d3[m Dashboard de alumnos y maestros
+[33m5abf0aa[m Actualizacion en registros
+[33m9126816[m Unificación de registro persona con selects dependientes, bio y mapa
+[33m0ba7bf4[m Conexión a PostgreSQL funcionando y migraciones aplicadas
+[33m5425aae[m Listado de Maestros + Seed de prueba con usuarios y materias
+[33m2886d60[m Primer commit: registro y login funcionando

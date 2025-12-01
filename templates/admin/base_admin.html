@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Admin - EduLink{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 col-lg-2 bg-dark text-white vh-100 position-fixed">
+            <div class="p-3">
+                <h4 class="text-warning fw-bold">
+                    <i class="fas fa-crown me-2"></i>Admin Panel
+                </h4>
+                <hr class="bg-light">
+                
+                <ul class="nav nav-pills flex-column">
+                    <li class="nav-item">
+                        <a href="{% url 'dashboard_admin' %}" 
+                           class="nav-link text-white {% if request.resolver_match.url_name == 'dashboard_admin' %}active{% endif %}">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" 
+                           class="nav-link text-white">
+                            <i class="fas fa-chart-bar me-2"></i>Estadísticas
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" 
+                           class="nav-link text-white">
+                            <i class="fas fa-tag me-2"></i>Promociones
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" 
+                           class="nav-link text-white">
+                            <i class="fas fa-ticket-alt me-2"></i>Vouchers
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/django-admin/" class="nav-link text-warning">
+                            <i class="fas fa-cog me-2"></i>Django Admin
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Main content -->
+        <div class="col-md-9 col-lg-10 ms-auto">
+            <div class="p-4">
+                {% block admin_content %}
+                {% endblock %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -27,6 +27,8 @@ class Usuario(AbstractUser):
     verificado = models.BooleanField(default=False)
     foto_perfil = models.ImageField(upload_to='perfiles/', null=True, blank=True)
 
+    institucion = models.ForeignKey('Institucion', on_delete=models.SET_NULL, null=True, blank=True)
+
     # Geolocalización (usa FK a tablas auxiliares si existen)
     provincia = models.ForeignKey("Provincia", on_delete=models.SET_NULL, null=True, blank=True)
     departamento = models.ForeignKey("Departamento", on_delete=models.SET_NULL, null=True, blank=True)
@@ -222,6 +224,13 @@ class SolicitudClase(models.Model):
     fecha_pago = models.DateTimeField(null=True, blank=True)
     codigo_pago = models.CharField(max_length=255, blank=True, null=True)
     
+    
+    promocion_aplicada = models.ForeignKey('Promocion', on_delete=models.SET_NULL, null=True, blank=True)
+    voucher_usado = models.ForeignKey('Voucher', on_delete=models.SET_NULL, null=True, blank=True)
+    monto_original = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    monto_final = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+
     # Propiedad para compatibilidad
     @property
     def pago_realizado(self):
@@ -236,6 +245,30 @@ class SolicitudClase(models.Model):
             self.estado_pago = 'pendiente'
             self.fecha_pago = None
     
+
+    # Método para aplicar descuento en SolicitudClase
+    def aplicar_descuento(self, promocion=None, voucher=None):
+        if self.monto_acordado:
+            self.monto_original = self.monto_acordado
+            self.monto_final = self.monto_acordado
+        
+            if promocion and promocion.activa:
+                self.promocion_aplicada = promocion
+                if promocion.tipo == 'descuento_porcentaje':
+                    descuento = (self.monto_acordado * promocion.valor) / 100
+                    self.monto_final = self.monto_acordado - descuento
+                elif promocion.tipo == 'descuento_monto':
+                    self.monto_final = self.monto_acordado - promocion.valor
+                elif promocion.tipo == 'clase_gratuita':
+                    self.monto_final = 0
+        
+            if voucher and not voucher.usado:
+                self.voucher_usado = voucher
+            # Aplicar lógica adicional del voucher si es necesario
+        
+            self.save()
+
+
     def __str__(self):
         return f"Solicitud de {self.alumno.usuario.username} a {self.maestro.usuario.username}"
     
@@ -260,11 +293,50 @@ class Mensaje(models.Model):
     conversacion = models.ForeignKey('Conversacion', on_delete=models.CASCADE, related_name='mensajes')
     remitente = models.ForeignKey('Usuario', on_delete=models.CASCADE)
     contenido = models.TextField()
+    archivo = models.FileField(upload_to='mensajes/archivos/', blank=True, null=True)
+    imagen = models.ImageField(upload_to='mensajes/imagenes/', blank=True, null=True)
     fecha_envio = models.DateTimeField(auto_now_add=True)
     leido = models.BooleanField(default=False)
+    
+    # Nuevo campo para tipo de mensaje
+    tipo = models.CharField(max_length=10, default='texto', choices=[
+        ('texto', 'Texto'),
+        ('imagen', 'Imagen'),
+        ('archivo', 'Archivo'),
+    ])
+    
+    # Nombre original del archivo
+    nombre_archivo = models.CharField(max_length=255, blank=True, null=True)
+    
+    # Tamaño del archivo (en bytes)
+    tamano_archivo = models.IntegerField(default=0)
 
     def __str__(self):
         return f"Mensaje de {self.remitente.username} - {self.fecha_envio.strftime('%Y-%m-%d %H:%M')}"
+    
+    def obtener_tipo_archivo(self):
+        """Determinar el tipo de archivo basado en la extensión"""
+        if self.archivo:
+            nombre = self.archivo.name.lower()
+            if nombre.endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp')):
+                return 'imagen'
+            elif nombre.endswith(('.pdf', '.doc', '.docx', '.txt')):
+                return 'documento'
+            elif nombre.endswith(('.zip', '.rar', '.7z')):
+                return 'comprimido'
+            else:
+                return 'archivo'
+        return None
+    
+    def formatear_tamano(self):
+        """Formatear tamaño del archivo a formato legible"""
+        bytes = self.tamano_archivo
+        if bytes < 1024:
+            return f"{bytes} B"
+        elif bytes < 1024 * 1024:
+            return f"{bytes/1024:.1f} KB"
+        else:
+            return f"{bytes/(1024*1024):.1f} MB"
 
 
 
@@ -343,7 +415,7 @@ class ReseñaAlumno(models.Model):
 # Modelos para las herramientas
 class BlocNotas(models.Model):
     usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE)
-    contenido = models.TextField(blank=True, null=True)
+    """ contenido = models.TextField(blank=True, null=True) """
     ultima_actualizacion = models.DateTimeField(auto_now=True)
     
     def __str__(self):
@@ -388,3 +460,78 @@ class SesionEstudio(models.Model):
     
     def __str__(self):
         return f"Sesión de {self.usuario.username} - {self.duracion_minutos}min"
+
+
+
+# Después de los modelos existentes, agregar:
+
+class Institucion(models.Model):
+    nombre = models.CharField(max_length=200)
+    direccion = models.TextField(blank=True, null=True)
+    telefono = models.CharField(max_length=20, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    activa = models.BooleanField(default=True)
+    
+    def __str__(self):
+        return self.nombre
+
+class Promocion(models.Model):
+    TIPO_CHOICES = [
+        ('descuento_porcentaje', 'Descuento Porcentaje'),
+        ('descuento_monto', 'Descuento Monto Fijo'),
+        ('clase_gratuita', 'Clase Gratuita'),
+        ('grupo', 'Descuento Grupo'),
+    ]
+    
+    nombre = models.CharField(max_length=200)
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    valor = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # % o monto fijo
+    descripcion = models.TextField()
+    fecha_inicio = models.DateTimeField()
+    fecha_fin = models.DateTimeField()
+    activa = models.BooleanField(default=True)
+    max_usos = models.IntegerField(default=100)
+    usos_actuales = models.IntegerField(default=0)
+    
+    def __str__(self):
+        return f"{self.nombre} ({self.get_tipo_display()})"
+
+class Voucher(models.Model):
+    codigo = models.CharField(max_length=50, unique=True)
+    promocion = models.ForeignKey(Promocion, on_delete=models.CASCADE)
+    alumno = models.ForeignKey('Alumno', on_delete=models.CASCADE, null=True, blank=True)
+    maestro = models.ForeignKey('Maestro', on_delete=models.CASCADE, null=True, blank=True)
+    usado = models.BooleanField(default=False)
+    fecha_uso = models.DateTimeField(null=True, blank=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"Voucher {self.codigo} - {self.promocion.nombre}"
+
+class Nota(models.Model):
+    bloc_notas = models.ForeignKey('BlocNotas', on_delete=models.CASCADE, related_name='notas')
+    titulo = models.CharField(max_length=200, default="Nueva nota")
+    contenido = models.TextField(blank=True, null=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-fecha_actualizacion']
+    
+    def __str__(self):
+        return f"{self.titulo} - {self.bloc_notas.usuario.username}"
+
+
+
+
+
+# Modificar el modelo Usuario para agregar institución
+# Agregar este campo al modelo Usuario existente:
+# institucion = models.ForeignKey(Institucion, on_delete=models.SET_NULL, null=True, blank=True)
+
+# Modificar el modelo SolicitudClase para soportar promociones
+# Agregar estos campos al modelo SolicitudClase existente:
+# promocion_aplicada = models.ForeignKey(Promocion, on_delete=models.SET_NULL, null=True, blank=True)
+# voucher_usado = models.ForeignKey(Voucher, on_delete=models.SET_NULL, null=True, blank=True)
+# monto_original = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+# monto_final = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)

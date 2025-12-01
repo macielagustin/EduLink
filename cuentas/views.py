@@ -1,12 +1,12 @@
 from django.contrib import messages
 from django.contrib.auth import login, logout, authenticate, get_user_model
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.views import LoginView
 from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
 from django.http import JsonResponse, HttpResponseForbidden
-from .forms import RegistroPersonaForm, RegistroAlumnoForm, RegistroMaestroForm, ReseñaForm, LoginForm, UsuarioForm, AlumnoForm, ConfirmarFechaForm, DisponibilidadForm, ReseñaAlumnoForm, BlocNotasForm, TareaForm, SesionEstudioForm
-from .models import Departamento, Municipio, Localidad, Provincia, Maestro, Alumno, Usuario, DisponibilidadUsuario, BlocNotas, Tarea, SesionEstudio
+from .forms import RegistroPersonaForm, RegistroAlumnoForm, RegistroMaestroForm, ReseñaForm, LoginForm, UsuarioForm, AlumnoForm, ConfirmarFechaForm, DisponibilidadForm, ReseñaAlumnoForm, BlocNotasForm, TareaForm, SesionEstudioForm, NotaForm, PromocionForm, VoucherForm
+from .models import Departamento, Municipio, Localidad, Provincia, Maestro, Alumno, Usuario, DisponibilidadUsuario, BlocNotas, Tarea, SesionEstudio, Nota, Promocion, Voucher
 from catalogo.models import Materia
 import math
 from django.db.models.functions import Coalesce
@@ -26,6 +26,10 @@ from django.db.models import Count, Avg, Q, Sum, Exists, OuterRef
 from .models import Notificacion, Reseña
 import json
 from datetime import datetime, timedelta
+
+from django.contrib.auth.decorators import user_passes_test
+from django.contrib import messages
+from django.shortcuts import redirect
 
 
 
@@ -51,6 +55,16 @@ def verificar_disponibilidad_maestro(maestro, fecha_propuesta, duracion_minutos)
     ).exists()
     
     return not clases_conflictivas
+
+def admin_required(function=None):
+    """Decorator para verificar si el usuario es administrador"""
+    actual_decorator = user_passes_test(
+        lambda u: u.is_authenticated and (u.is_superuser or getattr(u, 'rol', '') == 'ADMIN'),
+        login_url='/login/'
+    )
+    if function:
+        return actual_decorator(function)
+    return actual_decorator
 
 
 @login_required
@@ -310,7 +324,32 @@ def home_view(request):
         Q(estado='aceptada') | Q(estado='completada')
     ).count()
 
-    # Profesor con más alumnos
+    # PROFESOR DESTACADO (mejor calificado)
+    profesor_destacado = Maestro.objects.annotate(
+        avg_rating=Avg('reseñas__puntuacion'),
+        review_count=Count('reseñas'),
+        total_clases=Count('solicitudclase', filter=Q(solicitudclase__estado='completada'))
+    ).filter(
+        avg_rating__isnull=False
+    ).order_by('-avg_rating', '-review_count').first()
+
+    # NUEVOS PROFESORES (última semana) - CORREGIDO
+    una_semana_atras = timezone.now() - timedelta(days=7)
+    nuevos_profesores = Maestro.objects.filter(
+        usuario__fecha_creacion__gte=una_semana_atras
+    ).annotate(
+        avg_rating=Avg('reseñas__puntuacion'),
+        review_count=Count('reseñas')
+    ).select_related('usuario').order_by('-usuario__fecha_creacion')[:4]
+
+    # Si no hay nuevos de la última semana, mostrar los últimos registrados
+    if not nuevos_profesores:
+        nuevos_profesores = Maestro.objects.annotate(
+            avg_rating=Avg('reseñas__puntuacion'),
+            review_count=Count('reseñas')
+        ).select_related('usuario').order_by('-usuario__fecha_creacion')[:4]
+
+    # PROFESOR POPULAR (más alumnos)
     profesores_con_alumnos = []
     for maestro in Maestro.objects.all():
         total_alumnos = SolicitudClase.objects.filter(
@@ -333,16 +372,7 @@ def home_view(request):
         profesor_popular = profesor_popular_data['maestro']
         profesor_popular.total_alumnos = profesor_popular_data['total_alumnos']
 
-    # Nuevos profesores
-    una_semana_atras = timezone.now() - timedelta(days=7)
-    nuevos_profesores_qs = Maestro.objects.filter(
-        usuario__fecha_creacion__gte=una_semana_atras
-    ).select_related('usuario').order_by('-usuario__fecha_creacion')[:4]
-
-    if not nuevos_profesores_qs.exists():
-        nuevos_profesores_qs = Maestro.objects.select_related('usuario').order_by('-usuario__fecha_creacion')[:4]
-
-    # Materias populares
+    # MATERIAS POPULARES
     materias_populares = []
     for materia in Materia.objects.all():
         num_profesores = materia.maestros.count()
@@ -357,22 +387,57 @@ def home_view(request):
         key=lambda x: -x['num_profesores']
     )[:6]
 
-    # Profesores verificados
-    profesores_verificados_qs = Maestro.objects.filter(
+    # PROFESORES VERIFICADOS
+    profesores_verificados = Maestro.objects.filter(
         usuario__verificado=True
+    ).annotate(
+        avg_rating=Avg('reseñas__puntuacion'),
+        review_count=Count('reseñas')
     ).select_related('usuario')[:3]
 
     profesores_ultima_semana = Maestro.objects.filter(
         usuario__fecha_creacion__gte=una_semana_atras
     ).count()
 
+    # ANUNCIOS SIMULADOS
+    anuncios = [
+        {
+            'titulo': '🎓 Clase de Prueba Gratuita',
+            'descripcion': '¡Agendá tu primera clase sin costo! Conocé a tu profesor ideal.',
+            'color': 'primary',
+            'icon': 'fa-graduation-cap'
+        },
+        {
+            'titulo': '💰 20% OFF en Primera Clase',
+            'descripcion': 'Descuento especial para nuevos estudiantes. ¡Aprovechá ahora!',
+            'color': 'success',
+            'icon': 'fa-tag'
+        },
+        {
+            'titulo': '👥 Grupos de Estudio',
+            'descripcion': 'Formá grupos y ahorrá hasta 30% en clases grupales.',
+            'color': 'info',
+            'icon': 'fa-users'
+        },
+        {
+            'titulo': '🏆 Profesores Verificados',
+            'descripcion': 'Todos nuestros profesores pasan por un riguroso proceso de verificación.',
+            'color': 'warning',
+            'icon': 'fa-shield-alt'
+        }
+    ]
+
     context = {
         'total_profesores': total_profesores,
         'total_materias': total_materias,
         'total_clases': total_clases,
+        'profesor_destacado': profesor_destacado,
         'profesor_popular': profesor_popular,
+        'nuevos_profesores': nuevos_profesores,
         'materias_populares': materias_populares,
+        'profesores_verificados': profesores_verificados,
         'profesores_ultima_semana': profesores_ultima_semana,
+        'anuncios': anuncios,
     }
     return render(request, "home.html", context)
 
@@ -901,12 +966,13 @@ def dashboard_maestro(request):
     ahora = timezone.now()
     fin_semana = ahora + timezone.timedelta(days=7)
 
-    # Datos reales
+    # Solicitudes pendientes
     solicitudes_pendientes = SolicitudClase.objects.filter(
         maestro=perfil_maestro,
         estado="pendiente"
     ).count()
 
+    # Clases esta semana
     clases_esta_semana = SolicitudClase.objects.filter(
         maestro=perfil_maestro,
         estado="aceptada",
@@ -924,43 +990,72 @@ def dashboard_maestro(request):
         fecha_clase_propuesta__lte=hoy_fin
     ).count()
 
-    # Ingresos del mes reales
+    # INGRESOS - cálculo detallado
     mes_actual = ahora.month
     año_actual = ahora.year
-    ingresos_mes = SolicitudClase.objects.filter(
+
+    solicitudes_aceptadas_mes = SolicitudClase.objects.filter(
         maestro=perfil_maestro,
         estado="aceptada",
         fecha_clase_propuesta__month=mes_actual,
         fecha_clase_propuesta__year=año_actual
-    ).aggregate(Sum('monto_acordado'))['monto_acordado__sum'] or 0
+    )
 
+    ingresos_mes = 0
+    for solicitud in solicitudes_aceptadas_mes:
+        if solicitud.monto_acordado:
+            ingresos_mes += float(solicitud.monto_acordado)
+
+    count_clases_mes = solicitudes_aceptadas_mes.count()
+    promedio_por_clase_mes = ingresos_mes / count_clases_mes if count_clases_mes > 0 else 0
+
+    # Comparación con mes anterior
+    if mes_actual == 1:
+        mes_anterior = 12
+        año_anterior = año_actual - 1
+    else:
+        mes_anterior = mes_actual - 1
+        año_anterior = año_actual
+
+    ingresos_mes_anterior = 0
+    solicitudes_mes_anterior = SolicitudClase.objects.filter(
+        maestro=perfil_maestro,
+        estado="aceptada",
+        fecha_clase_propuesta__month=mes_anterior,
+        fecha_clase_propuesta__year=año_anterior
+    )
+
+    for solicitud in solicitudes_mes_anterior:
+        if solicitud.monto_acordado:
+            ingresos_mes_anterior += float(solicitud.monto_acordado)
+
+    if ingresos_mes_anterior > 0:
+        porcentaje_cambio_ingresos = ((ingresos_mes - ingresos_mes_anterior) / ingresos_mes_anterior) * 100
+    else:
+        porcentaje_cambio_ingresos = 100 if ingresos_mes > 0 else 0
+
+    # Próximas clases
     resena_exists = ReseñaAlumno.objects.filter(solicitud=OuterRef('pk'))
-    ahora = timezone.now()
-
     proximas_clases = (
         SolicitudClase.objects
         .filter(maestro=perfil_maestro)
         .annotate(
             tiene_resena=Exists(resena_exists),
-            # Usamos confirmada si existe; si no, propuesta
             fecha_orden=Coalesce('fecha_clase_confirmada', 'fecha_clase_propuesta')
         )
         .filter(
-            # 1) futuras en pendiente/propuesta/aceptada
             Q(estado__in=['pendiente', 'propuesta', 'aceptada'], fecha_orden__gte=ahora)
-            # 2) completadas SIN reseña (para poder calificar)
             | Q(estado='completada', tiene_resena=False)
         )
-        .exclude(fecha_orden__isnull=True)   # evitamos las que no tienen fecha
-        .order_by('fecha_orden')[:5]         # orden por la fecha que definimos
+        .exclude(fecha_orden__isnull=True)
+        .order_by('fecha_orden')[:5]
     )
-
 
     # Mensajes recientes
     conversaciones = Conversacion.objects.filter(maestro=perfil_maestro).prefetch_related("mensajes")
     mensajes_recientes = []
     mensajes_nuevos = 0
-    
+
     for conv in conversaciones:
         ultimo = conv.mensajes.order_by("-fecha_envio").first()
         if ultimo:
@@ -974,29 +1069,30 @@ def dashboard_maestro(request):
         leida=False
     ).count()
 
-    # Estadísticas de tareas del usuario
+    # Tareas del usuario
     total_tareas = request.user.tarea_set.count()
     tareas_pendientes = request.user.tarea_set.filter(completada=False).count()
     tareas_completadas = request.user.tarea_set.filter(completada=True).count()
 
-
     context = {
-    "solicitudes_pendientes": solicitudes_pendientes,
-    "clases_esta_semana": clases_esta_semana,
-    "clases_hoy": clases_hoy,
-    "ingresos_mes": ingresos_mes,
-    "proximas_clases": proximas_clases,
-    "mensajes_recientes": mensajes_recientes,
-    "mensajes_nuevos": mensajes_nuevos,
-    "notificaciones_no_leidas": notificaciones_no_leidas,
-    
-    # ✅ Nuevas métricas para el template
-    "total_tareas": total_tareas,
-    "tareas_pendientes": tareas_pendientes,
-    "tareas_completadas": tareas_completadas,
-}
+        "solicitudes_pendientes": solicitudes_pendientes,
+        "clases_esta_semana": clases_esta_semana,
+        "clases_hoy": clases_hoy,
+        "ingresos_mes": round(ingresos_mes, 2),
+        "count_clases_mes": count_clases_mes,
+        "promedio_por_clase_mes": round(promedio_por_clase_mes, 2),
+        "porcentaje_cambio_ingresos": round(porcentaje_cambio_ingresos, 1),
+        "proximas_clases": proximas_clases,
+        "mensajes_recientes": mensajes_recientes,
+        "mensajes_nuevos": mensajes_nuevos,
+        "notificaciones_no_leidas": notificaciones_no_leidas,
+        "total_tareas": total_tareas,
+        "tareas_pendientes": tareas_pendientes,
+        "tareas_completadas": tareas_completadas,
+    }
 
     return render(request, "cuentas/dashboard_maestro.html", context)
+
 
 def test_geocoding(request):
     return render(request, "cuentas/test_geocoding.html")
@@ -1458,16 +1554,33 @@ def mis_solicitudes_alumno(request):
 @login_required
 def lista_conversaciones(request):
     conversaciones = []
+    total_mensajes_no_leidos = 0
+    total_archivos = 0
     
     if request.user.rol == 'ALUMNO':
         alumno = get_object_or_404(Alumno, usuario=request.user)
         conversaciones = Conversacion.objects.filter(alumno=alumno).order_by('-ultimo_mensaje')
+        
+        # Contar mensajes no leídos y archivos
+        for conv in conversaciones:
+            mensajes_no_leidos = conv.mensajes.filter(leido=False).exclude(remitente=request.user).count()
+            total_mensajes_no_leidos += mensajes_no_leidos
+            total_archivos += conv.mensajes.filter(tipo__in=['imagen', 'archivo']).count()
+            
     elif request.user.rol == 'MAESTRO':
         maestro = get_object_or_404(Maestro, usuario=request.user)
         conversaciones = Conversacion.objects.filter(maestro=maestro).order_by('-ultimo_mensaje')
+        
+        # Contar mensajes no leídos y archivos
+        for conv in conversaciones:
+            mensajes_no_leidos = conv.mensajes.filter(leido=False).exclude(remitente=request.user).count()
+            total_mensajes_no_leidos += mensajes_no_leidos
+            total_archivos += conv.mensajes.filter(tipo__in=['imagen', 'archivo']).count()
     
     return render(request, 'mensajes/lista_conversaciones.html', {
-        'conversaciones': conversaciones
+        'conversaciones': conversaciones,
+        'total_mensajes_no_leidos': total_mensajes_no_leidos,
+        'total_archivos': total_archivos,
     })
 
 @login_required
@@ -1489,28 +1602,57 @@ def ver_conversacion(request, conversacion_id):
     mensajes = conversacion.mensajes.all().order_by('fecha_envio')
     
     if request.method == 'POST':
-        form = MensajeForm(request.POST)
+        form = MensajeForm(request.POST, request.FILES)
         if form.is_valid():
             mensaje = form.save(commit=False)
             mensaje.conversacion = conversacion
             mensaje.remitente = request.user
+            
+            # Determinar el tipo de mensaje
+            if mensaje.imagen:
+                mensaje.tipo = 'imagen'
+                mensaje.nombre_archivo = mensaje.imagen.name
+                mensaje.tamano_archivo = mensaje.imagen.size
+            elif mensaje.archivo:
+                mensaje.tipo = 'archivo'
+                mensaje.nombre_archivo = mensaje.archivo.name
+                mensaje.tamano_archivo = mensaje.archivo.size
+            
             mensaje.save()
             
             # Actualizar último mensaje de la conversación
             conversacion.ultimo_mensaje = timezone.now()
             conversacion.save()
             
+            # Si es una petición AJAX, devolver JSON
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'mensaje_id': mensaje.id
+                })
+            
             return redirect('ver_conversacion', conversacion_id=conversacion.id)
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'errors': form.errors
+                }, status=400)
+    
     else:
         form = MensajeForm()
     
     # Marcar mensajes como leídos
     mensajes.filter(leido=False).exclude(remitente=request.user).update(leido=True)
     
+    # Obtener estadísticas de archivos
+    archivos_compartidos = mensajes.filter(tipo__in=['imagen', 'archivo'])
+    
     return render(request, 'mensajes/conversacion.html', {
         'conversacion': conversacion,
         'mensajes': mensajes,
-        'form': form
+        'form': form,
+        'archivos_compartidos': archivos_compartidos
     })
 
 @login_required
@@ -2050,6 +2192,12 @@ def control_gastos_alumno(request):
     try:
         alumno = Alumno.objects.get(usuario=request.user)
         
+
+         # Obtener parámetros de filtro
+        mes = request.GET.get('mes')
+        año = request.GET.get('año', timezone.now().year)
+
+
         # Obtener TODAS las solicitudes con montos
         solicitudes = SolicitudClase.objects.filter(
             alumno=alumno
@@ -2057,24 +2205,53 @@ def control_gastos_alumno(request):
             'maestro', 'maestro__usuario', 'materia'
         ).order_by('-fecha_solicitud')
         
+
+        # Aplicar filtros
+        if mes and año:
+            try:
+                solicitudes = solicitudes.filter(
+                    fecha_solicitud__year=año,
+                    fecha_solicitud__month=mes
+                )
+            except ValueError:
+                pass
+
+
         # DEBUG DETALLADO
         print(f"=== DEBUG CONTROL GASTOS ===")
         print(f"Solicitudes encontradas: {solicitudes.count()}")
         for s in solicitudes:
             print(f"- ID: {s.id} | Materia: {s.materia.nombre} | Monto: ${s.monto_acordado} | Estado: {s.estado} | Estado Pago: {s.estado_pago} | Fecha: {s.fecha_clase_propuesta}")
         
-        # Estadísticas MEJORADAS
+         # Cálculos de estadísticas
         solicitudes_pagadas = solicitudes.filter(estado_pago='pagado')
         solicitudes_pendientes = solicitudes.filter(estado_pago='pendiente', estado='aceptada')
         
-        total_gastado = sum(float(s.monto_acordado) for s in solicitudes_pagadas if s.monto_acordado)
+        total_gastado = sum(float(s.monto_final or s.monto_acordado) for s in solicitudes_pagadas if s.monto_acordado)
         total_pendiente = sum(float(s.monto_acordado) for s in solicitudes_pendientes if s.monto_acordado)
-        total_clases = solicitudes.count()
         
-        print(f"Total gastado: ${total_gastado}")
-        print(f"Total pendiente: ${total_pendiente}")
-        print(f"Clases pagadas: {solicitudes_pagadas.count()}")
-        print(f"Clases pendientes: {solicitudes_pendientes.count()}")
+        # Gastos por mes para el gráfico
+        gastos_por_mes = []
+        meses_nombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 
+                        'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+        
+        for mes_num in range(1, 13):
+            gastos_mes = solicitudes_pagadas.filter(
+                fecha_solicitud__month=mes_num,
+                fecha_solicitud__year=año
+            )
+            total_mes = sum(float(s.monto_final or s.monto_acordado) for s in gastos_mes if s.monto_acordado)
+            gastos_por_mes.append(round(total_mes, 2))
+        
+        # Años disponibles
+        años_disponibles = list(set([
+            s.fecha_solicitud.year for s in SolicitudClase.objects.filter(alumno=alumno)
+            if s.fecha_solicitud
+        ]))
+        if not años_disponibles:
+            años_disponibles = [timezone.now().year]
+        else:
+            años_disponibles.sort(reverse=True)
         
         # Gastos por maestro
         gastos_por_maestro = {}
@@ -2119,11 +2296,19 @@ def control_gastos_alumno(request):
             'solicitudes': solicitudes,
             'total_gastado': total_gastado,
             'total_pendiente': total_pendiente,
-            'total_clases': total_clases,
+
+            """ 'total_clases': total_clases, """
+
+            'gastos_por_mes': gastos_por_mes,
+            'meses_nombres': meses_nombres,
+            'años_disponibles': años_disponibles,
+            'mes_filtro': mes,
+            'año_filtro': año,
             'gastos_por_maestro': gastos_por_maestro,
             'gastos_por_materia': gastos_por_materia,
             'proximos_pagos': proximos_pagos,
             'historial_pagos': historial_pagos,
+            
             'solicitudes_pagadas': solicitudes_pagadas,
             'solicitudes_pendientes': solicitudes_pendientes,
             'debug_info': {
@@ -2141,6 +2326,99 @@ def control_gastos_alumno(request):
     except Exception as e:
         messages.error(request, f"Error en control de gastos: {str(e)}")
         return redirect('dashboard_alumno')
+
+
+@login_required
+def exportar_gastos_pdf(request):
+    """Exportar gastos a PDF"""
+    try:
+        from io import BytesIO
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+        from reportlab.lib import colors
+        
+        alumno = Alumno.objects.get(usuario=request.user)
+        
+        # Obtener parámetros de filtro
+        mes = request.GET.get('mes')
+        año = request.GET.get('año', timezone.now().year)
+        
+        # Obtener solicitudes filtradas
+        solicitudes = SolicitudClase.objects.filter(
+            alumno=alumno
+        ).exclude(monto_acordado__isnull=True).select_related(
+            'maestro', 'maestro__usuario', 'materia'
+        ).order_by('-fecha_solicitud')
+        
+        if mes and año:
+            try:
+                solicitudes = solicitudes.filter(
+                    fecha_solicitud__year=int(año),
+                    fecha_solicitud__month=int(mes)
+                )
+            except (ValueError, TypeError):
+                pass
+        
+        # Crear PDF
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        elements = []
+        
+        # Estilos
+        styles = getSampleStyleSheet()
+        
+        # Título
+        title = Paragraph(f"Reporte de Gastos - {alumno.usuario.get_full_name()}", styles['Heading1'])
+        elements.append(title)
+        
+        # Información del período
+        periodo_text = f"Período: {mes if mes else 'Todos los meses'} / {año}" if año else "Todos los períodos"
+        periodo = Paragraph(periodo_text, styles['Normal'])
+        elements.append(periodo)
+        
+        # Tabla de gastos
+        data = [['Fecha', 'Materia', 'Profesor', 'Monto', 'Estado']]
+        
+        for solicitud in solicitudes:
+            data.append([
+                solicitud.fecha_solicitud.strftime("%d/%m/%Y"),
+                solicitud.materia.nombre,
+                solicitud.maestro.usuario.get_full_name(),
+                f"${solicitud.monto_final or solicitud.monto_acordado}",
+                solicitud.estado_pago
+            ])
+        
+        table = Table(data)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 10),
+            ('GRID', (0,0), (-1,-1), 1, colors.black)
+        ]))
+        
+        elements.append(table)
+        
+        # Generar PDF
+        doc.build(elements)
+        
+        # Preparar respuesta
+        buffer.seek(0)
+        response = HttpResponse(buffer, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="gastos_{alumno.usuario.username}_{año}_{mes or "total"}.pdf"'
+        
+        return response
+        
+    except Exception as e:
+        messages.error(request, f"Error al generar PDF: {str(e)}")
+        return redirect('control_gastos_alumno')
 
 
 @login_required
@@ -2326,21 +2604,92 @@ def calculadora(request):
 # BLOC DE NOTAS
 @login_required
 def bloc_notas(request):
+    """Vista mejorada del bloc de notas con múltiples hojas"""
     # Obtener o crear el bloc de notas del usuario
     bloc, created = BlocNotas.objects.get_or_create(usuario=request.user)
     
+    # Obtener todas las notas del usuario
+    notas = bloc.notas.all()
+    
+    # Manejar creación de nueva nota
+    if request.method == 'POST' and 'crear_nota' in request.POST:
+        nueva_nota = Nota.objects.create(
+            bloc_notas=bloc,
+            titulo="Nueva nota",
+            contenido=""
+        )
+        return redirect('editar_nota', nota_id=nueva_nota.id)
+    
+    # Manejar guardado desde la lista
+    if request.method == 'POST' and 'guardar_todo' in request.POST:
+        for nota in notas:
+            contenido_key = f"contenido_{nota.id}"
+            if contenido_key in request.POST:
+                nota.contenido = request.POST[contenido_key]
+                nota.save()
+        messages.success(request, "Todas las notas guardadas correctamente.")
+        return redirect('bloc_notas')
+    
+    return render(request, 'herramientas/bloc_notas.html', {
+        'bloc': bloc,
+        'notas': notas,
+        'form': NotaForm()  # Para crear nuevas notas
+    })
+
+@login_required
+def editar_nota(request, nota_id):
+    """Vista para editar una nota específica"""
+    nota = get_object_or_404(Nota, id=nota_id, bloc_notas__usuario=request.user)
+    
     if request.method == 'POST':
-        form = BlocNotasForm(request.POST, instance=bloc)
+        form = NotaForm(request.POST, instance=nota)
         if form.is_valid():
             form.save()
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'status': 'success', 'message': 'Notas guardadas'})
-            messages.success(request, 'Notas guardadas correctamente.')
+            messages.success(request, 'Nota guardada correctamente.')
             return redirect('bloc_notas')
     else:
-        form = BlocNotasForm(instance=bloc)
+        form = NotaForm(instance=nota)
     
-    return render(request, 'herramientas/bloc_notas.html', {'form': form})
+    # Obtener todas las notas para mostrar en el sidebar
+    todas_las_notas = nota.bloc_notas.notas.all()
+    
+    return render(request, 'herramientas/editar_nota.html', {
+        'form': form,
+        'nota': nota,
+        'todas_las_notas': todas_las_notas
+    })
+
+
+@login_required
+def crear_nota(request):
+    """Crear una nueva nota"""
+    bloc, created = BlocNotas.objects.get_or_create(usuario=request.user)
+    
+    if request.method == 'POST':
+        form = NotaForm(request.POST)
+        if form.is_valid():
+            nueva_nota = form.save(commit=False)
+            nueva_nota.bloc_notas = bloc
+            nueva_nota.save()
+            messages.success(request, 'Nota creada correctamente.')
+            return redirect('editar_nota', nota_id=nueva_nota.id)
+    else:
+        form = NotaForm(initial={'titulo': 'Nueva nota'})
+    
+    return render(request, 'herramientas/crear_nota.html', {'form': form})
+
+
+@login_required
+def eliminar_nota(request, nota_id):
+    """Eliminar una nota"""
+    nota = get_object_or_404(Nota, id=nota_id, bloc_notas__usuario=request.user)
+    
+    if request.method == 'POST':
+        nota.delete()
+        messages.success(request, 'Nota eliminada correctamente.')
+        return redirect('bloc_notas')
+    
+    return render(request, 'herramientas/eliminar_nota.html', {'nota': nota})
 
 # GESTOR DE TAREAS
 @login_required
@@ -2506,3 +2855,597 @@ def conversor_unidades(request):
 @login_required
 def generador_graficos(request):
     return render(request, 'herramientas/generador_graficos.html')
+
+
+
+
+# ===== NUEVAS HERRAMIENTAS =====
+from django.http import JsonResponse
+import json
+import requests
+from bs4 import BeautifulSoup
+
+# Biblioteca de fórmulas matemáticas
+@login_required
+def biblioteca_formulas(request):
+    """Biblioteca de fórmulas matemáticas organizadas por categoría"""
+    # Datos de fórmulas (puedes expandir esto)
+    formulas_por_categoria = {
+        'Álgebra': [
+            {'nombre': 'Ecuación cuadrática', 'formula': 'x = [-b ± √(b² - 4ac)] / 2a'},
+            {'nombre': 'Teorema de Pitágoras', 'formula': 'a² + b² = c²'},
+            {'nombre': 'Logaritmos', 'formula': 'logₐ(b) = c ⇔ aᶜ = b'},
+        ],
+        'Cálculo': [
+            {'nombre': 'Derivada básica', 'formula': 'd/dx(xⁿ) = n·xⁿ⁻¹'},
+            {'nombre': 'Regla de la cadena', 'formula': 'd/dx[f(g(x))] = f'(g(x))·g'(x)'},
+            {'nombre': 'Integral definida', 'formula': '∫ₐᵇ f(x) dx = F(b) - F(a)'},
+        ],
+        'Geometría': [
+            {'nombre': 'Área del círculo', 'formula': 'A = π·r²'},
+            {'nombre': 'Volumen de la esfera', 'formula': 'V = (4/3)π·r³'},
+            {'nombre': 'Teorema del coseno', 'formula': 'c² = a² + b² - 2ab·cos(C)'},
+        ],
+        'Estadística': [
+            {'nombre': 'Media aritmética', 'formula': 'x̄ = (Σxᵢ) / n'},
+            {'nombre': 'Desviación estándar', 'formula': 'σ = √[Σ(xᵢ - x̄)² / n]'},
+            {'nombre': 'Distribución normal', 'formula': 'f(x) = (1/σ√(2π))·e^(-(x-μ)²/2σ²)'},
+        ],
+        'Física': [
+            {'nombre': 'Segunda ley de Newton', 'formula': 'F = m·a'},
+            {'nombre': 'Energía cinética', 'formula': 'E = ½·m·v²'},
+            {'nombre': 'Ley de Ohm', 'formula': 'V = I·R'},
+        ]
+    }
+    
+    return render(request, 'herramientas/biblioteca_formulas.html', {
+        'formulas_por_categoria': formulas_por_categoria,
+    })
+
+# Tabla periódica interactiva
+@login_required
+def tabla_periodica(request):
+    """Tabla periódica interactiva con información de elementos"""
+    # Datos de elementos químicos (simplificado)
+    elementos = [
+        {'simbolo': 'H', 'nombre': 'Hidrógeno', 'numero': 1, 'masa': 1.008, 'grupo': 1},
+        {'simbolo': 'He', 'nombre': 'Helio', 'numero': 2, 'masa': 4.0026, 'grupo': 18},
+        {'simbolo': 'Li', 'nombre': 'Litio', 'numero': 3, 'masa': 6.94, 'grupo': 1},
+        {'simbolo': 'Be', 'nombre': 'Berilio', 'numero': 4, 'masa': 9.0122, 'grupo': 2},
+        {'simbolo': 'B', 'nombre': 'Boro', 'numero': 5, 'masa': 10.81, 'grupo': 13},
+        # Agregar más elementos según necesites
+    ]
+    
+    # Grupos por color
+    grupos_colores = {
+        1: '#FF9999',    # Alcalinos
+        2: '#FFDEAD',    # Alcalinotérreos
+        13: '#FFB366',   # Grupo del Boro
+        14: '#CCCC99',   # Grupo del Carbono
+        15: '#99CC99',   # Nitrogenoides
+        16: '#99CCCC',   # Calcógenos
+        17: '#9999CC',   # Halógenos
+        18: '#CC99CC',   # Gases nobles
+    }
+    
+    return render(request, 'herramientas/tabla_periodica.html', {
+        'elementos': elementos,
+        'grupos_colores': grupos_colores,
+    })
+
+# Traductor automático (usando API gratuita)
+@login_required
+def traductor_automatico(request):
+    """Traductor automático usando API de MyMemory"""
+    if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        texto = request.POST.get('texto', '')
+        idioma_origen = request.POST.get('idioma_origen', 'es')
+        idioma_destino = request.POST.get('idioma_destino', 'en')
+        
+        try:
+            # Usar API de MyMemory (gratuita con límites)
+            url = f"https://api.mymemory.translated.net/get"
+            params = {
+                'q': texto,
+                'langpair': f'{idioma_origen}|{idioma_destino}'
+            }
+            
+            response = requests.get(url, params=params)
+            data = response.json()
+            
+            traduccion = data['responseData']['translatedText']
+            return JsonResponse({'success': True, 'traduccion': traduccion})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    # Lista de idiomas soportados
+    idiomas = [
+        {'codigo': 'es', 'nombre': 'Español'},
+        {'codigo': 'en', 'nombre': 'Inglés'},
+        {'codigo': 'fr', 'nombre': 'Francés'},
+        {'codigo': 'de', 'nombre': 'Alemán'},
+        {'codigo': 'it', 'nombre': 'Italiano'},
+        {'codigo': 'pt', 'nombre': 'Portugués'},
+        {'codigo': 'ru', 'nombre': 'Ruso'},
+        {'codigo': 'zh', 'nombre': 'Chino'},
+        {'codigo': 'ja', 'nombre': 'Japonés'},
+        {'codigo': 'ko', 'nombre': 'Coreano'},
+    ]
+    
+    return render(request, 'herramientas/traductor_automatico.html', {
+        'idiomas': idiomas,
+    })
+
+# Diccionario integrado (usando API de DictionaryAPI)
+@login_required
+def diccionario_integrado(request):
+    """Diccionario de español/inglés"""
+    if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        palabra = request.POST.get('palabra', '').strip().lower()
+        idioma = request.POST.get('idioma', 'es')
+        
+        try:
+            if idioma == 'es':
+                # Para español, usar API de RAE (alternativa)
+                url = f"https://dle.rae.es/data/{palabra}"
+                response = requests.get(url)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    definiciones = []
+                    
+                    for resultado in data.get('res', []):
+                        for acepcion in resultado.get('acept', []):
+                            definiciones.append(acepcion.get('def', ''))
+                    
+                    return JsonResponse({
+                        'success': True,
+                        'palabra': palabra,
+                        'definiciones': definiciones[:5],  # Limitar a 5 definiciones
+                        'fuente': 'RAE'
+                    })
+                else:
+                    # Fallback a API de WordReference
+                    url = f"https://api.wordreference.com/0.8/80143/json/esen/{palabra}"
+                    response = requests.get(url)
+                    data = response.json()
+                    
+                    definiciones = []
+                    if 'term0' in data:
+                        for entry in data['term0']['PrincipalTranslations']:
+                            definiciones.append(entry['FirstTranslation']['term'])
+                    
+                    return JsonResponse({
+                        'success': True,
+                        'palabra': palabra,
+                        'definiciones': definiciones[:5],
+                        'fuente': 'WordReference'
+                    })
+                    
+            elif idioma == 'en':
+                # Para inglés, usar Free Dictionary API
+                url = f"https://api.dictionaryapi.dev/api/v2/entries/en/{palabra}"
+                response = requests.get(url)
+                data = response.json()
+                
+                definiciones = []
+                if isinstance(data, list):
+                    for entry in data:
+                        for meaning in entry.get('meanings', []):
+                            for definition in meaning.get('definitions', []):
+                                definiciones.append(definition.get('definition', ''))
+                
+                return JsonResponse({
+                    'success': True,
+                    'palabra': palabra,
+                    'definiciones': definiciones[:5],
+                    'fuente': 'Free Dictionary API'
+                })
+                
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e),
+                'sugerencia': 'Intenta con otra palabra o verifica la conexión a internet.'
+            })
+    
+    return render(request, 'herramientas/diccionario_integrado.html')
+
+# Sinónimos y antónimos
+@login_required
+def sinonimos_antonimos(request):
+    """Buscador de sinónimos y antónimos"""
+    if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        palabra = request.POST.get('palabra', '').strip().lower()
+        tipo = request.POST.get('tipo', 'sinonimos')  # 'sinonimos' o 'antonimos'
+        
+        try:
+            # Usar Datamuse API para sinónimos/antónimos en inglés
+            if tipo == 'sinonimos':
+                url = f"https://api.datamuse.com/words?rel_syn={palabra}&max=10"
+            else:
+                url = f"https://api.datamuse.com/words?rel_ant={palabra}&max=10"
+            
+            response = requests.get(url)
+            palabras_relacionadas = response.json()
+            
+            resultados = [item['word'] for item in palabras_relacionadas[:8]]
+            
+            return JsonResponse({
+                'success': True,
+                'palabra': palabra,
+                'tipo': tipo,
+                'resultados': resultados
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return render(request, 'herramientas/sinonimos_antonimos.html')
+
+
+
+
+@login_required
+def ingresos_detallados(request):
+    """Vista detallada de ingresos del maestro - TODOS LOS CÁLCULOS EN VISTA (fusionado con filtros de año/mes)"""
+    try:
+        perfil_maestro = Maestro.objects.get(usuario=request.user)
+    except Maestro.DoesNotExist:
+        messages.error(request, "No tienes un perfil de maestro.")
+        return redirect("dashboard_maestro")
+    
+    # ======== Fechas base ========
+    ahora = timezone.now()
+    mes_actual = ahora.month
+    año_actual = ahora.year
+
+    # ======== Obtener todas las clases pagadas ========
+    clases_pagadas = SolicitudClase.objects.filter(
+        maestro=perfil_maestro,
+        estado_pago='pagado'
+    ).select_related('alumno', 'alumno__usuario', 'materia').order_by('-fecha_pago')
+
+    # ======================================================
+    #   FUSIÓN DEL SISTEMA DE FILTROS:
+    #   - Tus filtros: actual / anterior / año
+    #   - Filtros del código nuevo: mes & año manuales
+    # ======================================================
+
+    filtro_mes = request.GET.get('mes', None)        # Puede ser: "actual", "anterior", "5", "8", etc.
+    filtro_año = request.GET.get('año', año_actual) # Puede ser numérico
+
+    try:
+        filtro_año = int(filtro_año)
+    except (ValueError, TypeError):
+        filtro_año = año_actual
+
+    clases_filtradas = clases_pagadas
+    mes_nombre = ""
+
+    # ===============================
+    #   PARTES DEL CÓDIGO NUEVO
+    #   Si mes es un número → usar filtro tradicional
+    # ===============================
+    if filtro_mes and filtro_mes.isdigit():
+        try:
+            mes_int = int(filtro_mes)
+            clases_filtradas = clases_pagadas.filter(
+                fecha_pago__year=filtro_año,
+                fecha_pago__month=mes_int
+            )
+            mes_nombre = f"{mes_int}/{filtro_año}"
+        except:
+            pass
+
+    else:
+        # ===============================
+        #   TU SISTEMA DE FILTROS ORIGINAL
+        # ===============================
+
+        if filtro_mes == 'actual':
+            clases_filtradas = clases_pagadas.filter(
+                fecha_pago__month=mes_actual,
+                fecha_pago__year=año_actual
+            )
+            mes_nombre = ahora.strftime("%B %Y")
+
+        elif filtro_mes == 'anterior':
+            if mes_actual == 1:
+                mes_anterior = 12
+                año_anterior = año_actual - 1
+            else:
+                mes_anterior = mes_actual - 1
+                año_anterior = año_actual
+            
+            clases_filtradas = clases_pagadas.filter(
+                fecha_pago__month=mes_anterior,
+                fecha_pago__year=año_anterior
+            )
+            fecha_anterior = ahora.replace(month=mes_anterior, year=año_anterior)
+            mes_nombre = fecha_anterior.strftime("%B %Y")
+
+        else:
+            clases_filtradas = clases_pagadas.filter(
+                fecha_pago__year=filtro_año
+            )
+            mes_nombre = f"Año {filtro_año}"
+
+    # ======================================================
+    #   CALCULAR TODO EN LA VISTA - NO EN EL TEMPLATE
+    # ======================================================
+
+    # 1. Total de ingresos y clases
+    total_ingresos = 0
+    total_clases = clases_filtradas.count()
+    
+    for clase in clases_filtradas:
+        if clase.monto_acordado:
+            total_ingresos += float(clase.monto_acordado)
+
+    # 2. Promedio por clase
+    promedio_por_clase = total_ingresos / total_clases if total_clases > 0 else 0
+
+    # 3. Ingresos por materia
+    ingresos_por_materia = {}
+    for clase in clases_filtradas:
+        if clase.monto_acordado:
+            materia = clase.materia.nombre
+            monto = float(clase.monto_acordado)
+            ingresos_por_materia[materia] = ingresos_por_materia.get(materia, 0) + monto
+
+    materias_con_datos = [
+        {
+            'nombre': materia,
+            'monto': round(monto, 2),
+            'porcentaje': round((monto / total_ingresos * 100), 1) if total_ingresos > 0 else 0
+        }
+        for materia, monto in ingresos_por_materia.items()
+    ]
+    materias_con_datos.sort(key=lambda x: x['monto'], reverse=True)
+
+    # 4. Ingresos por alumno
+    ingresos_por_alumno = {}
+    for clase in clases_filtradas:
+        if clase.monto_acordado:
+            alumno_nombre = clase.alumno.usuario.get_full_name() or clase.alumno.usuario.username
+            monto = float(clase.monto_acordado)
+            if alumno_nombre not in ingresos_por_alumno:
+                ingresos_por_alumno[alumno_nombre] = {
+                    'monto': 0,
+                    'clases': 0,
+                    'alumno_id': clase.alumno.id
+                }
+            ingresos_por_alumno[alumno_nombre]['monto'] += monto
+            ingresos_por_alumno[alumno_nombre]['clases'] += 1
+
+    alumnos_con_datos = [
+        {
+            'nombre': nombre,
+            'monto': round(datos['monto'], 2),
+            'clases': datos['clases'],
+            'alumno_id': datos['alumno_id']
+        }
+        for nombre, datos in ingresos_por_alumno.items()
+    ]
+    alumnos_con_datos.sort(key=lambda x: x['monto'], reverse=True)
+
+    # 5. Ingresos mensuales (como el código nuevo)
+    ingresos_mensuales = []
+    meses_nombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 
+                     'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+
+    for mes in range(1, 13):
+        ingresos_mes = sum(
+            float(clase.monto_acordado)
+            for clase in clases_pagadas.filter(fecha_pago__month=mes, fecha_pago__year=filtro_año)
+            if clase.monto_acordado
+        )
+        ingresos_mensuales.append(round(ingresos_mes, 2))
+
+    # 6. Años disponibles
+    años_disponibles = list(set([
+        clase.fecha_pago.year for clase in clases_pagadas if clase.fecha_pago
+    ]))
+    años_disponibles = sorted(años_disponibles, reverse=True) or [año_actual]
+
+    # 7. Métodos de pago
+    metodos_pago = {}
+    for clase in clases_filtradas:
+        metodo = clase.get_metodo_pago_display()
+        metodos_pago[metodo] = metodos_pago.get(metodo, 0) + 1
+
+    # ===== CONTEXTO FINAL =====
+    context = {
+        'clases_pagadas': clases_filtradas,
+        'total_ingresos': round(total_ingresos, 2),
+        'total_clases': total_clases,
+        'promedio_por_clase': round(promedio_por_clase, 2),
+        'materias_con_datos': materias_con_datos,
+        'alumnos_con_datos': alumnos_con_datos[:5],  # top 5
+        'ingresos_mensuales': ingresos_mensuales,
+        'meses_nombres': meses_nombres,
+        'mes_nombre': mes_nombre,
+        'filtro_mes': filtro_mes,
+        'filtro_año': filtro_año,
+        'años_disponibles': años_disponibles,
+        'metodos_pago': metodos_pago,
+        'año_actual': año_actual,
+    }
+    
+    return render(request, 'maestro/ingresos_detallados.html', context)
+
+
+
+
+@login_required
+def editar_perfil_alumno(request):
+    """Vista para que el alumno edite su propio perfil"""
+    try:
+        alumno = Alumno.objects.get(usuario=request.user)
+    except Alumno.DoesNotExist:
+        messages.error(request, "No tienes un perfil de alumno.")
+        return redirect("dashboard_alumno")
+
+    if request.method == "POST":
+        usuario_form = UsuarioForm(request.POST, request.FILES, instance=request.user)
+        alumno_form = AlumnoForm(request.POST, instance=alumno)
+
+        if usuario_form.is_valid() and alumno_form.is_valid():
+            usuario_form.save()
+            alumno_form.save()
+            messages.success(request, "¡Perfil actualizado correctamente!")
+            return redirect("dashboard_alumno")
+        else:
+            messages.error(request, "Por favor, corrige los errores en el formulario.")
+    else:
+        usuario_form = UsuarioForm(instance=request.user)
+        alumno_form = AlumnoForm(instance=alumno)
+
+    return render(
+        request,
+        "alumno/perfil_alumno.html",
+        {"usuario_form": usuario_form, "alumno_form": alumno_form},
+    )
+
+
+
+
+def admin_required(function=None):
+    """Decorator para verificar si el usuario es administrador"""
+    def decorator(view_func):
+        def _wrapped_view(request, *args, **kwargs):
+            if not request.user.is_authenticated:
+                messages.error(request, "Debes iniciar sesión para acceder al panel de administración.")
+                return redirect('login')
+            
+            # Verificar si es superusuario o tiene rol ADMIN
+            if not (request.user.is_superuser or getattr(request.user, 'rol', None) == 'ADMIN'):
+                messages.error(request, "No tienes permisos para acceder al panel de administración.")
+                return redirect('home')
+            
+            return view_func(request, *args, **kwargs)
+        return _wrapped_view
+
+    if function:
+        return decorator(function)
+    return decorator
+
+
+# MUEVE el decorador admin_required ANTES de las vistas que lo usan
+@admin_required
+def dashboard_admin(request):
+    """Dashboard principal del administrador"""
+    try:
+        # Estadísticas generales
+        total_usuarios = Usuario.objects.count()
+        total_alumnos = Alumno.objects.count()
+        total_maestros = Maestro.objects.count()
+        total_clases = SolicitudClase.objects.count()
+        
+        # Clases por estado
+        clases_por_estado = SolicitudClase.objects.values('estado').annotate(
+            total=Count('id')
+        ).order_by('-total')
+        
+        # Ingresos totales
+        ingresos_totales = SolicitudClase.objects.filter(
+            estado_pago='pagado'
+        ).aggregate(Sum('monto_final'))['monto_final__sum'] or 0
+        
+        # Usuarios nuevos este mes
+        from datetime import datetime
+        primer_dia_mes = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        nuevos_usuarios_mes = Usuario.objects.filter(
+            fecha_creacion__gte=primer_dia_mes
+        ).count()
+        
+        # Materias más populares
+        from catalogo.models import Materia
+        materias_populares = Materia.objects.annotate(
+            total_clases=Count('solicitudclase'),
+            total_maestros=Count('maestros')
+        ).order_by('-total_clases')[:10]
+        
+        context = {
+            'total_usuarios': total_usuarios,
+            'total_alumnos': total_alumnos,
+            'total_maestros': total_maestros,
+            'total_clases': total_clases,
+            'clases_por_estado': clases_por_estado,
+            'ingresos_totales': ingresos_totales,
+            'nuevos_usuarios_mes': nuevos_usuarios_mes,
+            'materias_populares': materias_populares,
+        }
+        
+        return render(request, 'admin/dashboard_admin.html', context)
+    
+    except Exception as e:
+        messages.error(request, f"Error al cargar el dashboard: {str(e)}")
+        return redirect('home')    
+
+
+
+@admin_required
+def estadisticas_detalladas(request):
+    """Estadísticas detalladas del sistema"""
+    # Aquí va el código completo de estadisticas_detalladas que te pasé antes
+    # ... (usa el código completo que te proporcioné en la respuesta anterior)
+
+
+@admin_required
+def gestion_promociones(request):
+    """Gestión de promociones"""
+    promociones = Promocion.objects.all().order_by('-fecha_inicio')
+    
+    if request.method == 'POST':
+        form = PromocionForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Promoción creada correctamente.')
+            return redirect('gestion_promociones')
+    else:
+        form = PromocionForm()
+    
+    return render(request, 'admin/gestion_promociones.html', {
+        'promociones': promociones,
+        'form': form
+    })
+
+
+@admin_required
+def gestion_vouchers(request):
+    """Gestión de vouchers"""
+    vouchers = Voucher.objects.all().order_by('-fecha_creacion')
+    
+    if request.method == 'POST':
+        form = VoucherForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Voucher creado correctamente.')
+            return redirect('gestion_vouchers')
+    else:
+        form = VoucherForm()
+    
+    return render(request, 'admin/gestion_vouchers.html', {
+        'vouchers': vouchers,
+        'form': form
+    })
+
+
+@login_required
+def aplicar_promocion(request):
+    return render(request, "admin/aplicar_promocion.html")
+
+
+def admin_required(function=None):
+    """Decorator para verificar si el usuario es administrador"""
+    actual_decorator = user_passes_test(
+        lambda u: u.is_authenticated and (u.is_superuser or u.rol == 'ADMIN'),
+        login_url='/login/'
+    )
+    if function:
+        return actual_decorator(function)
+    return actual_decorator
+
+
