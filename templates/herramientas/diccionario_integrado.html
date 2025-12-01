@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Diccionario | EduLink{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h2 fw-bold text-primary">
+                📖 Diccionario Integrado
+            </h1>
+            <p class="text-muted">
+                Busca definiciones, sinónimos y antónimos en español e inglés
+            </p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="card">
+                <div class="card-body">
+                    <!-- Buscador principal -->
+                    <div class="mb-4">
+                        <div class="input-group input-group-lg">
+                            <input type="text" class="form-control" id="palabra-buscar" 
+                                   placeholder="Escribe una palabra..." autofocus>
+                            <button class="btn btn-primary" onclick="buscarPalabra()" id="btn-buscar">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                        <div class="mt-2">
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="idioma" id="espanol" value="es" checked>
+                                <label class="form-check-label" for="espanol">Español</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="idioma" id="ingles" value="en">
+                                <label class="form-check-label" for="ingles">Inglés</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Resultados -->
+                    <div id="resultados-container">
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-book fa-4x mb-3"></i>
+                            <p>Escribe una palabra para buscar su definición</p>
+                        </div>
+                    </div>
+
+                    <!-- Sugerencias -->
+                    <div class="mt-4">
+                        <h6 class="mb-3">✨ Palabras populares</h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button class="btn btn-outline-primary btn-sm" onclick="buscarPalabraSugerida('aprender')">
+                                aprender
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm" onclick="buscarPalabraSugerida('educación')">
+                                educación
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm" onclick="buscarPalabraSugerida('conocimiento')">
+                                conocimiento
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm" onclick="buscarPalabraSugerida('estudio')">
+                                estudio
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm" onclick="buscarPalabraSugerida('enseñanza')">
+                                enseñanza
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Herramientas adicionales -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">🔄 Sinónimos</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="input-group mb-3">
+                                <input type="text" class="form-control" id="palabra-sinonimos" 
+                                       placeholder="Buscar sinónimos...">
+                                <button class="btn btn-outline-primary" onclick="buscarSinonimos()">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            <div id="resultados-sinonimos"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">⚡ Antónimos</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="input-group mb-3">
+                                <input type="text" class="form-control" id="palabra-antonimos" 
+                                       placeholder="Buscar antónimos...">
+                                <button class="btn btn-outline-primary" onclick="buscarAntonimos()">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            <div id="resultados-antonimos"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function buscarPalabra() {
+    const palabra = document.getElementById('palabra-buscar').value.trim();
+    const idioma = document.querySelector('input[name="idioma"]:checked').value;
+    const btnBuscar = document.getElementById('btn-buscar');
+    
+    if (!palabra) {
+        alert('Por favor, escribe una palabra para buscar');
+        return;
+    }
+
+    // Mostrar carga
+    btnBuscar.disabled = true;
+    btnBuscar.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    
+    const resultados = document.getElementById('resultados-container');
+    resultados.innerHTML = `
+        <div class="text-center py-4">
+            <i class="fas fa-spinner fa-spin fa-2x"></i>
+            <p class="mt-2">Buscando "${palabra}"...</p>
+        </div>
+    `;
+
+    fetch('{% url "diccionario_integrado" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: new URLSearchParams({
+            'palabra': palabra,
+            'idioma': idioma
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            let html = `
+                <div class="card border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">${data.palabra.charAt(0).toUpperCase() + data.palabra.slice(1)}</h5>
+                        <small>Fuente: ${data.fuente}</small>
+                    </div>
+                    <div class="card-body">
+                        <h6>Definiciones:</h6>
+                        <ol class="mb-0">
+            `;
+            
+            data.definiciones.forEach((def, index) => {
+                html += `<li>${def}</li>`;
+            });
+            
+            html += `
+                        </ol>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-sm btn-outline-primary" onclick="copiarDefinicion('${data.palabra}', '${data.definiciones[0]}')">
+                            <i class="fas fa-copy"></i> Copiar definición
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            resultados.innerHTML = html;
+        } else {
+            resultados.innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    No se encontraron resultados para "${palabra}"
+                    ${data.sugerencia ? '<p class="mb-0 mt-2">' + data.sugerencia + '</p>' : ''}
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        resultados.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-times-circle me-2"></i>
+                Error de conexión. Por favor, intenta nuevamente.
+            </div>
+        `;
+    })
+    .finally(() => {
+        btnBuscar.disabled = false;
+        btnBuscar.innerHTML = '<i class="fas fa-search"></i>';
+    });
+}
+
+function buscarPalabraSugerida(palabra) {
+    document.getElementById('palabra-buscar').value = palabra;
+    buscarPalabra();
+}
+
+function buscarSinonimos() {
+    const palabra = document.getElementById('palabra-sinonimos').value.trim();
+    const resultados = document.getElementById('resultados-sinonimos');
+    
+    if (!palabra) {
+        resultados.innerHTML = '<div class="alert alert-info">Escribe una palabra para buscar sinónimos</div>';
+        return;
+    }
+    
+    resultados.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i></div>';
+    
+    fetch('{% url "sinonimos_antonimos" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: new URLSearchParams({
+            'palabra': palabra,
+            'tipo': 'sinonimos'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.resultados.length > 0) {
+            resultados.innerHTML = `
+                <p>Sinónimos de <strong>${data.palabra}</strong>:</p>
+                <div class="d-flex flex-wrap gap-1">
+                    ${data.resultados.map(s => `<span class="badge bg-primary">${s}</span>`).join('')}
+                </div>
+            `;
+        } else {
+            resultados.innerHTML = `<div class="alert alert-warning">No se encontraron sinónimos para "${palabra}"</div>`;
+        }
+    })
+    .catch(() => {
+        resultados.innerHTML = '<div class="alert alert-danger">Error al buscar sinónimos</div>';
+    });
+}
+
+function buscarAntonimos() {
+    const palabra = document.getElementById('palabra-antonimos').value.trim();
+    const resultados = document.getElementById('resultados-antonimos');
+    
+    if (!palabra) {
+        resultados.innerHTML = '<div class="alert alert-info">Escribe una palabra para buscar antónimos</div>';
+        return;
+    }
+    
+    resultados.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i></div>';
+    
+    fetch('{% url "sinonimos_antonimos" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: new URLSearchParams({
+            'palabra': palabra,
+            'tipo': 'antonimos'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.resultados.length > 0) {
+            resultados.innerHTML = `
+                <p>Antónimos de <strong>${data.palabra}</strong>:</p>
+                <div class="d-flex flex-wrap gap-1">
+                    ${data.resultados.map(s => `<span class="badge bg-danger">${s}</span>`).join('')}
+                </div>
+            `;
+        } else {
+            resultados.innerHTML = `<div class="alert alert-warning">No se encontraron antónimos para "${palabra}"</div>`;
+        }
+    })
+    .catch(() => {
+        resultados.innerHTML = '<div class="alert alert-danger">Error al buscar antónimos</div>';
+    });
+}
+
+function copiarDefinicion(palabra, definicion) {
+    const texto = `${palabra}: ${definicion}`;
+    navigator.clipboard.writeText(texto).then(() => {
+        alert('Definición copiada al portapapeles');
+    });
+}
+
+// Permitir búsqueda con Enter
+document.getElementById('palabra-buscar').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        buscarPalabra();
+    }
+});
+
+document.getElementById('palabra-sinonimos').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        buscarSinonimos();
+    }
+});
+
+document.getElementById('palabra-antonimos').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        buscarAntonimos();
+    }
+});
+</script>
+{% endblock %}
