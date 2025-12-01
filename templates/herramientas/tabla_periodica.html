@@ -11,67 +11,70 @@
                 🧪 Tabla Periódica Interactiva
             </h1>
             <p class="text-muted">
-                Explora los elementos químicos y sus propiedades
+                Explora los elementos químicos con datos en tiempo real desde la API
             </p>
         </div>
     </div>
 
-    <!-- Tabla periódica -->
+    <!-- Controles -->
     <div class="row mb-4">
-        <div class="col">
+        <!-- Buscador -->
+        <div class="col-md-6">
             <div class="card">
                 <div class="card-body">
-                    <div class="d-flex flex-wrap justify-content-center gap-2" id="tabla-container">
-                        {% for elemento in elementos %}
-                        <div class="elemento-quimico text-center p-3 rounded" 
-                             style="background-color: {{ grupos_colores.elemento.grupo|default:'#CCCCCC' }}; width: 80px; cursor: pointer;"
-                             data-bs-toggle="modal" data-bs-target="#modalElemento"
-                             onclick="mostrarElemento({{ forloop.counter0 }})">
-                            <h4 class="mb-1 fw-bold">{{ elemento.simbolo }}</h4>
-                            <small class="d-block">{{ elemento.numero }}</small>
-                            <small class="d-block">{{ elemento.nombre }}</small>
-                            <small class="d-block">{{ elemento.masa }}</small>
-                        </div>
-                        {% endfor %}
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="filtro-elemento" 
+                               placeholder="Buscar elemento...">
+                        <button class="btn btn-outline-primary" onclick="buscarElemento()">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modo avanzado -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="modo-avanzado" 
+                               onchange="toggleModoAvanzado()">
+                        <label class="form-check-label" for="modo-avanzado">
+                            Mostrar datos avanzados
+                        </label>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Información del elemento -->
+    <!-- Tabla periódica -->
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <div id="tabla-container" class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Cargando tabla periódica...</span>
+                        </div>
+                        <p class="mt-2">Cargando elementos desde la API...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detalles -->
     <div class="modal fade" id="modalElemento" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="elementoNombre"></h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
-                    <div id="elementoInfo">
-                        <!-- Información cargada dinámicamente -->
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Leyenda -->
-    <div class="row">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h6 class="mb-0">Leyenda de Grupos</h6>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex flex-wrap gap-2">
-                        {% for grupo, color in grupos_colores.items %}
-                        <div class="d-flex align-items-center">
-                            <div style="width: 20px; height: 20px; background-color: {{ color }}; margin-right: 5px;"></div>
-                            <small>Grupo {{ grupo }}</small>
-                        </div>
-                        {% endfor %}
-                    </div>
+                <div class="modal-body" id="elementoDetalles">
+                    <!-- Detalles por JavaScript -->
                 </div>
             </div>
         </div>
@@ -79,36 +82,139 @@
 </div>
 
 <script>
-const elementos = {{ elementos|safe }};
+let elementos = [];
+let modoAvanzado = false;
 
-function mostrarElemento(index) {
-    const elem = elementos[index];
-    document.getElementById('elementoNombre').textContent = elem.nombre;
+// Cargar elementos desde la API
+function cargarElementos() {
+    fetch("{% url 'tabla_periodica' %}")
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.elementos) {
+                elementos = data.elementos;
+            } else {
+                elementos = {{ elementos|safe }};
+            }
+            generarTabla();
+        })
+        .catch(error => {
+            console.error("Error al cargar datos:", error);
+            elementos = {{ elementos|safe }};
+            generarTabla();
+        });
+}
+
+function generarTabla() {
+    const container = document.getElementById('tabla-container');
     
-    const info = `
-        <p><strong>Símbolo:</strong> ${elem.simbolo}</p>
-        <p><strong>Número atómico:</strong> ${elem.numero}</p>
-        <p><strong>Masa atómica:</strong> ${elem.masa}</p>
-        <p><strong>Grupo:</strong> ${elem.grupo}</p>
-        <hr>
-        <p class="small text-muted">
-            Haz clic fuera del modal para cerrar. Esta es una versión simplificada.
-            Para información completa, consulta una base de datos química.
-        </p>
+    if (!elementos || elementos.length === 0) {
+        container.innerHTML = '<p class="text-danger">Error al cargar los elementos</p>';
+        return;
+    }
+    
+    let html = `
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+            <thead>
+                <tr>
+                    <th>Símbolo</th>
+                    <th>Nombre</th>
+                    <th>Número</th>
+                    <th>Masa</th>
+                    <th>Grupo</th>
+                    ${modoAvanzado ? `
+                        <th>Categoría</th>
+                        <th>Electronegatividad</th>
+                        <th>Estado</th>
+                    ` : ""}
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
     `;
     
-    document.getElementById('elementoInfo').innerHTML = info;
+    elementos.forEach(elemento => {
+        html += `
+        <tr>
+            <td><strong>${elemento.simbolo}</strong></td>
+            <td>${elemento.nombre}</td>
+            <td>${elemento.numero}</td>
+            <td>${elemento.masa}</td>
+            <td>${elemento.grupo}</td>
+            ${modoAvanzado ? `
+                <td>${elemento.categoria || ''}</td>
+                <td>${elemento.electronegatividad || ''}</td>
+                <td>${elemento.estado || ''}</td>
+            ` : ""}
+            <td>
+                <button class="btn btn-sm btn-info" onclick="mostrarDetalles('${elemento.simbolo}')">
+                    <i class="fas fa-info-circle"></i>
+                </button>
+            </td>
+        </tr>`;
+    });
+
+    html += `
+            </tbody>
+        </table>
+    </div>`;
+
+    container.innerHTML = html;
 }
+
+function mostrarDetalles(simbolo) {
+    const elemento = elementos.find(e => e.simbolo === simbolo);
+    if (!elemento) return;
+
+    document.getElementById('elementoNombre').textContent =
+        `${elemento.nombre} (${elemento.simbolo})`;
+
+    let detalles = `
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>Número atómico:</strong> ${elemento.numero}</p>
+                <p><strong>Masa atómica:</strong> ${elemento.masa} u</p>
+                <p><strong>Grupo:</strong> ${elemento.grupo}</p>
+                <p><strong>Periodo:</strong> ${elemento.periodo || 'N/A'}</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Categoría:</strong> ${elemento.categoria || 'N/A'}</p>
+                <p><strong>Configuración electrónica:</strong> ${elemento.config_electronica || 'N/A'}</p>
+                <p><strong>Electronegatividad:</strong> ${elemento.electronegatividad || 'N/A'}</p>
+                <p><strong>Estado:</strong> ${elemento.estado || 'N/A'}</p>
+            </div>
+        </div>
+    `;
+
+    if (elemento.densidad)
+        detalles += `<p><strong>Densidad:</strong> ${elemento.densidad} g/cm³</p>`;
+    if (elemento.punto_fusion)
+        detalles += `<p><strong>Punto de fusión:</strong> ${elemento.punto_fusion} K</p>`;
+    if (elemento.punto_ebullicion)
+        detalles += `<p><strong>Punto de ebullición:</strong> ${elemento.punto_ebullicion} K</p>`;
+
+    document.getElementById('elementoDetalles').innerHTML = detalles;
+
+    new bootstrap.Modal(document.getElementById('modalElemento')).show();
+}
+
+// Filtro
+function buscarElemento() {
+    const filtro = document.getElementById('filtro-elemento').value.toLowerCase();
+    const filas = document.querySelectorAll('#tabla-container tbody tr');
+
+    filas.forEach(fila => {
+        const texto = fila.textContent.toLowerCase();
+        fila.style.display = texto.includes(filtro) ? '' : 'none';
+    });
+}
+
+// Modo avanzado
+function toggleModoAvanzado() {
+    modoAvanzado = document.getElementById('modo-avanzado').checked;
+    generarTabla();
+}
+
+document.addEventListener('DOMContentLoaded', cargarElementos);
 </script>
-
-<style>
-.elemento-quimico {
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.elemento-quimico:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-</style>
 {% endblock %}

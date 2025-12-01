@@ -2861,14 +2861,18 @@ def generador_graficos(request):
 
 # ===== NUEVAS HERRAMIENTAS =====
 from django.http import JsonResponse
-import json
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
 import requests
+from bs4 import BeautifulSoup
 
-# Biblioteca de fórmulas matemáticas
+
+# ==============================
+# 📘 Biblioteca de fórmulas matemáticas
+# ==============================
 @login_required
 def biblioteca_formulas(request):
     """Biblioteca de fórmulas matemáticas organizadas por categoría"""
-    # Datos de fórmulas (puedes expandir esto)
     formulas_por_categoria = {
         'Álgebra': [
             {'nombre': 'Ecuación cuadrática', 'formula': 'x = [-b ± √(b² - 4ac)] / 2a'},
@@ -2901,63 +2905,105 @@ def biblioteca_formulas(request):
         'formulas_por_categoria': formulas_por_categoria,
     })
 
-# Tabla periódica interactiva
+
+# ==============================
+# 🔄 Datos de respaldo (sin API)
+# ==============================
+def obtener_elementos_respaldo():
+    return [
+        {'simbolo': 'H', 'nombre': 'Hidrógeno', 'numero': 1, 'masa': 1.008, 'grupo': 1, 'periodo': 1, 'categoria': 'diatomic nonmetal'},
+        {'simbolo': 'He', 'nombre': 'Helio', 'numero': 2, 'masa': 4.0026, 'grupo': 18, 'periodo': 1, 'categoria': 'noble gas'},
+    ]
+
+
+# ==============================
+# ⚛️ Tabla periódica (versión única AJAX + render)
+# ==============================
 @login_required
 def tabla_periodica(request):
-    """Tabla periódica interactiva con información de elementos"""
-    # Datos de elementos químicos (simplificado)
-    elementos = [
-        {'simbolo': 'H', 'nombre': 'Hidrógeno', 'numero': 1, 'masa': 1.008, 'grupo': 1},
-        {'simbolo': 'He', 'nombre': 'Helio', 'numero': 2, 'masa': 4.0026, 'grupo': 18},
-        {'simbolo': 'Li', 'nombre': 'Litio', 'numero': 3, 'masa': 6.94, 'grupo': 1},
-        {'simbolo': 'Be', 'nombre': 'Berilio', 'numero': 4, 'masa': 9.0122, 'grupo': 2},
-        {'simbolo': 'B', 'nombre': 'Boro', 'numero': 5, 'masa': 10.81, 'grupo': 13},
-        # Agregar más elementos según necesites
-    ]
-    
-    # Grupos por color
-    grupos_colores = {
-        1: '#FF9999',    # Alcalinos
-        2: '#FFDEAD',    # Alcalinotérreos
-        13: '#FFB366',   # Grupo del Boro
-        14: '#CCCC99',   # Grupo del Carbono
-        15: '#99CC99',   # Nitrogenoides
-        16: '#99CCCC',   # Calcógenos
-        17: '#9999CC',   # Halógenos
-        18: '#CC99CC',   # Gases nobles
+    """Vista unificada: devuelve JSON si es AJAX, o renderiza HTML si es GET normal."""
+
+    # -------------------------
+    # 🔹 Si es petición AJAX → devolver JSON
+    # -------------------------
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        try:
+            api_url = "https://periodic-table-api.herokuapp.com/elements"
+            response = requests.get(api_url, timeout=10)
+
+            if response.status_code == 200:
+                return JsonResponse({
+                    'success': True,
+                    'elementos': response.json()
+                })
+        except:
+            pass
+
+        # Si la API falla → usar respaldo
+        return JsonResponse({
+            'success': True,
+            'elementos': obtener_elementos_respaldo()
+        })
+
+    # -------------------------
+    # 🔹 Render normal (HTML)
+    # -------------------------
+    try:
+        response = requests.get("https://periodic-table-api.herokuapp.com/elements", timeout=10)
+        if response.status_code == 200:
+            elementos = response.json()
+        else:
+            elementos = obtener_elementos_respaldo()
+    except:
+        elementos = obtener_elementos_respaldo()
+
+    # Colores por categoría
+    categorias_colores = {
+        'diatomic nonmetal': '#66B2FF',
+        'noble gas': '#CC99FF',
+        'alkali metal': '#FF6666',
+        'alkaline earth metal': '#FFDEAD',
+        'metalloid': '#99CC99',
+        'polyatomic nonmetal': '#66B2FF',
+        'transition metal': '#FFB366',
+        'post-transition metal': '#CCCCCC',
+        'lanthanide': '#FFCC99',
+        'actinide': '#FF9999',
     }
-    
+
     return render(request, 'herramientas/tabla_periodica.html', {
         'elementos': elementos,
-        'grupos_colores': grupos_colores,
+        'categorias_colores': categorias_colores,
     })
+
 
 # Traductor automático (usando API gratuita)
 @login_required
 def traductor_automatico(request):
-    """Traductor automático usando API de MyMemory"""
+    """Traductor usando Google Translate API"""
     if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         texto = request.POST.get('texto', '')
         idioma_origen = request.POST.get('idioma_origen', 'es')
         idioma_destino = request.POST.get('idioma_destino', 'en')
         
         try:
-            # Usar API de MyMemory (gratuita con límites)
-            url = "https://api.mymemory.translated.net/get"
-            params = {
-                'q': texto,
-                'langpair': f'{idioma_origen}|{idioma_destino}'
-            }
+            translator = Translator()
+            traduccion = translator.translate(texto, src=idioma_origen, dest=idioma_destino)
             
-            response = requests.get(url, params=params)
-            data = response.json()
-            
-            traduccion = data['responseData']['translatedText']
-            return JsonResponse({'success': True, 'traduccion': traduccion})
+            return JsonResponse({
+                'success': True,
+                'traduccion': traduccion.text,
+                'pronunciacion_origen': getattr(traduccion, 'pronunciation', ''),
+                'detectado': getattr(traduccion, 'src', idioma_origen)
+            })
         except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)})
+            return JsonResponse({
+                'success': False,
+                'error': str(e),
+                'sugerencia': 'Intenta con un texto más corto o verifica los idiomas seleccionados.'
+            })
     
-    # Lista de idiomas soportados
+    # Lista completa de idiomas
     idiomas = [
         {'codigo': 'es', 'nombre': 'Español'},
         {'codigo': 'en', 'nombre': 'Inglés'},
@@ -2966,9 +3012,15 @@ def traductor_automatico(request):
         {'codigo': 'it', 'nombre': 'Italiano'},
         {'codigo': 'pt', 'nombre': 'Portugués'},
         {'codigo': 'ru', 'nombre': 'Ruso'},
-        {'codigo': 'zh', 'nombre': 'Chino'},
+        {'codigo': 'zh-cn', 'nombre': 'Chino (Simplificado)'},
         {'codigo': 'ja', 'nombre': 'Japonés'},
         {'codigo': 'ko', 'nombre': 'Coreano'},
+        {'codigo': 'ar', 'nombre': 'Árabe'},
+        {'codigo': 'hi', 'nombre': 'Hindi'},
+        {'codigo': 'nl', 'nombre': 'Neerlandés'},
+        {'codigo': 'sv', 'nombre': 'Sueco'},
+        {'codigo': 'pl', 'nombre': 'Polaco'},
+        {'codigo': 'tr', 'nombre': 'Turco'},
     ]
     
     return render(request, 'herramientas/traductor_automatico.html', {
@@ -2976,69 +3028,119 @@ def traductor_automatico(request):
     })
 
 # Diccionario integrado (usando API de DictionaryAPI)
+from googletrans import Translator
 @login_required
 def diccionario_integrado(request):
-    """Diccionario de español/inglés"""
+    """Diccionario usando API de Datamuse y traducción"""
     if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         palabra = request.POST.get('palabra', '').strip().lower()
         idioma = request.POST.get('idioma', 'es')
+        tipo = request.POST.get('tipo', 'definicion')  # 'definicion', 'sinonimos', 'antonimos'
         
         try:
-            if idioma == 'es':
-                # Para español, usar API de RAE (alternativa)
-                url = f"https://dle.rae.es/data/{palabra}"
-                response = requests.get(url)
+            if tipo == 'definicion':
+                # Usar Datamuse para definiciones (en inglés principalmente)
+                if idioma == 'en':
+                    # Para inglés, usar Datamuse
+                    url = f"https://api.datamuse.com/words?sp={palabra}&md=d&max=5"
+                    response = requests.get(url, timeout=5)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        definiciones = []
+                        
+                        for item in data:
+                            if 'defs' in item:
+                                for definicion in item['defs'][:3]:
+                                    definiciones.append(definicion)
+                        
+                        if definiciones:
+                            return JsonResponse({
+                                'success': True,
+                                'palabra': palabra,
+                                'definiciones': definiciones,
+                                'fuente': 'Datamuse API'
+                            })
                 
-                if response.status_code == 200:
-                    data = response.json()
-                    definiciones = []
-                    
-                    for resultado in data.get('res', []):
-                        for acepcion in resultado.get('acept', []):
-                            definiciones.append(acepcion.get('def', ''))
-                    
+                # Para español o si Datamuse no funciona, usar Wiktionary web scraping
+                definiciones = obtener_definicion_wiktionary(palabra, idioma)
+                if definiciones:
                     return JsonResponse({
                         'success': True,
                         'palabra': palabra,
-                        'definiciones': definiciones[:5],  # Limitar a 5 definiciones
-                        'fuente': 'RAE'
+                        'definiciones': definiciones,
+                        'fuente': 'Wiktionary'
                     })
-                else:
-                    # Fallback a API de WordReference
-                    url = f"https://api.wordreference.com/0.8/80143/json/esen/{palabra}"
-                    response = requests.get(url)
-                    data = response.json()
-                    
-                    definiciones = []
-                    if 'term0' in data:
-                        for entry in data['term0']['PrincipalTranslations']:
-                            definiciones.append(entry['FirstTranslation']['term'])
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'palabra': palabra,
-                        'definiciones': definiciones[:5],
-                        'fuente': 'WordReference'
-                    })
-                    
-            elif idioma == 'en':
-                # Para inglés, usar Free Dictionary API
-                url = f"https://api.dictionaryapi.dev/api/v2/entries/en/{palabra}"
-                response = requests.get(url)
-                data = response.json()
                 
-                definiciones = []
-                if isinstance(data, list):
-                    for entry in data:
-                        for meaning in entry.get('meanings', []):
-                            for definition in meaning.get('definitions', []):
-                                definiciones.append(definition.get('definition', ''))
-                
+                # Si no hay resultados, intentar traducción
+                translator = Translator()
+                traduccion = translator.translate(palabra, src=idioma, dest='en')
                 return JsonResponse({
                     'success': True,
                     'palabra': palabra,
-                    'definiciones': definiciones[:5],
-                    'fuente': 'Free Dictionary API'
+                    'definiciones': [f"Traducción al inglés: {traduccion.text}"],
+                    'fuente': 'Google Translate'
+                })
+            
+            elif tipo == 'sinonimos':
+                # Usar Datamuse para sinónimos
+                if idioma == 'es':
+                    url = f"https://api.datamuse.com/words?rel_syn={palabra}&lang=es&max=10"
+                else:
+                    url = f"https://api.datamuse.com/words?rel_syn={palabra}&max=10"
+                
+                response = requests.get(url, timeout=5)
+                if response.status_code == 200:
+                    data = response.json()
+                    sinonimos = [item['word'] for item in data[:8]]
+                    
+                    if sinonimos:
+                        return JsonResponse({
+                            'success': True,
+                            'palabra': palabra,
+                            'resultados': sinonimos,
+                            'tipo': 'sinónimos'
+                        })
+                
+                # Si no hay sinónimos, sugerir palabras similares
+                url_similar = f"https://api.datamuse.com/words?ml={palabra}&max=8"
+                response = requests.get(url_similar, timeout=5)
+                if response.status_code == 200:
+                    data = response.json()
+                    similares = [item['word'] for item in data[:6]]
+                    
+                    return JsonResponse({
+                        'success': True,
+                        'palabra': palabra,
+                        'resultados': similares,
+                        'tipo': 'palabras similares',
+                        'nota': 'No se encontraron sinónimos exactos, aquí hay palabras relacionadas:'
+                    })
+            
+            elif tipo == 'antonimos':
+                # Usar Datamuse para antónimos
+                if idioma == 'es':
+                    url = f"https://api.datamuse.com/words?rel_ant={palabra}&lang=es&max=10"
+                else:
+                    url = f"https://api.datamuse.com/words?rel_ant={palabra}&max=10"
+                
+                response = requests.get(url, timeout=5)
+                if response.status_code == 200:
+                    data = response.json()
+                    antonimos = [item['word'] for item in data[:8]]
+                    
+                    if antonimos:
+                        return JsonResponse({
+                            'success': True,
+                            'palabra': palabra,
+                            'resultados': antonimos,
+                            'tipo': 'antónimos'
+                        })
+                
+                # Si no hay antónimos, buscar palabras opuestas por significado
+                return JsonResponse({
+                    'success': False,
+                    'error': f'No se encontraron antónimos directos para "{palabra}"'
                 })
                 
         except Exception as e:
@@ -3049,6 +3151,48 @@ def diccionario_integrado(request):
             })
     
     return render(request, 'herramientas/diccionario_integrado.html')
+
+def obtener_definicion_wiktionary(palabra, idioma):
+    """Obtener definición de Wiktionary usando web scraping"""
+    try:
+        if idioma == 'es':
+            url = f"https://es.wiktionary.org/wiki/{palabra}"
+        else:
+            url = f"https://en.wiktionary.org/wiki/{palabra}"
+        
+        response = requests.get(url, timeout=5)
+        
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.content, 'html.parser')
+            definiciones = []
+            
+            # Buscar definiciones en español
+            if idioma == 'es':
+                for ol in soup.find_all('ol'):
+                    for li in ol.find_all('li'):
+                        text = li.get_text(strip=True)
+                        if len(text) > 10 and not text.startswith('(Figurado)') and not text.startswith('Sinónimo'):
+                            definiciones.append(text)
+            else:
+                # Buscar definiciones en inglés
+                for span in soup.find_all('span', {'class': 'mw-headline'}):
+                    if span.text in ['Etymology', 'Pronunciation']:
+                        continue
+                    parent = span.parent
+                    if parent.name == 'h3' or parent.name == 'h4':
+                        next_elem = parent.find_next_sibling()
+                        while next_elem and next_elem.name not in ['h3', 'h4']:
+                            if next_elem.name == 'ol':
+                                for li in next_elem.find_all('li'):
+                                    text = li.get_text(strip=True)
+                                    if text:
+                                        definiciones.append(text)
+                            next_elem = next_elem.find_next_sibling()
+            
+            return definiciones[:5] if definiciones else None
+            
+    except:
+        return None
 
 # Sinónimos y antónimos
 @login_required
