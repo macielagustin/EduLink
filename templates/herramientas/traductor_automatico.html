@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Traductor | EduLink{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h2 fw-bold text-primary">
+                🌍 Traductor Automático
+            </h1>
+            <p class="text-muted">
+                Traduce texto entre múltiples idiomas usando inteligencia artificial
+            </p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-10 offset-lg-1">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Idioma origen -->
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Idioma de origen</label>
+                                <select class="form-select" id="idioma-origen">
+                                    {% for idioma in idiomas %}
+                                    <option value="{{ idioma.codigo }}" {% if idioma.codigo == 'es' %}selected{% endif %}>
+                                        {{ idioma.nombre }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <textarea class="form-control" id="texto-origen" rows="8" 
+                                          placeholder="Escribe el texto a traducir aquí..."></textarea>
+                                <div class="mt-2 d-flex justify-content-between">
+                                    <small class="text-muted" id="contador-origen">0 caracteres</small>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="limpiarOrigen()">
+                                        <i class="fas fa-times"></i> Limpiar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Idioma destino -->
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Idioma de destino</label>
+                                <select class="form-select" id="idioma-destino">
+                                    {% for idioma in idiomas %}
+                                    <option value="{{ idioma.codigo }}" {% if idioma.codigo == 'en' %}selected{% endif %}>
+                                        {{ idioma.nombre }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <textarea class="form-control" id="texto-destino" rows="8" 
+                                          placeholder="La traducción aparecerá aquí..." readonly></textarea>
+                                <div class="mt-2 d-flex justify-content-between">
+                                    <small class="text-muted" id="contador-destino">0 caracteres</small>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="copiarTraduccion()">
+                                            <i class="fas fa-copy"></i> Copiar
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="limpiarDestino()">
+                                            <i class="fas fa-times"></i> Limpiar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botones de acción -->
+                    <div class="row mt-3">
+                        <div class="col text-center">
+                            <button class="btn btn-primary btn-lg" onclick="traducirTexto()" id="btn-traducir">
+                                <i class="fas fa-language me-2"></i> Traducir Texto
+                            </button>
+                            <button class="btn btn-outline-secondary btn-lg ms-2" onclick="intercambiarIdiomas()">
+                                <i class="fas fa-exchange-alt me-2"></i> Intercambiar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Historial de traducciones -->
+                    <div class="row mt-4">
+                        <div class="col">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">📝 Historial de Traducciones</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="historial-traducciones" style="max-height: 200px; overflow-y: auto;">
+                                        <!-- Historial se carga aquí -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let historial = JSON.parse(localStorage.getItem('historialTraducciones') || '[]');
+
+function actualizarContador() {
+    const origen = document.getElementById('texto-origen').value;
+    const destino = document.getElementById('texto-destino').value;
+    document.getElementById('contador-origen').textContent = origen.length + ' caracteres';
+    document.getElementById('contador-destino').textContent = destino.length + ' caracteres';
+}
+
+function traducirTexto() {
+    const texto = document.getElementById('texto-origen').value.trim();
+    const idiomaOrigen = document.getElementById('idioma-origen').value;
+    const idiomaDestino = document.getElementById('idioma-destino').value;
+    const btnTraducir = document.getElementById('btn-traducir');
+    
+    if (!texto) {
+        alert('Por favor, escribe algo para traducir');
+        return;
+    }
+
+    // Mostrar estado de carga
+    btnTraducir.disabled = true;
+    btnTraducir.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Traduciendo...';
+
+    fetch('{% url "traductor_automatico" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: new URLSearchParams({
+            'texto': texto,
+            'idioma_origen': idiomaOrigen,
+            'idioma_destino': idiomaDestino
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('texto-destino').value = data.traduccion;
+            
+            // Agregar al historial
+            agregarAlHistorial(texto, data.traduccion, idiomaOrigen, idiomaDestino);
+            
+            // Actualizar contador
+            actualizarContador();
+        } else {
+            alert('Error en la traducción: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Error de conexión. Por favor, intenta nuevamente.');
+        console.error('Error:', error);
+    })
+    .finally(() => {
+        btnTraducir.disabled = false;
+        btnTraducir.innerHTML = '<i class="fas fa-language me-2"></i> Traducir Texto';
+    });
+}
+
+function agregarAlHistorial(origen, destino, idiomaOrigen, idiomaDestino) {
+    const traduccion = {
+        origen: origen,
+        destino: destino,
+        idiomaOrigen: idiomaOrigen,
+        idiomaDestino: idiomaDestino,
+        fecha: new Date().toLocaleString()
+    };
+    
+    historial.unshift(traduccion);
+    if (historial.length > 10) historial = historial.slice(0, 10);
+    
+    localStorage.setItem('historialTraducciones', JSON.stringify(historial));
+    mostrarHistorial();
+}
+
+function mostrarHistorial() {
+    const container = document.getElementById('historial-traducciones');
+    if (historial.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center mb-0">No hay traducciones recientes</p>';
+        return;
+    }
+    
+    let html = '<div class="list-group">';
+    historial.forEach((item, index) => {
+        html += `
+            <div class="list-group-item list-group-item-action">
+                <small class="text-muted">${item.fecha}</small>
+                <p class="mb-1">${item.origen.substring(0, 50)}${item.origen.length > 50 ? '...' : ''}</p>
+                <small>→ ${item.destino.substring(0, 50)}${item.destino.length > 50 ? '...' : ''}</small>
+            </div>
+        `;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function intercambiarIdiomas() {
+    const origen = document.getElementById('idioma-origen');
+    const destino = document.getElementById('idioma-destino');
+    const textoOrigen = document.getElementById('texto-origen');
+    const textoDestino = document.getElementById('texto-destino');
+    
+    // Intercambiar idiomas
+    const temp = origen.value;
+    origen.value = destino.value;
+    destino.value = temp;
+    
+    // Intercambiar textos
+    const tempTexto = textoOrigen.value;
+    textoOrigen.value = textoDestino.value;
+    textoDestino.value = tempTexto;
+    
+    actualizarContador();
+}
+
+function copiarTraduccion() {
+    const texto = document.getElementById('texto-destino').value;
+    if (texto) {
+        navigator.clipboard.writeText(texto).then(() => {
+            alert('Traducción copiada al portapapeles');
+        });
+    }
+}
+
+function limpiarOrigen() {
+    document.getElementById('texto-origen').value = '';
+    actualizarContador();
+}
+
+function limpiarDestino() {
+    document.getElementById('texto-destino').value = '';
+    actualizarContador();
+}
+
+// Inicializar
+document.addEventListener('DOMContentLoaded', function() {
+    mostrarHistorial();
+    document.getElementById('texto-origen').addEventListener('input', actualizarContador);
+    document.getElementById('texto-destino').addEventListener('input', actualizarContador);
+    
+    // Permitir Enter para traducir (Shift+Enter para nueva línea)
+    document.getElementById('texto-origen').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            traducirTexto();
+        }
+    });
+});
+</script>
+{% endblock %}
