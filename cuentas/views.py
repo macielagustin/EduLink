@@ -2863,7 +2863,6 @@ def generador_graficos(request):
 from django.http import JsonResponse
 import json
 import requests
-from bs4 import BeautifulSoup
 
 # Biblioteca de fórmulas matemáticas
 @login_required
@@ -2878,7 +2877,7 @@ def biblioteca_formulas(request):
         ],
         'Cálculo': [
             {'nombre': 'Derivada básica', 'formula': 'd/dx(xⁿ) = n·xⁿ⁻¹'},
-            {'nombre': 'Regla de la cadena', 'formula': 'd/dx[f(g(x))] = f'(g(x))·g'(x)'},
+            {'nombre': 'Regla de la cadena', 'formula': 'd/dx[f(g(x))] = f\'(g(x))·g\'(x)'},
             {'nombre': 'Integral definida', 'formula': '∫ₐᵇ f(x) dx = F(b) - F(a)'},
         ],
         'Geometría': [
@@ -2944,7 +2943,7 @@ def traductor_automatico(request):
         
         try:
             # Usar API de MyMemory (gratuita con límites)
-            url = f"https://api.mymemory.translated.net/get"
+            url = "https://api.mymemory.translated.net/get"
             params = {
                 'q': texto,
                 'langpair': f'{idioma_origen}|{idioma_destino}'
