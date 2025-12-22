@@ -165,6 +165,11 @@ urlpatterns = [
 
     path("maestro/ingresos/", views.ingresos_detallados, name="ingresos_detallados"),
 
+    #path('ingresos-detallados/', views.ingresos_detallados, name='ingresos_detallados'),
+    path('api/ingresos/filtros/', views.obtener_datos_filtro, name='obtener_datos_filtro'),
+    path('api/clase/<int:clase_id>/detalle/', views.detalle_clase_api, name='detalle_clase_api'),
+
+
 
     # URLs de administrador
     path("admin/dashboard/", views.dashboard_admin, name="dashboard_admin"),

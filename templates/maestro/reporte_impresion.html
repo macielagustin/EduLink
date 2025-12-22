@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte de Ingresos - EduLink</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.4;
+            color: #333;
+        }
+        
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .header .subtitle {
+            color: #7f8c8d;
+            font-size: 16px;
+        }
+        
+        .resumen {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .resumen-item {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            width: 23%;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        
+        .resumen-item h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #6c757d;
+        }
+        
+        .resumen-item .valor {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            page-break-inside: avoid;
+        }
+        
+        .section h2 {
+            background: #2c3e50;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        table th {
+            background: #34495e;
+            color: white;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .text-right {
+            text-align: right;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .filtros-info {
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .filtros-info h4 {
+            margin-top: 0;
+            color: #1976d2;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 12px;
+        }
+        
+        .no-break {
+            page-break-inside: avoid;
+        }
+        
+        .total-row {
+            background: #2c3e50 !important;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .badge-success {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .badge-info {
+            background: #3498db;
+            color: white;
+        }
+        
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            
+            body {
+                font-size: 12px;
+            }
+            
+            .resumen-item {
+                width: 24%;
+                margin-bottom: 5px;
+            }
+            
+            table {
+                font-size: 11px;
+            }
+            
+            table th, table td {
+                padding: 6px 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 Reporte de Ingresos - EduLink</h1>
+        <div class="subtitle">Reporte detallado de ingresos del profesor</div>
+        <div class="subtitle">Generado el: {% now "d/m/Y H:i" %}</div>
+    </div>
+    
+    <!-- Información de Filtros Aplicados -->
+    <div class="filtros-info">
+        <h4>🔍 Filtros Aplicados</h4>
+        <div>
+            {% if filtro_mes %}
+            <strong>Mes:</strong> 
+            {% for num, nombre in meses_nombres_full %}
+                {% if num|stringformat:"i" == filtro_mes %}{{ nombre }}{% endif %}
+            {% endfor %}
+            {% endif %}
+            
+            {% if filtro_año %}
+            <strong> | Año:</strong> {{ filtro_año }}
+            {% endif %}
+            
+            {% if filtro_semana %}
+            <strong> | Semana:</strong> {{ filtro_semana|slice:"-2:" }} del {{ filtro_semana|slice:":4" }}
+            {% endif %}
+            
+            {% if filtro_alumno %}
+            <strong> | Alumno:</strong> 
+            {% for alumno in alumnos_disponibles %}
+                {% if alumno.id|stringformat:"i" == filtro_alumno %}
+                    {{ alumno.usuario.get_full_name|default:alumno.usuario.username }}
+                {% endif %}
+            {% endfor %}
+            {% endif %}
+            
+            {% if filtro_materia %}
+            <strong> | Materia:</strong> 
+            {% for materia in materias_disponibles %}
+                {% if materia.id|stringformat:"i" == filtro_materia %}
+                    {{ materia.nombre }}
+                {% endif %}
+            {% endfor %}
+            {% endif %}
+            
+            {% if fecha_inicio and fecha_fin %}
+            <strong> | Rango:</strong> {{ fecha_inicio }} al {{ fecha_fin }}
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Resumen General -->
+    <div class="section no-break">
+        <h2>📈 Resumen General</h2>
+        <div class="resumen">
+            <div class="resumen-item">
+                <h3>Total Ingresos</h3>
+                <div class="valor">${{ total_ingresos }}</div>
+            </div>
+            <div class="resumen-item">
+                <h3>Total Clases</h3>
+                <div class="valor">{{ total_clases }}</div>
+            </div>
+            <div class="resumen-item">
+                <h3>Promedio por Clase</h3>
+                <div class="valor">${{ promedio_por_clase }}</div>
+            </div>
+            <div class="resumen-item">
+                <h3>Materias Activas</h3>
+                <div class="valor">{{ materias_con_datos|length }}</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Ingresos por Materia -->
+    <div class="section">
+        <h2>📚 Ingresos por Materia</h2>
+        {% if materias_con_datos %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Materia</th>
+                    <th class="text-right">Ingresos</th>
+                    <th class="text-right">Porcentaje</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for materia in materias_con_datos %}
+                <tr>
+                    <td>{{ materia.nombre }}</td>
+                    <td class="text-right">${{ materia.monto }}</td>
+                    <td class="text-right">
+                        <span class="badge badge-info">{{ materia.porcentaje }}%</span>
+                    </td>
+                </tr>
+                {% endfor %}
+                <tr class="total-row">
+                    <td><strong>TOTAL</strong></td>
+                    <td class="text-right"><strong>${{ total_ingresos }}</strong></td>
+                    <td class="text-right"><strong>100%</strong></td>
+                </tr>
+            </tbody>
+        </table>
+        {% else %}
+        <p>No hay datos de materias para mostrar.</p>
+        {% endif %}
+    </div>
+    
+    <!-- Top Alumnos -->
+    <div class="section">
+        <h2>👥 Top Alumnos</h2>
+        {% if alumnos_con_datos %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Alumno</th>
+                    <th class="text-center">Clases</th>
+                    <th class="text-right">Ingresos</th>
+                    <th class="text-right">Promedio/Clase</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for alumno in alumnos_con_datos %}
+                <tr>
+                    <td>{{ alumno.nombre }}</td>
+                    <td class="text-center">{{ alumno.clases }}</td>
+                    <td class="text-right">${{ alumno.monto }}</td>
+                    <td class="text-right">${{ alumno.promedio_por_clase }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No hay datos de alumnos para mostrar.</p>
+        {% endif %}
+    </div>
+    
+    <!-- Detalle de Clases -->
+    <div class="section">
+        <h2>📋 Detalle de Clases ({{ total_clases }} clases)</h2>
+        {% if clases_pagadas %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Alumno</th>
+                    <th>Materia</th>
+                    <th class="text-center">Duración</th>
+                    <th>Método Pago</th>
+                    <th class="text-right">Monto</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for clase in clases_pagadas %}
+                <tr>
+                    <td>{{ clase.fecha_pago|date:"d/m/Y" }}</td>
+                    <td>{{ clase.alumno.usuario.get_full_name|default:clase.alumno.usuario.username|truncatechars:20 }}</td>
+                    <td>{{ clase.materia.nombre|truncatechars:20 }}</td>
+                    <td class="text-center">{{ clase.duracion_minutos }} min</td>
+                    <td>{{ clase.get_metodo_pago_display }}</td>
+                    <td class="text-right">${{ clase.monto_acordado }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="total-row">
+                    <td colspan="5"><strong>TOTAL</strong></td>
+                    <td class="text-right"><strong>${{ total_ingresos }}</strong></td>
+                </tr>
+            </tbody>
+        </table>
+        {% else %}
+        <p>No hay clases para mostrar.</p>
+        {% endif %}
+    </div>
+    
+    <!-- Métodos de Pago -->
+    <div class="section">
+        <h2>💳 Distribución por Método de Pago</h2>
+        {% if metodos_pago %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Método de Pago</th>
+                    <th class="text-center">Cantidad de Clases</th>
+                    <th class="text-center">Porcentaje</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for metodo, cantidad in metodos_pago.items %}
+                <tr>
+                    <td>{{ metodo }}</td>
+                    <td class="text-center">{{ cantidad }}</td>
+                    <td class="text-center">
+                        {% widthratio cantidad total_clases 100 %}%
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No hay datos de métodos de pago.</p>
+        {% endif %}
+    </div>
+    
+    <div class="footer">
+        <p>Reporte generado automáticamente por EduLink - Sistema de Gestión Educativa</p>
+        <p>Página 1 de 1</p>
+    </div>
+    
+    <script>
+        // Imprimir automáticamente al cargar
+        window.onload = function() {
+            window.print();
+            
+            // Cerrar la ventana después de imprimir (opcional)
+            setTimeout(function() {
+                window.close();
+            }, 1000);
+        };
+    </script>
+</body>
+</html>

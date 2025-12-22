@@ -4,7 +4,7 @@
 {% block title %}Ingresos Detallados - EduLink{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<div class="container-fluid py-4" id="reporte-ingresos">
     <div class="row">
         <div class="col-12">
             <div class="card border-0 shadow-sm">
@@ -15,30 +15,164 @@
                             <p class="text-muted mb-0">Seguimiento de tus ganancias como maestro</p>
                         </div>
                         <div class="d-flex gap-2">
-
-                            <!-- FILTRO MES (1–12) -->
-                            <select class="form-select form-select-sm" id="filtro-mes" style="width: auto;">
-                                <option value="">Todos</option>
-                                {% for numero, nombre in meses_nombres_full %}
-                                    <option value="{{ numero }}" {% if numero|stringformat:"i" == mes_filtro %}selected{% endif %}>
-                                        {{ nombre }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-
-                            <!-- FILTRO AÑO -->
-                            <select class="form-select form-select-sm" id="filtro-año" style="width: auto;">
-                                {% for año in años_disponibles %}
-                                    <option value="{{ año }}" {% if año|stringformat:"i" == año_filtro|stringformat:"i" %}selected{% endif %}>{{ año }}</option>
-                                {% endfor %}
-                            </select>
-
+                            <!-- Botones de acción -->
+                            <!-- En la parte de botones de acción -->
+<div class="dropdown">
+    <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" 
+            data-bs-toggle="dropdown" aria-expanded="false">
+        📊 Exportar/Imprimir
+    </button>
+    <ul class="dropdown-menu">
+        <li>
+            <a class="dropdown-item" href="#" onclick="exportarDatos('excel')">
+                <i class="fas fa-file-excel me-2"></i>Exportar a Excel
+            </a>
+        </li>
+        <li>
+            <a class="dropdown-item" href="#" onclick="generarReporteImpresion()">
+                <i class="fas fa-print me-2"></i>Generar Reporte para Imprimir
+            </a>
+        </li>
+        <li>
+            <a class="dropdown-item" href="#" onclick="imprimirTablaClases()">
+                <i class="fas fa-table me-2"></i>Imprimir Solo Tabla de Clases
+            </a>
+        </li>
+    </ul>
+</div>
+                        </div>
+                    </div>
+                    
+                    <!-- FILTROS AVANZADOS -->
+                    <div class="row mt-3 g-2">
+                        <div class="col-md-12">
+                            <div class="card border-light">
+                                <div class="card-body p-3">
+                                    <h6 class="mb-2">🔍 Filtros Avanzados</h6>
+                                    <form id="filtro-form" method="get" class="row g-2">
+                                        <!-- Fila 1 -->
+                                        <div class="col-md-3">
+                                            <label class="form-label small">Semana</label>
+                                            <select class="form-select form-select-sm" name="semana" id="filtro-semana">
+                                                <option value="">Todas las semanas</option>
+                                                {% for semana in semanas_disponibles %}
+                                                <option value="{{ semana }}" 
+                                                    {% if semana == filtro_semana %}selected{% endif %}>
+                                                    Semana {{ semana|slice:"-2:" }} - {{ semana|slice:":4" }}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="col-md-2">
+                                            <label class="form-label small">Mes</label>
+                                            <select class="form-select form-select-sm" name="mes" id="filtro-mes">
+                                                <option value="">Todos los meses</option>
+                                                {% for numero, nombre in meses_nombres_full %}
+                                                <option value="{{ numero }}" 
+                                                    {% if numero|stringformat:"i" == filtro_mes %}selected{% endif %}>
+                                                    {{ nombre }}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="col-md-2">
+                                            <label class="form-label small">Año</label>
+                                            <select class="form-select form-select-sm" name="año" id="filtro-año">
+                                                {% for año in años_disponibles %}
+                                                <option value="{{ año }}" 
+                                                    {% if año|stringformat:"i" == filtro_año|stringformat:"i" %}selected{% endif %}>
+                                                    {{ año }}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="col-md-3">
+                                            <label class="form-label small">Alumno</label>
+                                            <select class="form-select form-select-sm" name="alumno" id="filtro-alumno">
+                                                <option value="">Todos los alumnos</option>
+                                                {% for alumno in alumnos_disponibles %}
+                                                <option value="{{ alumno.id }}" 
+                                                    {% if alumno.id|stringformat:"i" == filtro_alumno %}selected{% endif %}>
+                                                    {{ alumno.usuario.get_full_name|default:alumno.usuario.username }}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="col-md-2">
+                                            <label class="form-label small">Materia</label>
+                                            <select class="form-select form-select-sm" name="materia" id="filtro-materia">
+                                                <option value="">Todas las materias</option>
+                                                {% for materia in materias_disponibles %}
+                                                <option value="{{ materia.id }}" 
+                                                    {% if materia.id|stringformat:"i" == filtro_materia %}selected{% endif %}>
+                                                    {{ materia.nombre }}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        
+                                        <!-- Fila 2 -->
+                                        <div class="col-md-3">
+                                            <label class="form-label small">Método de Pago</label>
+                                            <select class="form-select form-select-sm" name="metodo_pago" id="filtro-metodo-pago">
+                                                <option value="">Todos los métodos</option>
+                                                {% for key, value in metodos_pago_disponibles.items %}
+                                                <option value="{{ key }}" 
+                                                    {% if key == filtro_metodo_pago %}selected{% endif %}>
+                                                    {{ value }}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="col-md-4">
+                                            <label class="form-label small">Rango Personalizado</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="date" class="form-control" id="fecha-inicio" 
+                                                       name="fecha_inicio" value="{{ fecha_inicio }}">
+                                                <span class="input-group-text">a</span>
+                                                <input type="date" class="form-control" id="fecha-fin" 
+                                                       name="fecha_fin" value="{{ fecha_fin }}">
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-3 d-flex align-items-end">
+                                            <button type="submit" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-filter me-1"></i>Aplicar Filtros
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm ms-2" 
+                                                    onclick="limpiarFiltros()">
+                                                <i class="fas fa-times me-1"></i>Limpiar
+                                            </button>
+                                        </div>
+                                    </form>
+                                    
+                                    <!-- Información del filtro actual -->
+                                    {% if filtro_semana or filtro_mes or filtro_alumno or filtro_materia %}
+                                    <div class="mt-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Filtros aplicados: 
+                                            {% if filtro_semana %}Semana {{ filtro_semana|slice:"-2:" }} - {{ filtro_semana|slice:":4" }}{% endif %}
+                                            {% if filtro_mes %}{% for num, nombre in meses_nombres_full %}{% if num|stringformat:"i" == filtro_mes %}{{ nombre }}{% endif %}{% endfor %}{% endif %}
+                                            {% if filtro_año %}{{ filtro_año }}{% endif %}
+                                            {% if filtro_alumno %}{% for alumno in alumnos_disponibles %}{% if alumno.id|stringformat:"i" == filtro_alumno %}| Alumno: {{ alumno.usuario.get_full_name|default:alumno.usuario.username }}{% endif %}{% endfor %}{% endif %}
+                                            {% if filtro_materia %}{% for materia in materias_disponibles %}{% if materia.id|stringformat:"i" == filtro_materia %}| Materia: {{ materia.nombre }}{% endif %}{% endfor %}{% endif %}
+                                            {% if fecha_inicio and fecha_fin %}| Rango: {{ fecha_inicio }} al {{ fecha_fin }}{% endif %}
+                                        </small>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="card-body">
-                    
                     <!-- TARJETAS DE RESUMEN -->
                     <div class="row mb-4">
                         <div class="col-md-3 col-6 mb-3">
@@ -46,6 +180,7 @@
                                 <div class="card-body text-center py-3">
                                     <h5 class="card-title mb-2">Total</h5>
                                     <h2 class="mb-0">${{ total_ingresos }}</h2>
+                                    <small>{% if filtro_semana %}En la semana{% elif filtro_mes %}En el mes{% else %}Total general{% endif %}</small>
                                 </div>
                             </div>
                         </div>
@@ -55,6 +190,7 @@
                                 <div class="card-body text-center py-3">
                                     <h5 class="card-title mb-2">Clases Dictadas</h5>
                                     <h2 class="mb-0">{{ total_clases }}</h2>
+                                    <small>{% if filtro_semana %}Esta semana{% elif filtro_mes %}Este mes{% else %}Total{% endif %}</small>
                                 </div>
                             </div>
                         </div>
@@ -64,6 +200,7 @@
                                 <div class="card-body text-center py-3">
                                     <h5 class="card-title mb-2">Promedio por Clase</h5>
                                     <h2 class="mb-0">${{ promedio_por_clase }}</h2>
+                                    <small>Valor promedio</small>
                                 </div>
                             </div>
                         </div>
@@ -73,143 +210,209 @@
                                 <div class="card-body text-center py-3">
                                     <h5 class="card-title mb-2">Materias Activas</h5>
                                     <h2 class="mb-0">{{ materias_con_datos|length }}</h2>
+                                    <small>Con ingresos</small>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <div class="row">
-                        <!-- GRÁFICO Y MATERIAS -->
+                        <!-- GRÁFICO Y DETALLES -->
                         <div class="col-md-8">
-
                             <div class="card mb-4">
-                                <div class="card-header bg-white">
-                                    <h6 class="fw-bold mb-0">📈 Ingresos Mensuales - {{ año_filtro }}</h6>
+                                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                                    <h6 class="fw-bold mb-0">📈 Ingresos Mensuales - {{ filtro_año|default:años_disponibles.0 }}</h6>
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-secondary" onclick="cambiarGrafico('bar')">
+                                            <i class="fas fa-chart-bar"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary" onclick="cambiarGrafico('line')">
+                                            <i class="fas fa-chart-line"></i>
+                                        </button>
+                                    </div>
                                 </div>
                                 <div class="card-body">
                                     <canvas id="graficoIngresos" height="250"></canvas>
                                 </div>
                             </div>
 
+                            <!-- TABLA DETALLADA DE CLASES -->
                             <div class="card">
-                                <div class="card-header bg-white">
-                                    <h6 class="fw-bold mb-0">📚 Ingresos por Materia</h6>
+                                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                                    <h6 class="fw-bold mb-0">📋 Detalle de Clases ({{ total_clases }})</h6>
+                                    <div>
+                                        <span class="badge bg-primary me-2">Total: ${{ total_ingresos }}</span>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="imprimirTablaClases()">
+                                            <i class="fas fa-print"></i>
+                                        </button>
+                                    </div>
                                 </div>
+
                                 <div class="card-body">
-                                    {% if materias_con_datos %}
+                                    {% if clases_pagadas %}
                                         <div class="table-responsive">
-                                            <table class="table table-sm table-hover">
-                                                <thead class="table-light">
+                                            <table class="table table-striped table-hover" id="tabla-clases">
+                                                <thead class="table-dark">
                                                     <tr>
+                                                        <th>Fecha Pago</th>
+                                                        <th>Alumno</th>
                                                         <th>Materia</th>
-                                                        <th class="text-end">Ingresos</th>
-                                                        <th class="text-end">Porcentaje</th>
+                                                        <th class="text-center">Duración</th>
+                                                        <th>Método Pago</th>
+                                                        <th class="text-end">Monto</th>
+                                                        <th class="text-center">Acciones</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {% for materia in materias_con_datos %}
+                                                    {% for clase in clases_pagadas %}
                                                     <tr>
-                                                        <td>{{ materia.nombre }}</td>
-                                                        <td class="text-end fw-bold">${{ materia.monto }}</td>
-                                                        <td class="text-end">{{ materia.porcentaje }}%</td>
+                                                        <td>
+                                                            <div>{{ clase.fecha_pago|date:"d/m/Y" }}</div>
+                                                            <small class="text-muted">{{ clase.fecha_pago|date:"H:i" }}</small>
+                                                        </td>
+                                                        <td>
+                                                            <span class="fw-semibold">
+                                                                {{ clase.alumno.usuario.get_full_name|default:clase.alumno.usuario.username|truncatechars:20 }}
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            <span class="fw-semibold">
+                                                                {{ clase.materia.nombre|truncatechars:20 }}
+                                                            </span>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <span class="badge bg-info">{{ clase.duracion_minutos }} min</span>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge bg-secondary">
+                                                                {{ clase.get_metodo_pago_display }}
+                                                            </span>
+                                                        </td>
+                                                        <td class="text-end fw-bold">
+                                                            ${{ clase.monto_acordado }}
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <button class="btn btn-sm btn-outline-primary" 
+                                                                    onclick="verDetalleClase({{ clase.id }})"
+                                                                    data-bs-toggle="tooltip" title="Ver detalles">
+                                                                <i class="fas fa-eye"></i>
+                                                            </button>
+                                                        </td>
                                                     </tr>
                                                     {% endfor %}
                                                 </tbody>
+                                                <tfoot class="table-light">
+                                                    <tr>
+                                                        <td colspan="5" class="text-end fw-bold">Total:</td>
+                                                        <td class="text-end fw-bold fs-5">${{ total_ingresos }}</td>
+                                                        <td></td>
+                                                    </tr>
+                                                </tfoot>
                                             </table>
                                         </div>
                                     {% else %}
-                                        <p class="text-muted text-center">No hay ingresos.</p>
+                                        <div class="text-center py-5">
+                                            <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                                            <p class="text-muted">No hay clases pagadas para mostrar.</p>
+                                            <p class="text-muted small">Aplica diferentes filtros para ver los datos.</p>
+                                        </div>
                                     {% endif %}
                                 </div>
                             </div>
                         </div>
 
-                        <!-- ALUMNOS Y MÉTODOS DE PAGO -->
+                        <!-- PANEL LATERAL CON ESTADÍSTICAS -->
                         <div class="col-md-4">
+                            <!-- INGRESOS POR MATERIA (SIEMPRE TODAS) -->
                             <div class="card mb-4">
-                                <div class="card-header bg-white">
+                                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                                    <h6 class="fw-bold mb-0">📚 Ingresos por Materia</h6>
+                                    <small class="text-muted">Total general</small>
+                                </div>
+                                <div class="card-body">
+                                    {% if materias_todas %}
+                                        <div class="list-group list-group-flush">
+                                            {% for materia, monto in materias_todas.items|slice:":8" %}
+                                                <div class="list-group-item px-0 border-0">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <div>
+                                                            <span class="fw-semibold">{{ materia|truncatechars:20 }}</span>
+                                                        </div>
+                                                        <div class="text-end">
+                                                            <span class="badge bg-success">${{ monto|floatformat:2 }}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="progress mt-2" style="height: 5px;">
+                                                        <div class="progress-bar bg-success" 
+                                                             style="width: {% widthratio monto total_ingresos 100 %}%"></div>
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                        <div class="text-center mt-3">
+                                            <a href="#" class="btn btn-sm btn-outline-primary" onclick="verTodasMaterias()">
+                                                Ver todas las materias
+                                            </a>
+                                        </div>
+                                    {% else %}
+                                        <p class="text-muted text-center py-3">No hay datos de materias.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- TOP ALUMNOS -->
+                            <div class="card mb-4">
+                                <div class="card-header bg-white d-flex justify-content-between align-items-center">
                                     <h6 class="fw-bold mb-0">👥 Top Alumnos</h6>
+                                    <small class="text-muted">Por gasto total</small>
                                 </div>
                                 <div class="card-body">
                                     {% if alumnos_con_datos %}
                                         <div class="list-group list-group-flush">
                                             {% for alumno in alumnos_con_datos %}
-                                                <div class="list-group-item px-0">
+                                                <div class="list-group-item list-group-item-action px-0 border-0"
+                                                     onclick="filtrarPorAlumno({{ alumno.alumno_id }})" 
+                                                     style="cursor: pointer;">
                                                     <div class="d-flex justify-content-between align-items-start">
-                                                        <div>
-                                                            <h6 class="mb-1">{{ alumno.nombre }}</h6>
-                                                            <small class="text-muted">{{ alumno.clases }} clases</small>
+                                                        <div class="flex-grow-1">
+                                                            <h6 class="mb-1">{{ alumno.nombre|truncatechars:20 }}</h6>
+                                                            <small class="text-muted">{{ alumno.clases }} clase{{ alumno.clases|pluralize }}</small>
                                                         </div>
-                                                        <span class="badge bg-success fs-6">${{ alumno.monto }}</span>
+                                                        <div class="text-end">
+                                                            <span class="badge bg-success fs-6">${{ alumno.monto }}</span>
+                                                            <br>
+                                                            <small class="text-muted">${{ alumno.promedio_por_clase|floatformat:0 }}/clase</small>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             {% endfor %}
                                         </div>
                                     {% else %}
-                                        <p class="text-muted text-center">Sin datos.</p>
+                                        <p class="text-muted text-center py-3">Sin datos para mostrar.</p>
                                     {% endif %}
                                 </div>
                             </div>
 
+                            <!-- MÉTODOS DE PAGO -->
                             <div class="card">
                                 <div class="card-header bg-white">
                                     <h6 class="fw-bold mb-0">💳 Métodos de Pago</h6>
                                 </div>
                                 <div class="card-body">
                                     {% if metodos_pago %}
-                                        {% for metodo, cantidad in metodos_pago.items %}
-                                        <div class="d-flex justify-content-between border-bottom py-2">
-                                            <span>{{ metodo }}</span>
-                                            <span class="badge bg-primary">{{ cantidad }}</span>
-                                        </div>
-                                        {% endfor %}
-                                    {% else %}
-                                        <p class="text-muted text-center">Sin datos.</p>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- TABLA CLASES -->
-                    <div class="row mt-4">
-                        <div class="col-12">
-                            <div class="card">
-                                <div class="card-header bg-white d-flex justify-content-between">
-                                    <h6 class="fw-bold mb-0">📋 Todas las Clases</h6>
-                                    <span class="badge bg-primary">Total: ${{ total_ingresos }}</span>
-                                </div>
-
-                                <div class="card-body">
-                                    {% if clases_pagadas %}
-                                        <div class="table-responsive">
-                                            <table class="table table-striped table-hover">
-                                                <thead class="table-dark">
-                                                    <tr>
-                                                        <th>Fecha Pago</th>
-                                                        <th>Alumno</th>
-                                                        <th>Materia</th>
-                                                        <th>Duración</th>
-                                                        <th>Método Pago</th>
-                                                        <th class="text-end">Monto</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {% for clase in clases_pagadas %}
-                                                    <tr>
-                                                        <td>{{ clase.fecha_pago|date:"d/m/Y H:i" }}</td>
-                                                        <td>{{ clase.alumno.usuario.get_full_name|default:clase.alumno.usuario.username }}</td>
-                                                        <td>{{ clase.materia.nombre }}</td>
-                                                        <td>{{ clase.duracion_minutos }} min</td>
-                                                        <td>{{ clase.get_metodo_pago_display }}</td>
-                                                        <td class="text-end fw-bold">${{ clase.monto_acordado }}</td>
-                                                    </tr>
-                                                    {% endfor %}
-                                                </tbody>
-                                            </table>
+                                        <div class="row">
+                                            {% for metodo, cantidad in metodos_pago.items %}
+                                            <div class="col-6 mb-2">
+                                                <div class="border rounded p-2 text-center bg-light">
+                                                    <small class="text-muted d-block">{{ metodo }}</small>
+                                                    <span class="fw-bold">{{ cantidad }}</span>
+                                                    <small class="text-muted d-block">clase{{ cantidad|pluralize }}</small>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
                                         </div>
                                     {% else %}
-                                        <p class="text-muted text-center py-4">No hay clases pagadas.</p>
+                                        <p class="text-muted text-center py-3">Sin datos.</p>
                                     {% endif %}
                                 </div>
                             </div>
@@ -221,58 +424,434 @@
         </div>
     </div>
 </div>
+
+<!-- Modal para detalles de clase -->
+<div class="modal fade" id="modalDetalleClase" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i>Detalles de la Clase</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detalle-clase-content">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <p class="mt-2">Cargando detalles...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para todas las materias -->
+<div class="modal fade" id="modalTodasMaterias" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-book me-2"></i>Todas las Materias</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Materia</th>
+                                <th class="text-end">Ingresos Totales</th>
+                                <th class="text-end">Porcentaje</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for materia, monto in materias_todas.items|dictsortreversed:1 %}
+                            <tr>
+                                <td>{{ materia }}</td>
+                                <td class="text-end fw-bold">${{ monto|floatformat:2 }}</td>
+                                <td class="text-end">
+                                    <span class="badge bg-info">
+                                        {% widthratio monto total_ingresos 100 %}%
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-
-    // Filtros
-    document.getElementById('filtro-mes').addEventListener('change', aplicarFiltros);
-    document.getElementById('filtro-año').addEventListener('change', aplicarFiltros);
-
-    function aplicarFiltros() {
-        const mes = document.getElementById('filtro-mes').value;
-        const año = document.getElementById('filtro-año').value;
-
-        let url = `{% url 'ingresos_detallados' %}?mes=${mes}&año=${año}`;
-        window.location.href = url;
-    }
-
-    // Chart
-    const ctx = document.getElementById('graficoIngresos').getContext('2d');
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: {{ meses_nombres|safe }},
-            datasets: [{
-                label: 'Ingresos ($)',
-                data: {{ ingresos_mensuales|safe }},
-                backgroundColor: 'rgba(54, 162, 235, 0.8)',
-            }]
-        },
-        options: { responsive: true }
+    let chartInstance = null;
+    let chartType = 'bar';
+    
+    // Inicializar tooltips de Bootstrap
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
     });
-
+    
+    // Inicializar gráfico
+    function inicializarGrafico() {
+        const ctx = document.getElementById('graficoIngresos').getContext('2d');
+        
+        if (chartInstance) {
+            chartInstance.destroy();
+        }
+        
+        chartInstance = new Chart(ctx, {
+            type: chartType,
+            data: {
+                labels: {{ meses_nombres|safe }},
+                datasets: [{
+                    label: 'Ingresos ($)',
+                    data: {{ ingresos_mensuales|safe }},
+                    backgroundColor: chartType === 'bar' ? 'rgba(54, 162, 235, 0.8)' : 'transparent',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 2,
+                    fill: chartType === 'line',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `$${context.parsed.y.toFixed(2)}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Cambiar tipo de gráfico
+    window.cambiarGrafico = function(tipo) {
+        chartType = tipo;
+        inicializarGrafico();
+    };
+    
+    // Aplicar filtros desde formulario
+    document.getElementById('filtro-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const params = new URLSearchParams();
+        
+        // Agregar todos los campos del formulario
+        for (let [key, value] of formData.entries()) {
+            if (value) {
+                params.append(key, value);
+            }
+        }
+        
+        window.location.href = `{% url 'ingresos_detallados' %}?${params.toString()}`;
+    });
+    
+    // Limpiar filtros
+    window.limpiarFiltros = function() {
+        window.location.href = '{% url "ingresos_detallados" %}';
+    };
+    
+// Exportar datos (cambia 'csv' por 'excel')
+window.exportarDatos = function(formato) {
+    const params = new URLSearchParams(window.location.search);
+    params.set('exportar', formato);
+    window.location.href = `{% url 'ingresos_detallados' %}?${params.toString()}`;
+};
+    
+    // Generar reporte para impresión
+    window.generarReporteImpresion = function() {
+        const params = new URLSearchParams(window.location.search);
+        params.set('print', 'true');
+        window.open(`{% url 'ingresos_detallados' %}?${params.toString()}`, '_blank');
+    };
+    
+    // Imprimir solo tabla de clases
+    window.imprimirTablaClases = function() {
+        const tablaClases = document.getElementById('tabla-clases').outerHTML;
+        const ventana = window.open('', '_blank');
+        
+        const contenido = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Tabla de Clases - EduLink</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; }
+                    table { width: 100%; border-collapse: collapse; }
+                    th { background: #333; color: white; padding: 10px; }
+                    td { padding: 8px; border-bottom: 1px solid #ddd; }
+                    .text-end { text-align: right; }
+                    .text-center { text-align: center; }
+                    h1 { text-align: center; }
+                    .footer { margin-top: 30px; text-align: center; color: #666; }
+                </style>
+            </head>
+            <body>
+                <h1>Tabla de Clases - EduLink</h1>
+                <p>Generado: ${new Date().toLocaleDateString()}</p>
+                ${tablaClases}
+                <div class="footer">
+                    <p>Reporte generado por EduLink</p>
+                </div>
+                <script>
+                    window.onload = function() {
+                        window.print();
+                        setTimeout(function() { window.close(); }, 500);
+                    };
+                <\/script>
+            </body>
+            </html>
+        `;
+        
+        ventana.document.write(contenido);
+        ventana.document.close();
+    };
+    
+// Ver detalle de clase
+window.verDetalleClase = function(claseId) {
+    // Mostrar modal con spinner
+    const modal = new bootstrap.Modal(document.getElementById('modalDetalleClase'));
+    modal.show();
+    
+    // Mostrar loading
+    document.getElementById('detalle-clase-content').innerHTML = `
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-2">Cargando detalles de la clase...</p>
+        </div>
+    `;
+    
+    // Hacer petición AJAX
+    fetch(`/api/clase/${claseId}/detalle/`)
+        .then(response => {
+            if (!response.ok) {
+                // Si la respuesta no es OK, intentar obtener el mensaje de error
+                return response.json().then(err => {
+                    throw new Error(err.error || `Error ${response.status}: ${response.statusText}`);
+                }).catch(() => {
+                    throw new Error(`Error ${response.status}: ${response.statusText}`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Verificar si hay error en los datos
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            // Construir el HTML con los datos
+            let html = `
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">Alumno</h6>
+                                <h5 class="card-text">${data.alumno}</h5>
+                                <p class="card-text small">
+                                    <i class="fas fa-envelope me-1"></i> ${data.email_alumno || 'No disponible'}<br>
+                                    <i class="fas fa-phone me-1"></i> ${data.telefono_alumno || 'No disponible'}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">Materia</h6>
+                                <h5 class="card-text">${data.materia}</h5>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">Fecha y Hora</h6>
+                                <h5 class="card-text">${data.fecha}</h5>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">Duración</h6>
+                                <h5 class="card-text">${data.duracion} minutos</h5>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">Método de Pago</h6>
+                                <h5 class="card-text">${data.metodo_pago}</h5>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body">
+                                <h6 class="card-title">Monto</h6>
+                                <h2 class="card-text">${data.monto}</h2>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">Estado</h6>
+                                <h5><span class="badge bg-success">${data.estado}</span></h5>
+                            </div>
+                        </div>
+                    </div>
+            `;
+            
+            // Agregar comentarios solo si existen y no son el texto por defecto
+            if (data.comentarios && data.comentarios !== 'Sin comentarios') {
+                html += `
+                    <div class="col-12 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted">Comentarios</h6>
+                                <p class="card-text">${data.comentarios}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += `</div>`;
+            document.getElementById('detalle-clase-content').innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('detalle-clase-content').innerHTML = `
+                <div class="alert alert-danger">
+                    <h5><i class="fas fa-exclamation-triangle me-2"></i>Error al cargar los detalles</h5>
+                    <p>${error.message}</p>
+                    <p class="small text-muted">ID de clase: ${claseId}</p>
+                    <button class="btn btn-sm btn-primary mt-2" onclick="verDetalleClase(${claseId})">
+                        <i class="fas fa-redo me-1"></i>Intentar nuevamente
+                    </button>
+                </div>
+            `;
+        });
+};
+    
+    // Ver todas las materias
+    window.verTodasMaterias = function() {
+        const modal = new bootstrap.Modal(document.getElementById('modalTodasMaterias'));
+        modal.show();
+    };
+    
+    // Filtrar por alumno
+    window.filtrarPorAlumno = function(alumnoId) {
+        const params = new URLSearchParams(window.location.search);
+        params.set('alumno', alumnoId);
+        window.location.href = `{% url 'ingresos_detallados' %}?${params.toString()}`;
+    };
+    
+    // Establecer fechas por defecto para rango personalizado
+    function establecerFechasPorDefecto() {
+        const hoy = new Date();
+        const haceUnMes = new Date();
+        haceUnMes.setMonth(haceUnMes.getMonth() - 1);
+        
+        if (!document.getElementById('fecha-inicio').value) {
+            document.getElementById('fecha-inicio').value = haceUnMes.toISOString().split('T')[0];
+        }
+        if (!document.getElementById('fecha-fin').value) {
+            document.getElementById('fecha-fin').value = hoy.toISOString().split('T')[0];
+        }
+    }
+    
+    // Inicializar todo
+    inicializarGrafico();
+    establecerFechasPorDefecto();
 });
 </script>
-
 {% endblock %}
 
 {% block extra_css %}
-
 <style>
 .card {
-    border-radius: 10px;
+    border-radius: 12px;
+    transition: transform 0.2s;
 }
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
 .table th {
     border-top: none;
     font-weight: 600;
+    background-color: #f8f9fa;
 }
-.list-group-item {
-    border: none;
-    padding: 0.75rem 0;
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+.badge {
+    font-weight: 500;
+}
+
+/* Progress bars */
+.progress {
+    background-color: #e9ecef;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+    
+    .btn-group {
+        margin-top: 0.5rem;
+    }
 }
 </style>
 {% endblock %}

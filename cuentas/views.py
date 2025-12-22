@@ -9,6 +9,7 @@ from .forms import RegistroPersonaForm, RegistroAlumnoForm, RegistroMaestroForm,
 from .models import Departamento, Municipio, Localidad, Provincia, Maestro, Alumno, Usuario, DisponibilidadUsuario, BlocNotas, Tarea, SesionEstudio, Nota, Promocion, Voucher
 from catalogo.models import Materia
 import math
+import calendar
 from django.db.models.functions import Coalesce
 
 from .utils import enviar_email
@@ -25,11 +26,17 @@ from django.http import JsonResponse
 from django.db.models import Count, Avg, Q, Sum, Exists, OuterRef
 from .models import Notificacion, Reseña
 import json
+import csv
 from datetime import datetime, timedelta
 
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib import messages
 from django.shortcuts import redirect
+
+# Excel (openpyxl) imports usados por exportar_excel
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
 
 
 
@@ -3229,125 +3236,149 @@ def sinonimos_antonimos(request):
 
 
 
+
+
+
 @login_required
 def ingresos_detallados(request):
-    """Vista detallada de ingresos del maestro - TODOS LOS CÁLCULOS EN VISTA (fusionado con filtros de año/mes)"""
+    """Vista detallada de ingresos del maestro con múltiples filtros"""
     try:
         perfil_maestro = Maestro.objects.get(usuario=request.user)
     except Maestro.DoesNotExist:
         messages.error(request, "No tienes un perfil de maestro.")
         return redirect("dashboard_maestro")
     
-    # ======== Fechas base ========
-    ahora = timezone.now()
-    mes_actual = ahora.month
-    año_actual = ahora.year
-
-    # ======== Obtener todas las clases pagadas ========
+    # Obtener todas las clases pagadas
     clases_pagadas = SolicitudClase.objects.filter(
         maestro=perfil_maestro,
         estado_pago='pagado'
     ).select_related('alumno', 'alumno__usuario', 'materia').order_by('-fecha_pago')
-
-    # ======================================================
-    #   FUSIÓN DEL SISTEMA DE FILTROS:
-    #   - Tus filtros: actual / anterior / año
-    #   - Filtros del código nuevo: mes & año manuales
-    # ======================================================
-
-    filtro_mes = request.GET.get('mes', None)        # Puede ser: "actual", "anterior", "5", "8", etc.
-    filtro_año = request.GET.get('año', año_actual) # Puede ser numérico
-
-    try:
-        filtro_año = int(filtro_año)
-    except (ValueError, TypeError):
-        filtro_año = año_actual
-
-    clases_filtradas = clases_pagadas
-    mes_nombre = ""
-
-    # ===============================
-    #   PARTES DEL CÓDIGO NUEVO
-    #   Si mes es un número → usar filtro tradicional
-    # ===============================
-    if filtro_mes and filtro_mes.isdigit():
-        try:
-            mes_int = int(filtro_mes)
-            clases_filtradas = clases_pagadas.filter(
-                fecha_pago__year=filtro_año,
-                fecha_pago__month=mes_int
-            )
-            mes_nombre = f"{mes_int}/{filtro_año}"
-        except:
-            pass
-
-    else:
-        # ===============================
-        #   TU SISTEMA DE FILTROS ORIGINAL
-        # ===============================
-
-        if filtro_mes == 'actual':
-            clases_filtradas = clases_pagadas.filter(
-                fecha_pago__month=mes_actual,
-                fecha_pago__year=año_actual
-            )
-            mes_nombre = ahora.strftime("%B %Y")
-
-        elif filtro_mes == 'anterior':
-            if mes_actual == 1:
-                mes_anterior = 12
-                año_anterior = año_actual - 1
-            else:
-                mes_anterior = mes_actual - 1
-                año_anterior = año_actual
-            
-            clases_filtradas = clases_pagadas.filter(
-                fecha_pago__month=mes_anterior,
-                fecha_pago__year=año_anterior
-            )
-            fecha_anterior = ahora.replace(month=mes_anterior, year=año_anterior)
-            mes_nombre = fecha_anterior.strftime("%B %Y")
-
-        else:
-            clases_filtradas = clases_pagadas.filter(
-                fecha_pago__year=filtro_año
-            )
-            mes_nombre = f"Año {filtro_año}"
-
-    # ======================================================
-    #   CALCULAR TODO EN LA VISTA - NO EN EL TEMPLATE
-    # ======================================================
-
-    # 1. Total de ingresos y clases
-    total_ingresos = 0
-    total_clases = clases_filtradas.count()
     
-    for clase in clases_filtradas:
-        if clase.monto_acordado:
-            total_ingresos += float(clase.monto_acordado)
-
-    # 2. Promedio por clase
+    # ========== FILTROS ==========
+    filtro_mes = request.GET.get('mes', '')
+    filtro_año = request.GET.get('año', timezone.now().year)
+    filtro_semana = request.GET.get('semana', '')
+    filtro_alumno = request.GET.get('alumno', '')
+    filtro_materia = request.GET.get('materia', '')
+    filtro_metodo_pago = request.GET.get('metodo_pago', '')
+    fecha_inicio = request.GET.get('fecha_inicio', '')
+    fecha_fin = request.GET.get('fecha_fin', '')
+    exportar = request.GET.get('exportar', '')
+    print_mode = request.GET.get('print', False)
+    
+    # Aplicar filtros
+    clases_filtradas = clases_pagadas
+    
+    # Filtro por año
+    if filtro_año:
+        try:
+            año = int(filtro_año)
+            clases_filtradas = clases_filtradas.filter(fecha_pago__year=año)
+        except (ValueError, TypeError):
+            pass
+    
+    # Filtro por mes
+    if filtro_mes and filtro_mes.isdigit():
+        mes = int(filtro_mes)
+        clases_filtradas = clases_filtradas.filter(fecha_pago__month=mes)
+    
+    # Filtro por semana
+    if filtro_semana:
+        try:
+            # Formato: YYYY-WW
+            año_semana, numero_semana = map(int, filtro_semana.split('-W'))
+            # Encontrar el lunes de esa semana
+            primera_fecha = datetime(año_semana, 1, 1)
+            dias_para_lunes = (0 - primera_fecha.weekday()) % 7
+            fecha_inicio_semana = primera_fecha + timedelta(days=dias_para_lunes + (numero_semana - 1) * 7)
+            fecha_fin_semana = fecha_inicio_semana + timedelta(days=6)
+            
+            clases_filtradas = clases_filtradas.filter(
+                fecha_pago__date__range=[fecha_inicio_semana, fecha_fin_semana]
+            )
+        except (ValueError, TypeError):
+            pass
+    
+    # Filtro por rango de fechas personalizado
+    if fecha_inicio and fecha_fin:
+        try:
+            fecha_inicio_obj = datetime.strptime(fecha_inicio, '%Y-%m-%d')
+            fecha_fin_obj = datetime.strptime(fecha_fin, '%Y-%m-%d')
+            clases_filtradas = clases_filtradas.filter(
+                fecha_pago__date__range=[fecha_inicio_obj, fecha_fin_obj]
+            )
+        except (ValueError, TypeError):
+            pass
+    
+    # Filtro por alumno
+    if filtro_alumno:
+        clases_filtradas = clases_filtradas.filter(alumno_id=filtro_alumno)
+    
+    # Filtro por materia
+    if filtro_materia:
+        clases_filtradas = clases_filtradas.filter(materia_id=filtro_materia)
+    
+    # Filtro por método de pago
+    if filtro_metodo_pago:
+        clases_filtradas = clases_filtradas.filter(metodo_pago=filtro_metodo_pago)
+    
+    # ========== EXPORTACIÓN ==========
+    if exportar == 'excel':
+        return exportar_excel(clases_filtradas, filtros={
+            'mes': filtro_mes,
+            'año': filtro_año,
+            'semana': filtro_semana,
+            'alumno': filtro_alumno,
+            'materia': filtro_materia,
+            'metodo_pago': filtro_metodo_pago,
+            'fecha_inicio': fecha_inicio,
+            'fecha_fin': fecha_fin
+        })
+    elif exportar == 'print':
+        return imprimir_reporte(request, clases_filtradas, {
+            'mes': filtro_mes,
+            'año': filtro_año,
+            'semana': filtro_semana,
+            'alumno': filtro_alumno,
+            'materia': filtro_materia,
+            'fecha_inicio': fecha_inicio,
+            'fecha_fin': fecha_fin
+        })
+    
+    # ========== CÁLCULOS ==========
+    total_ingresos = sum(float(clase.monto_acordado) for clase in clases_filtradas if clase.monto_acordado)
+    total_clases = clases_filtradas.count()
     promedio_por_clase = total_ingresos / total_clases if total_clases > 0 else 0
-
-    # 3. Ingresos por materia
+    
+    # Ingresos por materia (SOLO para el panel lateral)
     ingresos_por_materia = {}
+    materias_todas = {}
+    
+    for clase in clases_pagadas:
+        if clase.monto_acordado:
+            materia_nombre = clase.materia.nombre
+            monto = float(clase.monto_acordado)
+            materias_todas[materia_nombre] = materias_todas.get(materia_nombre, 0) + monto
+    
+    # Ingresos por materia (con filtros aplicados)
     for clase in clases_filtradas:
         if clase.monto_acordado:
-            materia = clase.materia.nombre
+            materia_nombre = clase.materia.nombre
             monto = float(clase.monto_acordado)
-            ingresos_por_materia[materia] = ingresos_por_materia.get(materia, 0) + monto
-
+            ingresos_por_materia[materia_nombre] = ingresos_por_materia.get(materia_nombre, 0) + monto
+    
     materias_con_datos = [
         {
             'nombre': materia,
             'monto': round(monto, 2),
-            'porcentaje': round((monto / total_ingresos * 100), 1) if total_ingresos > 0 else 0
+            'porcentaje': round((monto / total_ingresos * 100), 1) if total_ingresos > 0 else 0,
+            'id': next((clase.materia.id for clase in clases_filtradas if clase.materia.nombre == materia), None)
         }
         for materia, monto in ingresos_por_materia.items()
     ]
     materias_con_datos.sort(key=lambda x: x['monto'], reverse=True)
-
-    # 4. Ingresos por alumno
+    
+    # Ingresos por alumno
     ingresos_por_alumno = {}
     for clase in clases_filtradas:
         if clase.monto_acordado:
@@ -3361,62 +3392,416 @@ def ingresos_detallados(request):
                 }
             ingresos_por_alumno[alumno_nombre]['monto'] += monto
             ingresos_por_alumno[alumno_nombre]['clases'] += 1
-
+    
     alumnos_con_datos = [
         {
             'nombre': nombre,
             'monto': round(datos['monto'], 2),
             'clases': datos['clases'],
-            'alumno_id': datos['alumno_id']
+            'alumno_id': datos['alumno_id'],
+            'promedio_por_clase': round(datos['monto'] / datos['clases'], 2) if datos['clases'] > 0 else 0
         }
         for nombre, datos in ingresos_por_alumno.items()
     ]
     alumnos_con_datos.sort(key=lambda x: x['monto'], reverse=True)
-
-    # 5. Ingresos mensuales (como el código nuevo)
+    
+    # Ingresos mensuales para gráfico
     ingresos_mensuales = []
     meses_nombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 
                      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
-
+    
+    año_grafico = int(filtro_año) if filtro_año else timezone.now().year
     for mes in range(1, 13):
+        clases_mes = clases_pagadas.filter(
+            fecha_pago__month=mes, 
+            fecha_pago__year=año_grafico
+        )
         ingresos_mes = sum(
-            float(clase.monto_acordado)
-            for clase in clases_pagadas.filter(fecha_pago__month=mes, fecha_pago__year=filtro_año)
-            if clase.monto_acordado
+            float(clase.monto_acordado) for clase in clases_mes if clase.monto_acordado
         )
         ingresos_mensuales.append(round(ingresos_mes, 2))
-
-    # 6. Años disponibles
+    
+    # Años disponibles
     años_disponibles = list(set([
         clase.fecha_pago.year for clase in clases_pagadas if clase.fecha_pago
     ]))
-    años_disponibles = sorted(años_disponibles, reverse=True) or [año_actual]
-
-    # 7. Métodos de pago
+    años_disponibles = sorted(años_disponibles, reverse=True) or [timezone.now().year]
+    
+    # Métodos de pago
     metodos_pago = {}
     for clase in clases_filtradas:
         metodo = clase.get_metodo_pago_display()
         metodos_pago[metodo] = metodos_pago.get(metodo, 0) + 1
-
-    # ===== CONTEXTO FINAL =====
+    
+    # Datos para filtros
+    alumnos_disponibles = Alumno.objects.filter(
+        solicitudclase__in=clases_pagadas
+    ).distinct().select_related('usuario')
+    
+    materias_disponibles = Materia.objects.filter(
+        solicitudclase__in=clases_pagadas
+    ).distinct()
+    
+    # Semanas disponibles (últimas 12 semanas)
+    semanas_disponibles = []
+    hoy = timezone.now().date()
+    for i in range(12):
+        fecha = hoy - timedelta(weeks=i)
+        año, semana, _ = fecha.isocalendar()
+        semanas_disponibles.append(f"{año}-W{semana:02d}")
+    
+    # Métodos de pago disponibles
+    metodos_pago_disponibles = dict(SolicitudClase.METODO_PAGO_CHOICES)
+    
+    # ========== CONTEXTO ==========
     context = {
         'clases_pagadas': clases_filtradas,
         'total_ingresos': round(total_ingresos, 2),
         'total_clases': total_clases,
         'promedio_por_clase': round(promedio_por_clase, 2),
         'materias_con_datos': materias_con_datos,
-        'alumnos_con_datos': alumnos_con_datos[:5],  # top 5
+        'materias_todas': materias_todas,
+        'alumnos_con_datos': alumnos_con_datos[:10],
         'ingresos_mensuales': ingresos_mensuales,
         'meses_nombres': meses_nombres,
-        'mes_nombre': mes_nombre,
+        'meses_nombres_full': list(enumerate(calendar.month_name[1:], start=1)),
         'filtro_mes': filtro_mes,
         'filtro_año': filtro_año,
+        'filtro_semana': filtro_semana,
+        'filtro_alumno': filtro_alumno,
+        'filtro_materia': filtro_materia,
+        'filtro_metodo_pago': filtro_metodo_pago,
         'años_disponibles': años_disponibles,
         'metodos_pago': metodos_pago,
-        'año_actual': año_actual,
+        'alumnos_disponibles': alumnos_disponibles,
+        'materias_disponibles': materias_disponibles,
+        'semanas_disponibles': semanas_disponibles,
+        'metodos_pago_disponibles': metodos_pago_disponibles,
+        'print_mode': print_mode,
+        'fecha_inicio': fecha_inicio,
+        'fecha_fin': fecha_fin,
     }
     
+    if print_mode:
+        return render(request, 'maestro/reporte_impresion.html', context)
+    
     return render(request, 'maestro/ingresos_detallados.html', context)
+
+
+
+def exportar_excel(queryset, filtros=None):
+    """Exportar datos a Excel (xlsx)"""
+    # Crear libro de trabajo
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Ingresos"
+    
+    # Estilos
+    header_font = Font(bold=True, color="FFFFFF", size=12)
+    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    header_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    
+    title_font = Font(bold=True, size=14, color="366092")
+    summary_font = Font(bold=True, color="2F5597")
+    
+    border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # Título del reporte
+    ws.merge_cells('A1:H1')
+    ws['A1'] = "📊 REPORTE DE INGRESOS - EDULINK"
+    ws['A1'].font = title_font
+    ws['A1'].alignment = Alignment(horizontal="center")
+    
+    # Información de filtros
+    if filtros:
+        filtros_texto = []
+        if filtros.get('año'):
+            filtros_texto.append(f"Año: {filtros['año']}")
+        if filtros.get('mes'):
+            for num, nombre in enumerate(calendar.month_name[1:], 1):
+                if str(num) == str(filtros['mes']):
+                    filtros_texto.append(f"Mes: {nombre}")
+                    break
+        if filtros.get('semana'):
+            filtros_texto.append(f"Semana: {filtros['semana']}")
+        if filtros.get('fecha_inicio') and filtros.get('fecha_fin'):
+            filtros_texto.append(f"Rango: {filtros['fecha_inicio']} a {filtros['fecha_fin']}")
+        
+        if filtros_texto:
+            ws.merge_cells('A2:H2')
+            ws['A2'] = " | ".join(filtros_texto)
+            ws['A2'].font = Font(italic=True, color="808080")
+            ws['A2'].alignment = Alignment(horizontal="center")
+    
+    # Fecha de generación
+    ws.merge_cells('A3:H3')
+    ws['A3'] = f"Generado: {timezone.now().strftime('%d/%m/%Y %H:%M:%S')}"
+    ws['A3'].font = Font(italic=True, color="808080")
+    ws['A3'].alignment = Alignment(horizontal="center")
+    
+    # Espacio
+    ws.append([])
+    
+    # Encabezados de la tabla
+    headers = [
+        'Fecha Pago', 'Hora', 'Alumno', 'Correo Alumno', 'Teléfono Alumno',
+        'Materia', 'Duración (min)', 'Método de Pago', 'Monto ($)', 'Estado'
+    ]
+    
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=6, column=col_num, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_alignment
+        cell.border = border
+    
+    # Datos
+    row_num = 7
+    total_ingresos = 0
+    
+    for clase in queryset:
+        # Obtener información del alumno
+        alumno_nombre = clase.alumno.usuario.get_full_name() or clase.alumno.usuario.username
+        alumno_email = clase.alumno.usuario.email if clase.alumno.usuario.email else "No disponible"
+        
+        # Obtener teléfono del alumno (dependiendo de tu modelo)
+        alumno_telefono = "No disponible"
+        try:
+            # Si tu modelo Alumno tiene campo telefono
+            if hasattr(clase.alumno, 'telefono') and clase.alumno.telefono:
+                alumno_telefono = clase.alumno.telefono
+            # Si el teléfono está en el modelo User
+            elif hasattr(clase.alumno.usuario, 'telefono') and clase.alumno.usuario.telefono:
+                alumno_telefono = clase.alumno.usuario.telefono
+            # Si tienes un perfil con teléfono
+            elif hasattr(clase.alumno, 'perfil') and hasattr(clase.alumno.perfil, 'telefono'):
+                alumno_telefono = clase.alumno.perfil.telefono
+        except:
+            alumno_telefono = "No disponible"
+        
+        # Fecha y hora separadas
+        fecha_pago = clase.fecha_pago.strftime('%d/%m/%Y') if clase.fecha_pago else ""
+        hora_pago = clase.fecha_pago.strftime('%H:%M') if clase.fecha_pago else ""
+        
+        # Datos de la fila
+        row_data = [
+            fecha_pago,
+            hora_pago,
+            alumno_nombre,
+            alumno_email,
+            alumno_telefono,
+            clase.materia.nombre,
+            clase.duracion_minutos,
+            clase.get_metodo_pago_display(),
+            float(clase.monto_acordado) if clase.monto_acordado else 0,
+            clase.get_estado_pago_display()
+        ]
+        
+        # Agregar fila
+        for col_num, value in enumerate(row_data, 1):
+            cell = ws.cell(row=row_num, column=col_num, value=value)
+            cell.border = border
+            
+            # Formato para montos
+            if col_num == 9:  # Columna de monto
+                cell.number_format = '"$"#,##0.00'
+                if value > 0:
+                    total_ingresos += value
+        
+        row_num += 1
+    
+    # Totales
+    ws.merge_cells(f'A{row_num}:H{row_num}')
+    total_cell = ws.cell(row=row_num, column=1, value="TOTAL INGRESOS:")
+    total_cell.font = summary_font
+    total_cell.alignment = Alignment(horizontal="right")
+    
+    total_valor_cell = ws.cell(row=row_num, column=9, value=total_ingresos)
+    total_valor_cell.font = summary_font
+    total_valor_cell.number_format = '"$"#,##0.00'
+    total_valor_cell.fill = PatternFill(start_color="C6E0B4", end_color="C6E0B4", fill_type="solid")
+    total_valor_cell.border = border
+    
+    # Estadísticas resumen
+    row_num += 2
+    ws.merge_cells(f'A{row_num}:H{row_num}')
+    ws.cell(row=row_num, column=1, value="RESUMEN ESTADÍSTICO").font = title_font
+    
+    row_num += 1
+    stats = [
+        ("Total Clases:", queryset.count()),
+        ("Total Ingresos:", f"${total_ingresos:,.2f}"),
+        ("Promedio por Clase:", f"${total_ingresos/queryset.count():,.2f}" if queryset.count() > 0 else "$0.00"),
+        ("Materias diferentes:", len(set(clase.materia.nombre for clase in queryset))),
+        ("Alumnos diferentes:", len(set(clase.alumno.id for clase in queryset))),
+    ]
+    
+    for i, (label, value) in enumerate(stats):
+        ws.cell(row=row_num + i, column=1, value=label).font = Font(bold=True)
+        ws.cell(row=row_num + i, column=2, value=value)
+    
+    # Ajustar ancho de columnas
+    for column in ws.columns:
+        max_length = 0
+        column_letter = get_column_letter(column[0].column)
+        for cell in column:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        adjusted_width = min(max_length + 2, 50)  # Máximo 50 caracteres de ancho
+        ws.column_dimensions[column_letter].width = adjusted_width
+    
+    # Crear respuesta HTTP
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="ingresos_edulink.xlsx"'
+    
+    wb.save(response)
+    return response
+
+# ... (resto de tus funciones)
+
+
+
+
+def exportar_csv(queryset):
+    """Exportar datos a CSV"""
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="ingresos_edulink.csv"'
+    
+    writer = csv.writer(response)
+    # Encabezados
+    writer.writerow([
+        'Fecha Pago', 'Alumno', 'Materia', 'Duración (min)', 
+        'Método Pago', 'Monto', 'Estado'
+    ])
+    
+    # Datos
+    for clase in queryset:
+        writer.writerow([
+            clase.fecha_pago.strftime('%d/%m/%Y %H:%M') if clase.fecha_pago else '',
+            clase.alumno.usuario.get_full_name() or clase.alumno.usuario.username,
+            clase.materia.nombre,
+            clase.duracion_minutos,
+            clase.get_metodo_pago_display(),
+            clase.monto_acordado,
+            clase.get_estado_pago_display()
+        ])
+    
+    return response
+
+
+
+
+@login_required
+def obtener_datos_filtro(request):
+    """Endpoint para obtener datos dinámicos para filtros"""
+    try:
+        perfil_maestro = Maestro.objects.get(usuario=request.user)
+        
+        # Obtener años con datos
+        años = SolicitudClase.objects.filter(
+            maestro=perfil_maestro,
+            estado_pago='pagado'
+        ).dates('fecha_pago', 'year').order_by('-fecha_pago')
+        
+        años_list = [fecha.year for fecha in años]
+        
+        return JsonResponse({
+            'años': años_list,
+            'status': 'success'
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+
+def imprimir_reporte(request, queryset, filtros):
+    """Generar vista para impresión"""
+    context = {
+        'clases_pagadas': queryset,
+        'filtros': filtros,
+        'total_ingresos': sum(float(clase.monto_acordado) for clase in queryset if clase.monto_acordado),
+        'total_clases': queryset.count(),
+        'fecha_generacion': timezone.now(),
+    }
+    return render(request, 'maestro/reporte_impresion.html', context)
+
+
+
+@login_required
+def detalle_clase_api(request, clase_id):
+    """API para obtener detalles de una clase específica"""
+    try:
+        # Primero verificamos que el usuario sea maestro
+        perfil_maestro = Maestro.objects.get(usuario=request.user)
+        
+        # Buscamos la clase que pertenezca a este maestro
+        clase = SolicitudClase.objects.get(
+            id=clase_id,
+            maestro=perfil_maestro
+        )
+        
+        # Construimos los datos de manera segura
+        data = {
+            'alumno': clase.alumno.usuario.get_full_name() or clase.alumno.usuario.username,
+            'materia': clase.materia.nombre,
+            'fecha': clase.fecha_pago.strftime('%d/%m/%Y %H:%M') if clase.fecha_pago else 'No especificada',
+            'duracion': clase.duracion_minutos,
+            'metodo_pago': clase.get_metodo_pago_display(),
+            'monto': str(clase.monto_acordado),  # Convertir a string para evitar problemas
+            'estado': clase.get_estado_pago_display(),
+        }
+        
+        # Agregar comentarios solo si el campo existe
+        if hasattr(clase, 'comentarios'):
+            data['comentarios'] = clase.comentarios or 'Sin comentarios'
+        else:
+            data['comentarios'] = 'Sin comentarios'
+        
+        # Intentamos obtener email del alumno (si existe)
+        try:
+            data['email_alumno'] = clase.alumno.usuario.email or 'No disponible'
+        except:
+            data['email_alumno'] = 'No disponible'
+            
+        # Intentamos obtener teléfono del alumno (varias opciones)
+        telefono_alumno = "No disponible"
+        try:
+            # Caso 1: el modelo Alumno tiene el campo telefono
+            if hasattr(clase.alumno, 'telefono') and clase.alumno.telefono:
+                telefono_alumno = clase.alumno.telefono
+            # Caso 2: el modelo Usuario tiene el campo telefono
+            elif hasattr(clase.alumno.usuario, 'telefono') and clase.alumno.usuario.telefono:
+                telefono_alumno = clase.alumno.usuario.telefono
+            # Caso 3: existe un perfil relacionado con campo telefono
+            elif hasattr(clase.alumno.usuario, 'profile') and hasattr(clase.alumno.usuario.profile, 'telefono'):
+                telefono_alumno = clase.alumno.usuario.profile.telefono
+        except:
+            telefono_alumno = "No disponible"
+        
+        data['telefono_alumno'] = telefono_alumno
+        
+        return JsonResponse(data)
+        
+    except Maestro.DoesNotExist:
+        return JsonResponse({'error': 'No tienes un perfil de maestro.'}, status=404)
+    except SolicitudClase.DoesNotExist:
+        return JsonResponse({'error': 'Clase no encontrada o no tienes permisos para verla.'}, status=404)
+    except Exception as e:
+        # Para debugging, devolvemos el error real
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Error en detalle_clase_api: {error_details}")  # Esto se verá en la consola del servidor
+        return JsonResponse({'error': f'Error interno del servidor: {str(e)}'}, status=500)
 
 
 

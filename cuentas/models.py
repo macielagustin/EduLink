@@ -198,6 +198,12 @@ class SolicitudClase(models.Model):
         ('reembolsado', 'Reembolsado'),
         ('cancelado', 'Cancelado'),
     ]
+
+    METODO_PAGO_CHOICES = [
+        ('efectivo', 'Efectivo'),
+        ('transferencia', 'Transferencia'),
+        ('mercadopago', 'Mercado Pago'),
+    ]
     
     alumno = models.ForeignKey('Alumno', on_delete=models.CASCADE)
     maestro = models.ForeignKey('Maestro', on_delete=models.CASCADE)
