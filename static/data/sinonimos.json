@@ -1,0 +1,10 @@
+{
+  "alegria": {
+    "sinonimos": ["felicidad", "gozo", "júbilo", "contento"],
+    "antonimos": ["tristeza", "melancolía"]
+  },
+  "grande": {
+    "sinonimos": ["enorme", "colosal", "gigante"],
+    "antonimos": ["pequeño", "diminuto"]
+  }
+}

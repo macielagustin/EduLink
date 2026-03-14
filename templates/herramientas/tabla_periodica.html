@@ -54,11 +54,8 @@
         <div class="col">
             <div class="card">
                 <div class="card-body">
-                    <div id="tabla-container" class="text-center">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Cargando tabla periódica...</span>
-                        </div>
-                        <p class="mt-2">Cargando elementos desde la API...</p>
+                    <div id="tabla-container">
+                        <!-- La tabla se genera por JavaScript -->
                     </div>
                 </div>
             </div>
@@ -82,29 +79,17 @@
 </div>
 
 <script>
-let elementos = [];
+
+// Datos seguros desde Django
+let elementos = {{ elementos_json|safe }};
 let modoAvanzado = false;
 
-// Cargar elementos desde la API
-function cargarElementos() {
-    fetch("{% url 'tabla_periodica' %}")
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && data.elementos) {
-                elementos = data.elementos;
-            } else {
-                elementos = {{ elementos|safe }};
-            }
-            generarTabla();
-        })
-        .catch(error => {
-            console.error("Error al cargar datos:", error);
-            elementos = {{ elementos|safe }};
-            generarTabla();
-        });
-}
 
+// =============================
+// Generar tabla
+// =============================
 function generarTabla() {
+
     const container = document.getElementById('tabla-container');
     
     if (!elementos || elementos.length === 0) {
@@ -134,6 +119,7 @@ function generarTabla() {
     `;
     
     elementos.forEach(elemento => {
+
         html += `
         <tr>
             <td><strong>${elemento.simbolo}</strong></td>
@@ -141,11 +127,13 @@ function generarTabla() {
             <td>${elemento.numero}</td>
             <td>${elemento.masa}</td>
             <td>${elemento.grupo}</td>
+
             ${modoAvanzado ? `
                 <td>${elemento.categoria || ''}</td>
                 <td>${elemento.electronegatividad || ''}</td>
                 <td>${elemento.estado || ''}</td>
             ` : ""}
+
             <td>
                 <button class="btn btn-sm btn-info" onclick="mostrarDetalles('${elemento.simbolo}')">
                     <i class="fas fa-info-circle"></i>
@@ -162,8 +150,15 @@ function generarTabla() {
     container.innerHTML = html;
 }
 
+
+
+// =============================
+// Modal de detalles
+// =============================
 function mostrarDetalles(simbolo) {
+
     const elemento = elementos.find(e => e.simbolo === simbolo);
+
     if (!elemento) return;
 
     document.getElementById('elementoNombre').textContent =
@@ -188,8 +183,10 @@ function mostrarDetalles(simbolo) {
 
     if (elemento.densidad)
         detalles += `<p><strong>Densidad:</strong> ${elemento.densidad} g/cm³</p>`;
+
     if (elemento.punto_fusion)
         detalles += `<p><strong>Punto de fusión:</strong> ${elemento.punto_fusion} K</p>`;
+
     if (elemento.punto_ebullicion)
         detalles += `<p><strong>Punto de ebullición:</strong> ${elemento.punto_ebullicion} K</p>`;
 
@@ -198,23 +195,92 @@ function mostrarDetalles(simbolo) {
     new bootstrap.Modal(document.getElementById('modalElemento')).show();
 }
 
-// Filtro
+
+
+// =============================
+// Filtro de búsqueda
+// =============================
 function buscarElemento() {
+
     const filtro = document.getElementById('filtro-elemento').value.toLowerCase();
+
     const filas = document.querySelectorAll('#tabla-container tbody tr');
 
     filas.forEach(fila => {
+
         const texto = fila.textContent.toLowerCase();
+
         fila.style.display = texto.includes(filtro) ? '' : 'none';
+
     });
 }
 
+
+
+// =============================
 // Modo avanzado
+// =============================
 function toggleModoAvanzado() {
+
     modoAvanzado = document.getElementById('modo-avanzado').checked;
+
     generarTabla();
+
 }
 
-document.addEventListener('DOMContentLoaded', cargarElementos);
+
+
+// =============================
+// Inicialización
+// =============================
+document.addEventListener('DOMContentLoaded', function() {
+
+    generarTabla();
+
+});
+
+
+
+// =============================
+// Intentar actualizar desde API
+// =============================
+fetch("{% url 'tabla_periodica' %}", {
+    headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+    },
+    credentials: 'same-origin'
+})
+.then(response => {
+
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+
+})
+.then(data => {
+
+    if (data.success && data.elementos) {
+
+        elementos = data.elementos;
+
+        generarTabla();
+
+    } else {
+
+        console.warn('La API devolvió datos no válidos, usando locales');
+
+    }
+
+})
+.catch(error => {
+
+    console.error("Error al actualizar desde API:", error);
+
+    // No pasa nada porque ya tenemos los datos de Django
+
+});
+
 </script>
 {% endblock %}
