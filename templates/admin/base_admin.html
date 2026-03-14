@@ -6,8 +6,8 @@
 {% block content %}
 <div class="container-fluid">
     <div class="row">
-        <!-- Sidebar -->
-        <div class="col-md-3 col-lg-2 bg-dark text-white vh-100 position-fixed">
+        <!-- Sidebar fijo con altura completa -->
+        <div class="col-md-3 col-lg-2 bg-dark text-white vh-100 position-fixed" style="z-index: 1000; overflow-y: auto;">
             <div class="p-3">
                 <h4 class="text-warning fw-bold">
                     <i class="fas fa-crown me-2"></i>Admin Panel
@@ -22,21 +22,27 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="#" 
-                           class="nav-link text-white">
+                        <a href="{% url 'estadisticas_detalladas' %}" 
+                           class="nav-link text-white {% if request.resolver_match.url_name == 'estadisticas_detalladas' %}active{% endif %}">
                             <i class="fas fa-chart-bar me-2"></i>Estadísticas
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="#" 
-                           class="nav-link text-white">
+                        <a href="{% url 'gestion_promociones' %}" 
+                           class="nav-link text-white {% if request.resolver_match.url_name == 'gestion_promociones' %}active{% endif %}">
                             <i class="fas fa-tag me-2"></i>Promociones
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="#" 
-                           class="nav-link text-white">
+                        <a href="{% url 'gestion_vouchers' %}" 
+                           class="nav-link text-white {% if request.resolver_match.url_name == 'gestion_vouchers' %}active{% endif %}">
                             <i class="fas fa-ticket-alt me-2"></i>Vouchers
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{% url 'lista_usuarios_admin' %}" 
+                           class="nav-link text-white {% if request.resolver_match.url_name == 'lista_usuarios_admin' %}active{% endif %}">
+                            <i class="fas fa-users me-2"></i>Usuarios
                         </a>
                     </li>
                     <li class="nav-item">
@@ -48,8 +54,8 @@
             </div>
         </div>
 
-        <!-- Main content -->
-        <div class="col-md-9 col-lg-10 ms-auto">
+        <!-- Main content con margen izquierdo igual al ancho del sidebar -->
+        <div class="col-md-9 col-lg-10" style="margin-left: 16.66666667%;">
             <div class="p-4">
                 {% block admin_content %}
                 {% endblock %}

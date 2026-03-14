@@ -1,0 +1,43 @@
+{% extends "admin/base_admin.html" %}
+{% block admin_content %}
+<h1 class="h2 fw-bold text-primary">🎫 Tickets de Soporte</h1>
+
+<div class="card mt-4">
+    <div class="card-body">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Remitente</th>
+                    <th>Asunto</th>
+                    <th>Fecha</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ticket in tickets %}
+                <tr>
+                    <td>#{{ ticket.id }}</td>
+                    <td>{{ ticket.remitente.get_full_name|default:ticket.remitente.username }}</td>
+                    <td>{{ ticket.asunto|truncatechars:50 }}</td>
+                    <td>{{ ticket.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                    <td>
+                        <span class="badge {% if ticket.estado == 'abierto' %}bg-danger{% elif ticket.estado == 'resuelto' %}bg-success{% else %}bg-warning{% endif %}">
+                            {{ ticket.get_estado_display }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{% url 'detalle_ticket_admin' ticket.id %}" class="btn btn-sm btn-info">Ver</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center">No hay tickets</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

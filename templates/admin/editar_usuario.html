@@ -1,0 +1,60 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="h2">✏️ Editar Usuario #{{ usuario.id }}</h2>
+    <a href="{% url 'detalle_usuario_admin' usuario.id %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Volver al detalle
+    </a>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="nombre" class="form-label">Nombre</label>
+                    <input type="text" class="form-control" id="nombre" name="nombre" value="{{ usuario.nombre }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="apellido" class="form-label">Apellido</label>
+                    <input type="text" class="form-control" id="apellido" name="apellido" value="{{ usuario.apellido }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="email" name="email" value="{{ usuario.email }}" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="username" class="form-label">Nombre de usuario</label>
+                    <input type="text" class="form-control" id="username" value="{{ usuario.username }}" readonly disabled>
+                    <small class="text-muted">El nombre de usuario no se puede cambiar.</small>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="rol" class="form-label">Rol</label>
+                    <select class="form-select" id="rol" name="rol">
+                        <option value="ALUMNO" {% if usuario.rol == 'ALUMNO' %}selected{% endif %}>Alumno</option>
+                        <option value="MAESTRO" {% if usuario.rol == 'MAESTRO' %}selected{% endif %}>Maestro</option>
+                        <option value="ADMIN" {% if usuario.rol == 'ADMIN' %}selected{% endif %}>Administrador</option>
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="form-check mt-4">
+                        <input class="form-check-input" type="checkbox" id="verificado" name="verificado" {% if usuario.verificado %}checked{% endif %}>
+                        <label class="form-check-label" for="verificado">
+                            Usuario verificado
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Guardar cambios
+                </button>
+                <a href="{% url 'detalle_usuario_admin' usuario.id %}" class="btn btn-secondary">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

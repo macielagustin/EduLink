@@ -1,0 +1,46 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="h2">🔄 Cambiar rol de {{ usuario.get_full_name|default:usuario.username }}</h2>
+    <a href="{% url 'detalle_usuario_admin' usuario.id %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Volver al detalle
+    </a>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label">Rol actual:</label>
+                <span class="badge 
+                    {% if usuario.rol == 'ADMIN' %}bg-danger
+                    {% elif usuario.rol == 'MAESTRO' %}bg-success
+                    {% elif usuario.rol == 'ALUMNO' %}bg-primary
+                    {% else %}bg-secondary{% endif %}">
+                    {{ usuario.rol }}
+                </span>
+            </div>
+            <div class="mb-3">
+                <label for="rol" class="form-label">Nuevo rol:</label>
+                <select class="form-select" id="rol" name="rol" required>
+                    <option value="">-- Seleccionar --</option>
+                    <option value="ALUMNO">Alumno</option>
+                    <option value="MAESTRO">Maestro</option>
+                    <option value="ADMIN">Administrador</option>
+                </select>
+            </div>
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Cambiar el rol puede afectar la funcionalidad del usuario en el sistema. Asegúrate de que el usuario tenga el perfil correspondiente (Alumno/Maestro) antes de cambiar.
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-sync-alt me-2"></i>Cambiar rol
+            </button>
+            <a href="{% url 'detalle_usuario_admin' usuario.id %}" class="btn btn-secondary">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

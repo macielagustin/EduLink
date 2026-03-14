@@ -1,0 +1,104 @@
+{% extends "admin/base_admin.html" %}
+{% load static %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2">🎫 Gestión de Vouchers</h1>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#crearVoucherModal">
+        <i class="fas fa-plus me-2"></i>Nuevo Voucher
+    </button>
+</div>
+
+<!-- Listado de vouchers -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Código</th>
+                        <th>Descripción</th>
+                        <th>Descuento</th>
+                        <th>Fecha creación</th>
+                        <th>Fecha expira</th>
+                        <th>Usado</th>
+                        <th>Fecha uso</th>
+                        <th>Usuario</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for voucher in vouchers %}
+                    <tr>
+                        <td>{{ voucher.id }}</td>
+                        <td><strong>{{ voucher.codigo }}</strong></td>
+                        <td>{{ voucher.descripcion|truncatechars:50 }}</td>
+                        <td>
+                            {% if voucher.tipo_descuento == 'porcentaje' %}
+                                {{ voucher.valor_descuento }}%
+                            {% else %}
+                                ${{ voucher.valor_descuento }}
+                            {% endif %}
+                        </td>
+                        <td>{{ voucher.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                        <td>{{ voucher.fecha_expiracion|date:"d/m/Y"|default:"Sin expiración" }}</td>
+                        <td>
+                            {% if voucher.usado %}
+                                <span class="badge bg-secondary">Sí</span>
+                            {% else %}
+                                <span class="badge bg-success">No</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ voucher.fecha_uso|date:"d/m/Y H:i"|default:"-" }}</td>
+                        <td>{{ voucher.usuario|default:"-" }}</td>
+                        <td>
+                            {% if not voucher.usado %}
+                            <form method="post" action="{% url 'gestion_vouchers' %}" style="display:inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="voucher_id" value="{{ voucher.id }}">
+                                <button type="submit" name="marcar_usado" class="btn btn-sm btn-outline-success" onclick="return confirm('¿Marcar como usado?')">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                            <form method="post" action="{% url 'gestion_vouchers' %}" style="display:inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="voucher_id" value="{{ voucher.id }}">
+                                <button type="submit" name="eliminar" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Eliminar voucher?')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="10" class="text-center text-muted">No hay vouchers</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para crear voucher -->
+<div class="modal fade" id="crearVoucherModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" action="{% url 'gestion_vouchers' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Nuevo Voucher</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    {{ form.as_p }}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" name="crear" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

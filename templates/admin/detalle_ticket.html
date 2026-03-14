@@ -1,0 +1,31 @@
+{% extends "admin/base_admin.html" %}
+{% block admin_content %}
+<h1 class="h2 fw-bold text-primary">Ticket #{{ ticket.id }}</h1>
+
+<div class="card mt-4">
+    <div class="card-body">
+        <p><strong>Remitente:</strong> {{ ticket.remitente.get_full_name|default:ticket.remitente.username }} ({{ ticket.remitente.rol }})</p>
+        <p><strong>Asunto:</strong> {{ ticket.asunto }}</p>
+        <p><strong>Mensaje:</strong></p>
+        <div class="p-3 bg-light">{{ ticket.mensaje|linebreaks }}</div>
+        
+        {% if ticket.respuesta %}
+            <hr>
+            <p><strong>Respuesta ({{ ticket.fecha_respuesta|date:"d/m/Y H:i" }}) por {{ ticket.respondido_por.get_full_name }}:</strong></p>
+            <div class="p-3 bg-success text-white">{{ ticket.respuesta|linebreaks }}</div>
+        {% endif %}
+        
+        {% if ticket.estado != 'resuelto' %}
+        <hr>
+        <h5>Responder</h5>
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <textarea name="respuesta" rows="4" class="form-control" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Enviar Respuesta</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

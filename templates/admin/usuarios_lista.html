@@ -1,0 +1,48 @@
+{% extends 'admin/base_admin.html' %}
+{% block content %}
+<h2>Gestión de Usuarios</h2>
+<table class="table">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Nombre</th>
+      <th>Email</th>
+      <th>Rol</th>
+      <th>Fecha registro</th>
+      <th>Verificado</th>
+      <th>Acciones</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for usuario in usuarios %}
+    <tr>
+      <td>{{ usuario.id }}</td>
+      <td>{{ usuario.nombre }}</td>
+      <td>{{ usuario.email }}</td>
+      <td>{{ usuario.rol }}</td>
+      <td>{{ usuario.fecha_registro|date:"d/m/Y" }}</td>
+      <td>{% if usuario.verificado %}✅{% else %}❌{% endif %}</td>
+      <td>
+        <a href="{% url 'detalle_usuario' usuario.id %}" class="btn-ver">Ver</a>
+        <a href="{% url 'editar_usuario' usuario.id %}" class="btn-editar">Editar</a>
+        <a href="{% url 'eliminar_usuario' usuario.id %}" class="btn-eliminar" onclick="return confirm('¿Seguro?')">Eliminar</a>
+        <a href="{% url 'bloquear_usuario' usuario.id %}" class="btn-bloquear">Bloquear</a>
+        <a href="{% url 'asignar_rol' usuario.id %}" class="btn-rol">Asignar Rol</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="pagination">
+  {% if usuarios.has_previous %}
+    <a href="?page=1">&laquo; primera</a>
+    <a href="?page={{ usuarios.previous_page_number }}">anterior</a>
+  {% endif %}
+  <span>Página {{ usuarios.number }} de {{ usuarios.paginator.num_pages }}</span>
+  {% if usuarios.has_next %}
+    <a href="?page={{ usuarios.next_page_number }}">siguiente</a>
+    <a href="?page={{ usuarios.paginator.num_pages }}">última &raquo;</a>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1743,65 +1743,116 @@ def proponer_fecha_solicitud(request, solicitud_id):
 
 
 
+from django.utils import timezone
+from django.contrib import messages
+from django.shortcuts import get_object_or_404, redirect, render
 
+from .models import Voucher
 
 # Vista para que el alumno confirme la fecha
 @login_required
 def confirmar_fecha_solicitud(request, solicitud_id):
     solicitud = get_object_or_404(SolicitudClase, id=solicitud_id)
-    
-    # Verificar que el alumno es el dueño de la solicitud y que está en estado 'propuesta'
+
+    # Verificar que el alumno es el dueño de la solicitud
     if solicitud.alumno.usuario != request.user:
         messages.error(request, "No tienes permiso para esta acción.")
         return redirect('mis_solicitudes_alumno')
-    
+
+    # Verificar estado
     if solicitud.estado != 'propuesta':
         messages.error(request, "Esta solicitud no tiene una propuesta pendiente de confirmación.")
         return redirect('mis_solicitudes_alumno')
-    
+
     if request.method == 'POST':
         form = ConfirmarFechaForm(request.POST, instance=solicitud)
+
         if form.is_valid():
             try:
                 solicitud = form.save(commit=False)
+
+                # ==========================
+                # Aplicar voucher si existe
+                # ==========================
+                codigo_voucher = request.POST.get('codigo_voucher', '').strip()
+
+                if codigo_voucher:
+                    try:
+                        voucher = Voucher.objects.get(
+                            codigo=codigo_voucher,
+                            usado=False,
+                            fecha_expiracion__gte=timezone.now()
+                        )
+
+                        monto_original = solicitud.monto_acordado
+
+                        if voucher.tipo_descuento == 'porcentaje':
+                            descuento = monto_original * (voucher.valor_descuento / 100)
+                        else:
+                            descuento = voucher.valor_descuento
+
+                        solicitud.monto_final = max(monto_original - descuento, 0)
+
+                        # Marcar voucher como usado
+                        voucher.usado = True
+                        voucher.fecha_uso = timezone.now()
+                        voucher.usuario = request.user
+                        voucher.save()
+
+                        messages.success(request, f'Voucher aplicado. Descuento: ${descuento}')
+
+                    except Voucher.DoesNotExist:
+                        messages.error(request, 'Voucher inválido o expirado')
+
+                # ==========================
+                # Confirmar clase
+                # ==========================
+
                 solicitud.estado = 'aceptada'
-                
-                # ✅ INICIALIZAR EL ESTADO DEL PAGO CORRECTAMENTE
-                solicitud.estado_pago = 'pendiente'  # Esto es crucial
-                
-                # Si no se modifica la fecha, usar la propuesta por defecto
+
+                # Inicializar estado de pago
+                solicitud.estado_pago = 'pendiente'
+
+                # Si no se cambia la fecha usar la propuesta
                 if not solicitud.fecha_clase_confirmada:
                     solicitud.fecha_clase_confirmada = solicitud.fecha_clase_propuesta
-                
+
                 solicitud.save()
-                
-                # Crear notificación para el maestro
+
+                # ==========================
+                # Notificación al maestro
+                # ==========================
+
                 crear_notificacion(
                     usuario=solicitud.maestro.usuario,
                     tipo='clase_aceptada',
                     mensaje=f'El alumno {solicitud.alumno.usuario.get_full_name()} ha aceptado tu propuesta para la clase de {solicitud.materia.nombre}',
                     enlace=f'/maestro/solicitudes/'
                 )
-                
+
                 messages.success(request, '✅ ¡Clase confirmada! La clase ha sido agendada.')
-                
-                # Redirigir a la página de pago si no es efectivo
+
+                # ==========================
+                # Redirección según pago
+                # ==========================
+
                 if solicitud.metodo_pago != 'efectivo':
                     return redirect('generar_qr_pago', solicitud_id=solicitud.id)
                 else:
-                    # ✅ Para pagos en efectivo, redirigir al control de gastos
                     return redirect('control_gastos_alumno')
-                    
+
             except Exception as e:
                 messages.error(request, f'❌ Error al confirmar la clase: {str(e)}')
+
     else:
-        # Inicializar con la fecha propuesta
+        # Inicializar formulario con fecha propuesta
         initial_data = {
             'fecha_clase_confirmada': solicitud.fecha_clase_propuesta,
             'metodo_pago': solicitud.metodo_pago
         }
+
         form = ConfirmarFechaForm(instance=solicitud, initial=initial_data)
-    
+
     return render(request, 'alumno/confirmar_fecha.html', {
         'form': form,
         'solicitud': solicitud
@@ -3837,7 +3888,7 @@ def editar_perfil_alumno(request):
     )
 
 
-
+########### ADMIN Acciones ################
 
 def admin_required(function=None):
     """Decorator para verificar si el usuario es administrador"""
@@ -3860,7 +3911,11 @@ def admin_required(function=None):
     return decorator
 
 
-# MUEVE el decorador admin_required ANTES de las vistas que lo usan
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.db.models import Count, Sum
+from datetime import datetime
+
 @admin_required
 def dashboard_admin(request):
     """Dashboard principal del administrador"""
@@ -3870,56 +3925,125 @@ def dashboard_admin(request):
         total_alumnos = Alumno.objects.count()
         total_maestros = Maestro.objects.count()
         total_clases = SolicitudClase.objects.count()
-        
+
+        # Solicitudes activas
+        solicitudes_activas = SolicitudClase.objects.filter(
+            estado='pendiente'
+        ).count()
+
+        # Usuarios por rol
+        usuarios_por_rol = Usuario.objects.values('rol').annotate(
+            total=Count('id')
+        )
+
         # Clases por estado
         clases_por_estado = SolicitudClase.objects.values('estado').annotate(
             total=Count('id')
         ).order_by('-total')
-        
+
         # Ingresos totales
         ingresos_totales = SolicitudClase.objects.filter(
             estado_pago='pagado'
-        ).aggregate(Sum('monto_final'))['monto_final__sum'] or 0
-        
+        ).aggregate(
+            Sum('monto_final')
+        )['monto_final__sum'] or 0
+
         # Usuarios nuevos este mes
-        from datetime import datetime
-        primer_dia_mes = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        primer_dia_mes = datetime.now().replace(
+            day=1, hour=0, minute=0, second=0, microsecond=0
+        )
+
         nuevos_usuarios_mes = Usuario.objects.filter(
             fecha_creacion__gte=primer_dia_mes
         ).count()
-        
+
         # Materias más populares
         from catalogo.models import Materia
+
         materias_populares = Materia.objects.annotate(
             total_clases=Count('solicitudclase'),
             total_maestros=Count('maestros')
         ).order_by('-total_clases')[:10]
-        
+
         context = {
             'total_usuarios': total_usuarios,
             'total_alumnos': total_alumnos,
             'total_maestros': total_maestros,
             'total_clases': total_clases,
+            'solicitudes_activas': solicitudes_activas,
+            'usuarios_por_rol': usuarios_por_rol,
             'clases_por_estado': clases_por_estado,
             'ingresos_totales': ingresos_totales,
             'nuevos_usuarios_mes': nuevos_usuarios_mes,
             'materias_populares': materias_populares,
         }
-        
+
         return render(request, 'admin/dashboard_admin.html', context)
-    
+
     except Exception as e:
         messages.error(request, f"Error al cargar el dashboard: {str(e)}")
         return redirect('home')    
 
 
 
+from django.db.models import Count, Sum, Avg, Q
+from django.utils import timezone
+from datetime import timedelta
+
 @admin_required
 def estadisticas_detalladas(request):
-    """Estadísticas detalladas del sistema"""
-    # Aquí va el código completo de estadisticas_detalladas que te pasé antes
-    # ... (usa el código completo que te proporcioné en la respuesta anterior)
-
+    ahora = timezone.now()
+    
+    # Totales
+    total_usuarios = Usuario.objects.count()
+    total_clases = SolicitudClase.objects.count()
+    solicitudes_activas = SolicitudClase.objects.filter(estado='pendiente').count()
+    
+    # Usuarios por rol
+    usuarios_por_rol = Usuario.objects.values('rol').annotate(total=Count('id'))
+    
+    # Datos para gráficos (últimos 6 meses)
+    meses = []
+    usuarios_mes = []
+    ingresos_mes = []
+    for i in range(5, -1, -1):
+        fecha = ahora - timedelta(days=30*i)
+        meses.append(fecha.strftime('%b %Y'))
+        
+        # Usuarios creados en ese mes
+        usuarios_mes.append(
+            Usuario.objects.filter(
+                date_joined__year=fecha.year,
+                date_joined__month=fecha.month
+            ).count()
+        )
+        
+        # Ingresos de clases pagadas en ese mes
+        ingresos = SolicitudClase.objects.filter(
+            estado_pago='pagado',
+            fecha_pago__year=fecha.year,
+            fecha_pago__month=fecha.month
+        ).aggregate(Sum('monto_final'))['monto_final__sum'] or 0
+        ingresos_mes.append(float(ingresos))  # asegurar float
+    
+    # Clases por estado
+    clases_por_estado = list(SolicitudClase.objects.values('estado').annotate(total=Count('id')))
+    
+    # Calcular porcentajes para el template (opcional)
+    for item in clases_por_estado:
+        item['porcentaje'] = round((item['total'] / total_clases) * 100, 1) if total_clases else 0
+    
+    context = {
+        'total_usuarios': total_usuarios,
+        'total_clases': total_clases,
+        'solicitudes_activas': solicitudes_activas,
+        'usuarios_por_rol': usuarios_por_rol,
+        'meses': meses,
+        'usuarios_mes': usuarios_mes,
+        'ingresos_mes': ingresos_mes,
+        'clases_por_estado': clases_por_estado,
+    }
+    return render(request, 'admin/estadisticas_detalladas.html', context)
 
 @admin_required
 def gestion_promociones(request):
@@ -3927,19 +4051,32 @@ def gestion_promociones(request):
     promociones = Promocion.objects.all().order_by('-fecha_inicio')
     
     if request.method == 'POST':
-        form = PromocionForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Promoción creada correctamente.')
+        if 'crear' in request.POST:
+            form = PromocionForm(request.POST)
+            if form.is_valid():
+                form.save()
+                messages.success(request, 'Promoción creada correctamente.')
+                return redirect('gestion_promociones')
+        elif 'editar' in request.POST:
+            promo_id = request.POST.get('promocion_id')
+            promocion = get_object_or_404(Promocion, id=promo_id)
+            form = PromocionForm(request.POST, instance=promocion)
+            if form.is_valid():
+                form.save()
+                messages.success(request, 'Promoción actualizada.')
+                return redirect('gestion_promociones')
+        elif 'eliminar' in request.POST:
+            promo_id = request.POST.get('promocion_id')
+            promocion = get_object_or_404(Promocion, id=promo_id)
+            promocion.delete()
+            messages.success(request, 'Promoción eliminada.')
             return redirect('gestion_promociones')
-    else:
-        form = PromocionForm()
     
+    form = PromocionForm()
     return render(request, 'admin/gestion_promociones.html', {
         'promociones': promociones,
-        'form': form
+        'form': form,
     })
-
 
 @admin_required
 def gestion_vouchers(request):
@@ -3947,17 +4084,160 @@ def gestion_vouchers(request):
     vouchers = Voucher.objects.all().order_by('-fecha_creacion')
     
     if request.method == 'POST':
-        form = VoucherForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Voucher creado correctamente.')
+        if 'crear' in request.POST:
+            form = VoucherForm(request.POST)
+            if form.is_valid():
+                form.save()
+                messages.success(request, 'Voucher creado correctamente.')
+                return redirect('gestion_vouchers')
+        elif 'marcar_usado' in request.POST:
+            voucher_id = request.POST.get('voucher_id')
+            voucher = get_object_or_404(Voucher, id=voucher_id)
+            voucher.usado = True
+            voucher.fecha_uso = timezone.now()
+            voucher.save()
+            messages.success(request, 'Voucher marcado como usado.')
             return redirect('gestion_vouchers')
-    else:
-        form = VoucherForm()
+        elif 'eliminar' in request.POST:
+            voucher_id = request.POST.get('voucher_id')
+            voucher = get_object_or_404(Voucher, id=voucher_id)
+            voucher.delete()
+            messages.success(request, 'Voucher eliminado.')
+            return redirect('gestion_vouchers')
     
+    form = VoucherForm()
     return render(request, 'admin/gestion_vouchers.html', {
         'vouchers': vouchers,
-        'form': form
+        'form': form,
+    })
+
+from django.core.paginator import Paginator
+from django.db.models import Q
+
+@admin_required
+def lista_usuarios_admin(request):
+    """Lista todos los usuarios"""
+    
+    usuarios = Usuario.objects.all().order_by('-date_joined')
+
+    # Filtro por rol
+    rol = request.GET.get('rol')
+    if rol:
+        usuarios = usuarios.filter(rol=rol)
+
+    # Búsqueda
+    busqueda = request.GET.get('q')
+    if busqueda:
+        usuarios = usuarios.filter(
+            Q(username__icontains=busqueda) |
+            Q(email__icontains=busqueda) |
+            Q(nombre__icontains=busqueda) |
+            Q(apellido__icontains=busqueda)
+        )
+
+    # Paginación
+    paginator = Paginator(usuarios, 20)  # 20 usuarios por página
+    page = request.GET.get('page')
+    usuarios_paginados = paginator.get_page(page)
+
+    return render(request, 'admin/lista_usuarios.html', {
+        'usuarios': usuarios_paginados,
+        'rol_seleccionado': rol,
+        'busqueda': busqueda,
+    })
+
+from django.shortcuts import get_object_or_404, redirect, render
+from django.contrib import messages
+from django.db.models import Q
+
+@admin_required
+def detalle_usuario_admin(request, usuario_id):
+    """Ver perfil de un usuario específico"""
+    
+    usuario = get_object_or_404(Usuario, id=usuario_id)
+
+    # Obtener perfil según rol
+    perfil = None
+    if usuario.rol == 'ALUMNO':
+        perfil = Alumno.objects.filter(usuario=usuario).first()
+    elif usuario.rol == 'MAESTRO':
+        perfil = Maestro.objects.filter(usuario=usuario).first()
+
+    # Últimas solicitudes
+    solicitudes = SolicitudClase.objects.filter(
+        Q(alumno__usuario=usuario) | Q(maestro__usuario=usuario)
+    ).order_by('-fecha_solicitud')[:10]
+
+    return render(request, 'admin/detalle_usuario.html', {
+        'usuario': usuario,
+        'perfil': perfil,
+        'solicitudes': solicitudes,
+    })
+
+
+@admin_required
+def editar_usuario(request, usuario_id):
+    """Editar usuario (placeholder para formulario)"""
+    
+    usuario = get_object_or_404(Usuario, id=usuario_id)
+
+    if request.method == 'POST':
+        usuario.nombre = request.POST.get('nombre', usuario.nombre)
+        usuario.apellido = request.POST.get('apellido', usuario.apellido)
+        usuario.email = request.POST.get('email', usuario.email)
+        usuario.save()
+
+        messages.success(request, 'Usuario actualizado correctamente.')
+        return redirect('detalle_usuario_admin', usuario_id=usuario.id)
+
+    return render(request, 'admin/editar_usuario.html', {
+        'usuario': usuario
+    })
+
+
+@admin_required
+def eliminar_usuario(request, usuario_id):
+    """Eliminar usuario"""
+
+    usuario = get_object_or_404(Usuario, id=usuario_id)
+
+    usuario.delete()
+
+    messages.success(request, 'Usuario eliminado correctamente.')
+    return redirect('lista_usuarios_admin')
+
+
+@admin_required
+def bloquear_usuario(request, usuario_id):
+    """Bloquear usuario"""
+
+    usuario = get_object_or_404(Usuario, id=usuario_id)
+
+    usuario.activo = False  # Ajusta si usas otro campo
+    usuario.save()
+
+    messages.success(request, 'Usuario bloqueado.')
+    return redirect('lista_usuarios_admin')
+
+
+@admin_required
+def asignar_rol(request, usuario_id):
+    """Cambiar rol del usuario"""
+
+    usuario = get_object_or_404(Usuario, id=usuario_id)
+
+    if request.method == 'POST':
+        nuevo_rol = request.POST.get('rol')
+
+        if nuevo_rol in ['ADMIN', 'ALUMNO', 'MAESTRO']:
+            usuario.rol = nuevo_rol
+            usuario.save()
+            messages.success(request, 'Rol actualizado correctamente.')
+
+        return redirect('detalle_usuario_admin', usuario_id=usuario.id)
+
+    return render(request, 'admin/asignar_rol.html', {
+        'usuario': usuario
     })
 
 
@@ -3976,4 +4256,80 @@ def admin_required(function=None):
         return actual_decorator(function)
     return actual_decorator
 
+
+@admin_required
+def editar_promocion(request, promocion_id):
+    promocion = get_object_or_404(Promocion, id=promocion_id)
+    if request.method == 'POST':
+        form = PromocionForm(request.POST, instance=promocion)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Promoción actualizada correctamente.')
+            return redirect('gestion_promociones')
+    else:
+        form = PromocionForm(instance=promocion)
+    return render(request, 'admin/editar_promocion.html', {'form': form, 'promocion': promocion})
+
+
+@login_required
+def nuevo_ticket_soporte(request):
+    """Permite a cualquier usuario enviar un ticket de soporte"""
+    if request.method == 'POST':
+        asunto = request.POST.get('asunto')
+        mensaje = request.POST.get('mensaje')
+        if asunto and mensaje:
+            ticket = TicketSoporte.objects.create(
+                remitente=request.user,
+                asunto=asunto,
+                mensaje=mensaje
+            )
+            messages.success(request, 'Ticket enviado correctamente. Pronto recibirás respuesta.')
+            # Notificar a todos los admins
+            admins = Usuario.objects.filter(rol='ADMIN')
+            for admin in admins:
+                crear_notificacion(
+                    usuario=admin,
+                    tipo='solicitud',
+                    mensaje=f'Nuevo ticket de {request.user.get_full_name()}: {asunto}',
+                    enlace=f'/admin/soporte/{ticket.id}/'
+                )
+            return redirect('home')
+        else:
+            messages.error(request, 'Debes completar asunto y mensaje.')
+    return render(request, 'soporte/nuevo_ticket.html')
+
+@admin_required
+def lista_tickets_admin(request):
+    """Lista todos los tickets para el admin"""
+    tickets = TicketSoporte.objects.all().order_by('-fecha_creacion')
+    estado = request.GET.get('estado')
+    if estado:
+        tickets = tickets.filter(estado=estado)
+    return render(request, 'admin/lista_tickets.html', {
+        'tickets': tickets,
+        'estado_seleccionado': estado,
+    })
+
+@admin_required
+def detalle_ticket_admin(request, ticket_id):
+    """Ver y responder un ticket"""
+    ticket = get_object_or_404(TicketSoporte, id=ticket_id)
+    if request.method == 'POST':
+        respuesta = request.POST.get('respuesta')
+        if respuesta:
+            ticket.respuesta = respuesta
+            ticket.estado = 'resuelto'
+            ticket.fecha_respuesta = timezone.now()
+            ticket.respondido_por = request.user
+            ticket.save()
+            # Notificar al remitente
+            crear_notificacion(
+                usuario=ticket.remitente,
+                tipo='solicitud',
+                mensaje=f'Tu ticket "{ticket.asunto}" ha sido respondido.',
+                enlace='#'  # Podrías crear una vista para que el usuario vea la respuesta
+            )
+            messages.success(request, 'Respuesta enviada correctamente.')
+            return redirect('lista_tickets_admin')
+    return render(request, 'admin/detalle_ticket.html', {'ticket': ticket})
 

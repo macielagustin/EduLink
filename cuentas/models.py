@@ -469,7 +469,6 @@ class SesionEstudio(models.Model):
 
 
 
-# Después de los modelos existentes, agregar:
 
 class Institucion(models.Model):
     nombre = models.CharField(max_length=200)
@@ -528,6 +527,28 @@ class Nota(models.Model):
         return f"{self.titulo} - {self.bloc_notas.usuario.username}"
 
 
+
+class TicketSoporte(models.Model):
+    ESTADOS = [
+        ('abierto', 'Abierto'),
+        ('en_progreso', 'En progreso'),
+        ('resuelto', 'Resuelto'),
+        ('cerrado', 'Cerrado'),
+    ]
+    remitente = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='tickets_enviados')
+    asunto = models.CharField(max_length=200)
+    mensaje = models.TextField()
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    estado = models.CharField(max_length=20, choices=ESTADOS, default='abierto')
+    respuesta = models.TextField(blank=True, null=True)
+    fecha_respuesta = models.DateTimeField(blank=True, null=True)
+    respondido_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='tickets_respondidos')
+    
+    class Meta:
+        ordering = ['-fecha_creacion']
+    
+    def __str__(self):
+        return f"Ticket #{self.id} - {self.asunto}"
 
 
 

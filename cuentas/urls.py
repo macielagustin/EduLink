@@ -173,9 +173,11 @@ urlpatterns = [
 
     # URLs de administrador
     path("admin/dashboard/", views.dashboard_admin, name="dashboard_admin"),
-    #path("admin/estadisticas/", views.estadisticas_detalladas, name="estadisticas_detalladas"),
-    #path("admin/promociones/", views.gestion_promociones, name="gestion_promociones"),
-    #path("admin/vouchers/", views.gestion_vouchers, name="gestion_vouchers"),
+    path("admin/estadisticas/", views.estadisticas_detalladas, name="estadisticas_detalladas"),
+    path("admin/promociones/", views.gestion_promociones, name="gestion_promociones"),
+    path("admin/vouchers/", views.gestion_vouchers, name="gestion_vouchers"),
+    path("admin/usuarios/", views.lista_usuarios_admin, name="lista_usuarios_admin"),
+    path("admin/usuario/<int:usuario_id>/", views.detalle_usuario_admin, name="detalle_usuario_admin"),
 
     # URLs para aplicar promociones
     #path("solicitud/<int:solicitud_id>/aplicar-promocion/", views.aplicar_promocion, name="aplicar_promocion"),
@@ -185,4 +187,16 @@ urlpatterns = [
     path("alumno/gastos/exportar-pdf/", views.exportar_gastos_pdf, name="exportar_gastos_pdf"),
     #path("maestro/ingresos/exportar-pdf/", views.exportar_ingresos_pdf, name="exportar_ingresos_pdf"),
 
+    # URLs de soporte
+    path("soporte/nuevo/", views.nuevo_ticket_soporte, name="nuevo_ticket_soporte"),
+    path("admin/soporte/", views.lista_tickets_admin, name="lista_tickets_admin"),
+    path("admin/soporte/<int:ticket_id>/", views.detalle_ticket_admin, name="detalle_ticket_admin"),
+    
+    # URLs para gestión de usuarios por parte del admin
+    path('admin/usuario/<int:usuario_id>/editar/', views.editar_usuario, name='editar_usuario'),
+    path('admin/usuario/<int:usuario_id>/eliminar/', views.eliminar_usuario, name='eliminar_usuario'),
+    path('admin/usuario/<int:usuario_id>/bloquear/', views.bloquear_usuario, name='bloquear_usuario'),
+    path('admin/usuario/<int:usuario_id>/rol/', views.asignar_rol, name='asignar_rol'),
+
+    path('admin/promocion/<int:promocion_id>/editar/', views.editar_promocion, name='editar_promocion'),
 ]

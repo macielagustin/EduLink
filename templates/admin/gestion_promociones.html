@@ -1,0 +1,106 @@
+{% extends "admin/base_admin.html" %}
+{% load static %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2">🎟️ Gestión de Promociones</h1>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#crearPromocionModal">
+        <i class="fas fa-plus me-2"></i>Nueva Promoción
+    </button>
+</div>
+
+<!-- Listado de promociones -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Código</th>
+                        <th>Descripción</th>
+                        <th>Descuento</th>
+                        <th>Válido desde</th>
+                        <th>Válido hasta</th>
+                        <th>Usos máx.</th>
+                        <th>Usos actuales</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for promocion in promociones %}
+                    <tr>
+                        <td>{{ promocion.id }}</td>
+                        <td><strong>{{ promocion.codigo }}</strong></td>
+                        <td>{{ promocion.descripcion|truncatechars:50 }}</td>
+                        <td>
+                            {% if promocion.tipo_descuento == 'porcentaje' %}
+                                {{ promocion.valor_descuento }}%
+                            {% else %}
+                                ${{ promocion.valor_descuento }}
+                            {% endif %}
+                        </td>
+                        <td>{{ promocion.fecha_inicio|date:"d/m/Y" }}</td>
+                        <td>{{ promocion.fecha_fin|date:"d/m/Y" }}</td>
+                        <td>{{ promocion.usos_maximos|default:"∞" }}</td>
+                        <td>{{ promocion.usos_actuales }}</td>
+                        <td>
+                            {% if promocion.activa %}
+                                <span class="badge bg-success">Activa</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactiva</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'editar_promocion' promocion.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form method="post" action="{% url 'gestion_promociones' %}" style="display:inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="promocion_id" value="{{ promocion.id }}">
+                                <button type="submit" name="eliminar" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Eliminar promoción?')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="10" class="text-center text-muted">No hay promociones</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para crear/editar promoción -->
+<div class="modal fade" id="crearPromocionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" action="{% url 'gestion_promociones' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Nueva Promoción</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    {{ form.as_p }}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" name="crear" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Script para edición (podrías cargar datos vía JS) -->
+<script>
+function editarPromocion(id) {
+    // Por ahora redirige a una URL de edición (si existe) o muestra mensaje
+    alert('Funcionalidad de edición en desarrollo');
+}
+</script>
+{% endblock %}
