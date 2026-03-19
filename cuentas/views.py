@@ -39,6 +39,8 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
 
+from .models import Promocion
+
 
 # Agregar estas funciones utilitarias al inicio de views.py
 def crear_notificacion(usuario, tipo, mensaje, enlace=''):
@@ -1081,6 +1083,13 @@ def dashboard_maestro(request):
     tareas_pendientes = request.user.tarea_set.filter(completada=False).count()
     tareas_completadas = request.user.tarea_set.filter(completada=True).count()
 
+    # Promociones activas
+    promociones_activas = Promocion.objects.filter(
+    activa=True,
+    fecha_inicio__lte=timezone.now(),
+    fecha_fin__gte=timezone.now()
+    )
+
     context = {
         "solicitudes_pendientes": solicitudes_pendientes,
         "clases_esta_semana": clases_esta_semana,
@@ -1096,6 +1105,7 @@ def dashboard_maestro(request):
         "total_tareas": total_tareas,
         "tareas_pendientes": tareas_pendientes,
         "tareas_completadas": tareas_completadas,
+        "promociones_activas": promociones_activas,
     }
 
     return render(request, "cuentas/dashboard_maestro.html", context)
@@ -1759,14 +1769,12 @@ def confirmar_fecha_solicitud(request, solicitud_id):
         messages.error(request, "No tienes permiso para esta acción.")
         return redirect('mis_solicitudes_alumno')
 
-    # Verificar estado
     if solicitud.estado != 'propuesta':
         messages.error(request, "Esta solicitud no tiene una propuesta pendiente de confirmación.")
         return redirect('mis_solicitudes_alumno')
 
     if request.method == 'POST':
         form = ConfirmarFechaForm(request.POST, instance=solicitud)
-
         if form.is_valid():
             try:
                 solicitud = form.save(commit=False)
@@ -1778,28 +1786,43 @@ def confirmar_fecha_solicitud(request, solicitud_id):
 
                 if codigo_voucher:
                     try:
-                        voucher = Voucher.objects.get(
+                        voucher = Voucher.objects.select_related('promocion').get(
                             codigo=codigo_voucher,
                             usado=False,
-                            fecha_expiracion__gte=timezone.now()
+                            promocion__activa=True,
+                            promocion__fecha_inicio__lte=timezone.now(),
+                            promocion__fecha_fin__gte=timezone.now()
                         )
-
+                        promocion = voucher.promocion
                         monto_original = solicitud.monto_acordado
+                        descuento = 0
+                        monto_final = monto_original
 
-                        if voucher.tipo_descuento == 'porcentaje':
-                            descuento = monto_original * (voucher.valor_descuento / 100)
-                        else:
-                            descuento = voucher.valor_descuento
+                        if promocion.tipo == 'descuento_porcentaje':
+                            descuento = monto_original * (promocion.valor / 100)
+                            monto_final = monto_original - descuento
+                        elif promocion.tipo == 'descuento_monto':
+                            descuento = promocion.valor
+                            monto_final = monto_original - descuento
+                        elif promocion.tipo == 'clase_gratuita':
+                            monto_final = 0
+                            descuento = monto_original
+                        # otros tipos (grupo) se pueden implementar después
 
-                        solicitud.monto_final = max(monto_original - descuento, 0)
+                        monto_final = max(monto_final, 0)
+
+                        solicitud.monto_original = monto_original
+                        solicitud.monto_final = monto_final
+                        solicitud.promocion_aplicada = promocion
+                        solicitud.voucher_usado = voucher
 
                         # Marcar voucher como usado
                         voucher.usado = True
                         voucher.fecha_uso = timezone.now()
-                        voucher.usuario = request.user
+                        voucher.alumno = solicitud.alumno  # si el modelo tiene este campo
                         voucher.save()
 
-                        messages.success(request, f'Voucher aplicado. Descuento: ${descuento}')
+                        messages.success(request, f'Voucher aplicado. Descuento: ${descuento:.2f}')
 
                     except Voucher.DoesNotExist:
                         messages.error(request, 'Voucher inválido o expirado')
@@ -1807,22 +1830,13 @@ def confirmar_fecha_solicitud(request, solicitud_id):
                 # ==========================
                 # Confirmar clase
                 # ==========================
-
                 solicitud.estado = 'aceptada'
-
-                # Inicializar estado de pago
                 solicitud.estado_pago = 'pendiente'
-
-                # Si no se cambia la fecha usar la propuesta
                 if not solicitud.fecha_clase_confirmada:
                     solicitud.fecha_clase_confirmada = solicitud.fecha_clase_propuesta
-
                 solicitud.save()
 
-                # ==========================
-                # Notificación al maestro
-                # ==========================
-
+                # Notificar al maestro
                 crear_notificacion(
                     usuario=solicitud.maestro.usuario,
                     tipo='clase_aceptada',
@@ -1831,10 +1845,6 @@ def confirmar_fecha_solicitud(request, solicitud_id):
                 )
 
                 messages.success(request, '✅ ¡Clase confirmada! La clase ha sido agendada.')
-
-                # ==========================
-                # Redirección según pago
-                # ==========================
 
                 if solicitud.metodo_pago != 'efectivo':
                     return redirect('generar_qr_pago', solicitud_id=solicitud.id)
@@ -1845,12 +1855,10 @@ def confirmar_fecha_solicitud(request, solicitud_id):
                 messages.error(request, f'❌ Error al confirmar la clase: {str(e)}')
 
     else:
-        # Inicializar formulario con fecha propuesta
         initial_data = {
             'fecha_clase_confirmada': solicitud.fecha_clase_propuesta,
             'metodo_pago': solicitud.metodo_pago
         }
-
         form = ConfirmarFechaForm(instance=solicitud, initial=initial_data)
 
     return render(request, 'alumno/confirmar_fecha.html', {
@@ -4028,46 +4036,51 @@ from datetime import timedelta
 @admin_required
 def estadisticas_detalladas(request):
     ahora = timezone.now()
-    
-    # Totales
+    año_seleccionado = request.GET.get('año', ahora.year)
+    try:
+        año_seleccionado = int(año_seleccionado)
+    except:
+        año_seleccionado = ahora.year
+
     total_usuarios = Usuario.objects.count()
     total_clases = SolicitudClase.objects.count()
     solicitudes_activas = SolicitudClase.objects.filter(estado='pendiente').count()
-    
-    # Usuarios por rol
+
     usuarios_por_rol = Usuario.objects.values('rol').annotate(total=Count('id'))
-    
-    # Datos para gráficos (últimos 6 meses)
+
+    # Datos para gráficos: 12 meses del año seleccionado
     meses = []
     usuarios_mes = []
     ingresos_mes = []
-    for i in range(5, -1, -1):
-        fecha = ahora - timedelta(days=30*i)
-        meses.append(fecha.strftime('%b %Y'))
-        
-        # Usuarios creados en ese mes
+    from datetime import datetime
+    for mes in range(1, 13):
+        fecha_inicio = datetime(año_seleccionado, mes, 1, tzinfo=timezone.get_current_timezone())
+        if mes == 12:
+            fecha_fin = datetime(año_seleccionado+1, 1, 1, tzinfo=timezone.get_current_timezone())
+        else:
+            fecha_fin = datetime(año_seleccionado, mes+1, 1, tzinfo=timezone.get_current_timezone())
+        meses.append(fecha_inicio.strftime('%b %Y'))
+
         usuarios_mes.append(
-            Usuario.objects.filter(
-                date_joined__year=fecha.year,
-                date_joined__month=fecha.month
-            ).count()
+            Usuario.objects.filter(date_joined__gte=fecha_inicio, date_joined__lt=fecha_fin).count()
         )
-        
-        # Ingresos de clases pagadas en ese mes
+
         ingresos = SolicitudClase.objects.filter(
             estado_pago='pagado',
-            fecha_pago__year=fecha.year,
-            fecha_pago__month=fecha.month
+            fecha_pago__gte=fecha_inicio,
+            fecha_pago__lt=fecha_fin
         ).aggregate(Sum('monto_final'))['monto_final__sum'] or 0
-        ingresos_mes.append(float(ingresos))  # asegurar float
-    
-    # Clases por estado
+        ingresos_mes.append(float(ingresos))
+
     clases_por_estado = list(SolicitudClase.objects.values('estado').annotate(total=Count('id')))
-    
-    # Calcular porcentajes para el template (opcional)
     for item in clases_por_estado:
         item['porcentaje'] = round((item['total'] / total_clases) * 100, 1) if total_clases else 0
-    
+
+    años_disponibles = Usuario.objects.dates('date_joined', 'year').distinct()
+    años_list = [f.year for f in años_disponibles]
+    if not años_list:
+        años_list = [ahora.year]
+
     context = {
         'total_usuarios': total_usuarios,
         'total_clases': total_clases,
@@ -4077,8 +4090,11 @@ def estadisticas_detalladas(request):
         'usuarios_mes': usuarios_mes,
         'ingresos_mes': ingresos_mes,
         'clases_por_estado': clases_por_estado,
+        'años_disponibles': años_list,
+        'año_seleccionado': año_seleccionado,
     }
     return render(request, 'admin/estadisticas_detalladas.html', context)
+
 
 @admin_required
 def gestion_promociones(request):
@@ -4212,22 +4228,17 @@ def detalle_usuario_admin(request, usuario_id):
 
 @admin_required
 def editar_usuario(request, usuario_id):
-    """Editar usuario (placeholder para formulario)"""
-    
     usuario = get_object_or_404(Usuario, id=usuario_id)
-
     if request.method == 'POST':
         usuario.nombre = request.POST.get('nombre', usuario.nombre)
         usuario.apellido = request.POST.get('apellido', usuario.apellido)
         usuario.email = request.POST.get('email', usuario.email)
+        # Capturar el checkbox (envía 'on' si está marcado)
+        usuario.verificado = request.POST.get('verificado') == 'on'
         usuario.save()
-
         messages.success(request, 'Usuario actualizado correctamente.')
         return redirect('detalle_usuario_admin', usuario_id=usuario.id)
-
-    return render(request, 'admin/editar_usuario.html', {
-        'usuario': usuario
-    })
+    return render(request, 'admin/editar_usuario.html', {'usuario': usuario})
 
 
 @admin_required
@@ -4244,14 +4255,12 @@ def eliminar_usuario(request, usuario_id):
 
 @admin_required
 def bloquear_usuario(request, usuario_id):
-    """Bloquear usuario"""
-
     usuario = get_object_or_404(Usuario, id=usuario_id)
-
-    usuario.activo = False  # Ajusta si usas otro campo
+    # Alternar estado
+    usuario.is_active = not usuario.is_active
     usuario.save()
-
-    messages.success(request, 'Usuario bloqueado.')
+    estado = "bloqueado" if not usuario.is_active else "activado"
+    messages.success(request, f'Usuario {estado} correctamente.')
     return redirect('lista_usuarios_admin')
 
 
