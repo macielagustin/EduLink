@@ -15,6 +15,20 @@
                     <option value="{{ año }}" {% if año == año_seleccionado %}selected{% endif %}>{{ año }}</option>
                 {% endfor %}
             </select>
+            <div class="btn-group" role="group">
+                <a href="?año={{ año_seleccionado }}&exportar=csv" class="btn btn-success">
+                    <i class="fas fa-file-csv me-2"></i>CSV
+                </a>
+                <a href="?año={{ año_seleccionado }}&exportar=excel" class="btn btn-primary">
+                    <i class="fas fa-file-excel me-2"></i>Excel
+                </a>
+                <a href="?año={{ año_seleccionado }}&exportar=pdf" class="btn btn-danger">
+                    <i class="fas fa-file-pdf me-2"></i>PDF
+                </a>
+            </div>
+<!--             <a href="?año={{ año_seleccionado }}&exportar=csv" class="btn btn-success">
+                <i class="fas fa-download me-2"></i>Exportar CSV -->
+            </a>
             <noscript><button type="submit" class="btn btn-primary">Ver</button></noscript>
         </form>
     </div>

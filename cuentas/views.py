@@ -41,6 +41,10 @@ from openpyxl.utils import get_column_letter
 
 from .models import Promocion
 
+from django.db import models
+
+from django.db.models.functions import Coalesce
+
 
 # Agregar estas funciones utilitarias al inicio de views.py
 def crear_notificacion(usuario, tipo, mensaje, enlace=''):
@@ -3959,6 +3963,9 @@ from django.contrib import messages
 from django.db.models import Count, Sum
 from datetime import datetime
 
+from django.db.models.functions import Coalesce
+from django.db.models import Value
+
 @admin_required
 def dashboard_admin(request):
     """Dashboard principal del administrador"""
@@ -3988,8 +3995,8 @@ def dashboard_admin(request):
         ingresos_totales = SolicitudClase.objects.filter(
             estado_pago='pagado'
         ).aggregate(
-            Sum('monto_final')
-        )['monto_final__sum'] or 0
+            total=Sum(Coalesce('monto_final', 'monto_acordado', output_field=models.DecimalField()))
+        )['total'] or 0
 
         # Usuarios nuevos este mes
         primer_dia_mes = datetime.now().replace(
@@ -4033,6 +4040,9 @@ from django.db.models import Count, Sum, Avg, Q
 from django.utils import timezone
 from datetime import timedelta
 
+from django.db.models.functions import Coalesce
+from django.db.models import DecimalField
+
 @admin_required
 def estadisticas_detalladas(request):
     ahora = timezone.now()
@@ -4069,7 +4079,10 @@ def estadisticas_detalladas(request):
             estado_pago='pagado',
             fecha_pago__gte=fecha_inicio,
             fecha_pago__lt=fecha_fin
-        ).aggregate(Sum('monto_final'))['monto_final__sum'] or 0
+        ).aggregate(
+            total=Sum(Coalesce('monto_final', 'monto_acordado', output_field=models.DecimalField()))
+        )['total'] or 0
+
         ingresos_mes.append(float(ingresos))
 
     clases_por_estado = list(SolicitudClase.objects.values('estado').annotate(total=Count('id')))
@@ -4080,6 +4093,28 @@ def estadisticas_detalladas(request):
     años_list = [f.year for f in años_disponibles]
     if not años_list:
         años_list = [ahora.year]
+
+    exportar = request.GET.get('exportar')
+
+    if exportar == 'csv':
+        return exportar_estadisticas_csv(
+            request, año_seleccionado, meses, usuarios_mes, ingresos_mes,
+            clases_por_estado, total_usuarios, total_clases, solicitudes_activas
+        )
+
+    elif exportar == 'excel':
+        return exportar_estadisticas_excel(
+            request, año_seleccionado, meses, usuarios_mes, ingresos_mes,
+            clases_por_estado, total_usuarios, total_clases, solicitudes_activas
+        )
+
+    elif exportar == 'pdf':
+        return exportar_estadisticas_pdf(
+            request, año_seleccionado, meses, usuarios_mes, ingresos_mes,
+            clases_por_estado, total_usuarios, total_clases, solicitudes_activas
+        )
+    
+
 
     context = {
         'total_usuarios': total_usuarios,
@@ -4376,4 +4411,143 @@ def detalle_ticket_admin(request, ticket_id):
             messages.success(request, 'Respuesta enviada correctamente.')
             return redirect('lista_tickets_admin')
     return render(request, 'admin/detalle_ticket.html', {'ticket': ticket})
+
+
+import csv
+from django.http import HttpResponse
+
+def exportar_estadisticas_csv(request, año, meses, usuarios_mes, ingresos_mes, clases_por_estado, total_usuarios, total_clases, solicitudes_activas):
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="estadisticas_{año}.csv"'
+    writer = csv.writer(response)
+    
+    writer.writerow(['Estadísticas EduLink', f'Año {año}'])
+    writer.writerow(['Total usuarios', total_usuarios])
+    writer.writerow(['Total clases', total_clases])
+    writer.writerow(['Solicitudes activas', solicitudes_activas])
+    writer.writerow([])
+    
+    writer.writerow(['Mes', 'Usuarios nuevos', 'Ingresos ($)'])
+    # Tomar el mínimo de las longitudes para evitar errores
+    min_len = min(len(meses), len(usuarios_mes), len(ingresos_mes))
+    for i in range(min_len):
+        writer.writerow([meses[i], usuarios_mes[i], ingresos_mes[i]])
+    
+    writer.writerow([])
+    writer.writerow(['Clases por estado', 'Cantidad'])
+    for item in clases_por_estado:
+        writer.writerow([item['estado'], item['total']])
+    
+    return response
+
+
+from openpyxl import Workbook
+from django.http import HttpResponse
+
+def exportar_estadisticas_excel(request, año, meses, usuarios_mes, ingresos_mes,
+                                clases_por_estado, total_usuarios, total_clases, solicitudes_activas):
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Estadísticas"
+
+    # Título
+    ws.append([f"Estadísticas del año {año}"])
+    ws.append([])
+
+    # Resumen
+    ws.append(["Resumen"])
+    ws.append(["Total usuarios", total_usuarios])
+    ws.append(["Total clases", total_clases])
+    ws.append(["Solicitudes activas", solicitudes_activas])
+    ws.append([])
+
+    # Tabla mensual
+    ws.append(["Mes", "Usuarios nuevos", "Ingresos"])
+
+    for i in range(len(meses)):
+        ws.append([
+            meses[i],
+            usuarios_mes[i],
+            ingresos_mes[i]
+        ])
+
+    ws.append([])
+
+    # Clases por estado
+    ws.append(["Estado", "Cantidad", "Porcentaje"])
+
+    for estado in clases_por_estado:
+        ws.append([
+            estado['estado'],
+            estado['total'],
+            estado['porcentaje']
+        ])
+
+    # Response
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename=estadisticas_{año}.xlsx'
+
+    wb.save(response)
+    return response
+
+
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet
+from django.http import HttpResponse
+
+def exportar_estadisticas_pdf(request, año, meses, usuarios_mes, ingresos_mes,
+                              clases_por_estado, total_usuarios, total_clases, solicitudes_activas):
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename=estadisticas_{año}.pdf'
+
+    doc = SimpleDocTemplate(response, pagesize=letter)
+    elements = []
+
+    styles = getSampleStyleSheet()
+
+    # Título
+    elements.append(Paragraph(f"Estadísticas del año {año}", styles['Title']))
+
+    # Resumen
+    resumen_data = [
+        ["Total usuarios", total_usuarios],
+        ["Total clases", total_clases],
+        ["Solicitudes activas", solicitudes_activas],
+    ]
+
+    tabla_resumen = Table(resumen_data)
+    tabla_resumen.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.grey),
+        ('GRID', (0,0), (-1,-1), 1, colors.black),
+    ]))
+
+    elements.append(tabla_resumen)
+
+    # Tabla mensual
+    data = [["Mes", "Usuarios", "Ingresos"]]
+
+    for i in range(len(meses)):
+        data.append([
+            meses[i],
+            usuarios_mes[i],
+            f"${ingresos_mes[i]}"
+        ])
+
+    tabla = Table(data)
+    tabla.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.lightblue),
+        ('GRID', (0,0), (-1,-1), 1, colors.black),
+    ]))
+
+    elements.append(tabla)
+
+    doc.build(elements)
+    return response
+
 

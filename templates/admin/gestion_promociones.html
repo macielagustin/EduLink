@@ -14,62 +14,66 @@
     <div class="card-body">
         <div class="table-responsive">
             <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Código</th>
-                        <th>Descripción</th>
-                        <th>Descuento</th>
-                        <th>Válido desde</th>
-                        <th>Válido hasta</th>
-                        <th>Usos máx.</th>
-                        <th>Usos actuales</th>
-                        <th>Estado</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for promocion in promociones %}
-                    <tr>
-                        <td>{{ promocion.id }}</td>
-                        <td><strong>{{ promocion.codigo }}</strong></td>
-                        <td>{{ promocion.descripcion|truncatechars:50 }}</td>
-                        <td>
-                            {% if promocion.tipo_descuento == 'porcentaje' %}
-                                {{ promocion.valor_descuento }}%
-                            {% else %}
-                                ${{ promocion.valor_descuento }}
-                            {% endif %}
-                        </td>
-                        <td>{{ promocion.fecha_inicio|date:"d/m/Y" }}</td>
-                        <td>{{ promocion.fecha_fin|date:"d/m/Y" }}</td>
-                        <td>{{ promocion.usos_maximos|default:"∞" }}</td>
-                        <td>{{ promocion.usos_actuales }}</td>
-                        <td>
-                            {% if promocion.activa %}
-                                <span class="badge bg-success">Activa</span>
-                            {% else %}
-                                <span class="badge bg-secondary">Inactiva</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <a href="{% url 'editar_promocion' promocion.id %}" class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            <form method="post" action="{% url 'gestion_promociones' %}" style="display:inline;">
-                                {% csrf_token %}
-                                <input type="hidden" name="promocion_id" value="{{ promocion.id }}">
-                                <button type="submit" name="eliminar" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Eliminar promoción?')">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="10" class="text-center text-muted">No hay promociones</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Nombre</th>  <!-- antes decía Código -->
+            <th>Descripción</th>
+            <th>Descuento</th>
+            <th>Válido desde</th>
+            <th>Válido hasta</th>
+            <th>Usos máx.</th>
+            <th>Usos actuales</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for promocion in promociones %}
+        <tr>
+            <td>{{ promocion.id }}</td>
+            <td><strong>{{ promocion.nombre }}</strong></td>  <!-- antes promocion.codigo -->
+            <td>{{ promocion.descripcion|truncatechars:50 }}</td>
+            <td>
+                {% if promocion.tipo == 'descuento_porcentaje' %}
+                    {{ promocion.valor }}%
+                {% elif promocion.tipo == 'descuento_monto' %}
+                    ${{ promocion.valor }}
+                {% elif promocion.tipo == 'clase_gratuita' %}
+                    100% (Gratis)
+                {% else %}
+                    {{ promocion.valor }}
+                {% endif %}
+            </td>
+            <td>{{ promocion.fecha_inicio|date:"d/m/Y" }}</td>
+            <td>{{ promocion.fecha_fin|date:"d/m/Y" }}</td>
+            <td>{{ promocion.max_usos|default:"∞" }}</td>
+            <td>{{ promocion.usos_actuales }}</td>
+            <td>
+                {% if promocion.activa %}
+                    <span class="badge bg-success">Activa</span>
+                {% else %}
+                    <span class="badge bg-secondary">Inactiva</span>
+                {% endif %}
+            </td>
+            <td>
+                <a href="{% url 'editar_promocion' promocion.id %}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-edit"></i>
+                </a>
+                <form method="post" action="{% url 'gestion_promociones' %}" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="promocion_id" value="{{ promocion.id }}">
+                    <button type="submit" name="eliminar" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Eliminar promoción?')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </form>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="10" class="text-center text-muted">No hay promociones</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
         </div>
     </div>
 </div>
