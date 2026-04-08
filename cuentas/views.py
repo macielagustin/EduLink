@@ -4350,6 +4350,7 @@ def editar_promocion(request, promocion_id):
     return render(request, 'admin/editar_promocion.html', {'form': form, 'promocion': promocion})
 
 
+from .models import TicketSoporte
 @login_required
 def nuevo_ticket_soporte(request):
     """Permite a cualquier usuario enviar un ticket de soporte"""
@@ -4406,11 +4407,17 @@ def detalle_ticket_admin(request, ticket_id):
                 usuario=ticket.remitente,
                 tipo='solicitud',
                 mensaje=f'Tu ticket "{ticket.asunto}" ha sido respondido.',
-                enlace='#'  # Podrías crear una vista para que el usuario vea la respuesta
+                enlace=f'/soporte/mis-tickets/'   # luego crearemos esta vista
             )
             messages.success(request, 'Respuesta enviada correctamente.')
             return redirect('lista_tickets_admin')
     return render(request, 'admin/detalle_ticket.html', {'ticket': ticket})
+
+
+@login_required
+def mis_tickets(request):
+    tickets = TicketSoporte.objects.filter(remitente=request.user).order_by('-fecha_creacion')
+    return render(request, 'soporte/mis_tickets.html', {'tickets': tickets})
 
 
 import csv

@@ -11,7 +11,8 @@
         
         {% if ticket.respuesta %}
             <hr>
-            <p><strong>Respuesta ({{ ticket.fecha_respuesta|date:"d/m/Y H:i" }}) por {{ ticket.respondido_por.get_full_name }}:</strong></p>
+                <p><strong>Respuesta ({{ ticket.fecha_respuesta|date:"d/m/Y H:i" }}) por {{ ticket.respondido_por.get_full_name|default:ticket.respondido_por.username }}:</strong></p>
+                <p>{{ ticket.respuesta }}</p>
             <div class="p-3 bg-success text-white">{{ ticket.respuesta|linebreaks }}</div>
         {% endif %}
         

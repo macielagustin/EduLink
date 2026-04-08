@@ -50,6 +50,12 @@
                             <i class="fas fa-cog me-2"></i>Django Admin
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a href="{% url 'lista_tickets_admin' %}" 
+                           class="nav-link text-white {% if request.resolver_match.url_name == 'lista_tickets_admin' %}active{% endif %}">
+                            <i class="fas fa-ticket-alt me-2"></i>Soporte
+                        </a>
+                    </li>
                 </ul>
             </div>
         </div>
