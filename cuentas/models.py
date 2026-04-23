@@ -309,6 +309,7 @@ class Mensaje(models.Model):
         ('texto', 'Texto'),
         ('imagen', 'Imagen'),
         ('archivo', 'Archivo'),
+        ('audio', 'Audio'),
     ])
     
     # Nombre original del archivo

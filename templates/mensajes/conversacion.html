@@ -208,47 +208,50 @@
                                                     {{ mensaje.remitente.get_full_name|default:mensaje.remitente.username }}
                                                 </small>
                                                 
-                                                <!-- Contenido del mensaje -->
-                                                {% if mensaje.contenido %}
-                                                    <p class="mb-2">{{ mensaje.contenido }}</p>
-                                                {% endif %}
-                                                
-                                                <!-- Imagen adjunta -->
-                                                {% if mensaje.imagen %}
-                                                    <div class="mb-2">
-                                                        <img src="{{ mensaje.imagen.url }}" 
-                                                             alt="Imagen" 
-                                                             class="img-fluid rounded" 
-                                                             style="max-height: 200px; cursor: pointer;"
-                                                             onclick="ampliarImagen(this)">
-                                                    </div>
-                                                {% endif %}
-                                                
-                                                <!-- Archivo adjunto -->
-                                                {% if mensaje.archivo and not mensaje.imagen %}
-                                                    <div class="mb-2">
-                                                        <div class="card border">
-                                                            <div class="card-body py-2">
-                                                                <div class="d-flex align-items-center">
-                                                                    <div class="flex-shrink-0">
-                                                                        <i class="fas fa-file text-primary fa-2x"></i>
-                                                                    </div>
-                                                                    <div class="flex-grow-1 ms-3">
-                                                                        <h6 class="mb-1">{{ mensaje.nombre_archivo }}</h6>
-                                                                        <small class="text-muted">{{ mensaje.formatear_tamano }}</small>
-                                                                    </div>
-                                                                    <div class="flex-shrink-0 ms-3">
-                                                                        <a href="{{ mensaje.archivo.url }}" 
-                                                                           target="_blank" 
-                                                                           class="btn btn-sm btn-outline-primary">
-                                                                            <i class="fas fa-download"></i>
-                                                                        </a>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                {% endif %}
+                                                {% if mensaje.tipo == 'audio' %}
+    <div class="mb-2">
+        <audio controls src="{{ mensaje.archivo.url }}" style="max-width: 200px;"></audio>
+        <div class="small text-muted">Audio {{ mensaje.duracion_aprox }}s</div>
+    </div>
+
+{% elif mensaje.tipo == 'imagen' %}
+    <div class="mb-2">
+        <img src="{{ mensaje.imagen.url }}" 
+             alt="Imagen" 
+             class="img-fluid rounded" 
+             style="max-height: 200px; cursor: pointer;"
+             onclick="ampliarImagen(this)">
+    </div>
+
+{% elif mensaje.tipo == 'archivo' %}
+    <div class="mb-2">
+        <div class="card border">
+            <div class="card-body py-2">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-file text-primary fa-2x"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h6 class="mb-1">{{ mensaje.nombre_archivo }}</h6>
+                        <small class="text-muted">{{ mensaje.formatear_tamano }}</small>
+                    </div>
+                    <div class="flex-shrink-0 ms-3">
+                        <a href="{{ mensaje.archivo.url }}" 
+                           target="_blank" 
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-download"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% else %}
+    {% if mensaje.contenido %}
+        <p class="mb-2">{{ mensaje.contenido }}</p>
+    {% endif %}
+{% endif %}
                                                 
                                                 <!-- Hora del mensaje -->
                                                 <small class="text-muted d-block text-end">
@@ -270,46 +273,50 @@
                                             <!-- Burbuja de mensaje -->
                                             <div class="bg-primary text-white rounded-3 p-3 mb-1">
                                                 <!-- Contenido del mensaje -->
-                                                {% if mensaje.contenido %}
-                                                    <p class="mb-2">{{ mensaje.contenido }}</p>
-                                                {% endif %}
-                                                
-                                                <!-- Imagen adjunta -->
-                                                {% if mensaje.imagen %}
-                                                    <div class="mb-2">
-                                                        <img src="{{ mensaje.imagen.url }}" 
-                                                             alt="Imagen" 
-                                                             class="img-fluid rounded" 
-                                                             style="max-height: 200px; cursor: pointer;"
-                                                             onclick="ampliarImagen(this)">
-                                                    </div>
-                                                {% endif %}
-                                                
-                                                <!-- Archivo adjunto -->
-                                                {% if mensaje.archivo and not mensaje.imagen %}
-                                                    <div class="mb-2">
-                                                        <div class="card border-0 bg-white bg-opacity-25">
-                                                            <div class="card-body py-2">
-                                                                <div class="d-flex align-items-center">
-                                                                    <div class="flex-shrink-0">
-                                                                        <i class="fas fa-file text-white fa-2x"></i>
-                                                                    </div>
-                                                                    <div class="flex-grow-1 ms-3 text-start">
-                                                                        <h6 class="mb-1 text-white">{{ mensaje.nombre_archivo }}</h6>
-                                                                        <small class="text-white">{{ mensaje.formatear_tamano }}</small>
-                                                                    </div>
-                                                                    <div class="flex-shrink-0 ms-3">
-                                                                        <a href="{{ mensaje.archivo.url }}" 
-                                                                           target="_blank" 
-                                                                           class="btn btn-sm btn-light">
-                                                                            <i class="fas fa-download"></i>
-                                                                        </a>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                {% endif %}
+                                                {% if mensaje.tipo == 'audio' %}
+    <div class="mb-2">
+        <audio controls src="{{ mensaje.archivo.url }}" style="max-width: 200px;"></audio>
+        <div class="small text-white-50">Audio {{ mensaje.duracion_aprox }}s</div>
+    </div>
+
+{% elif mensaje.tipo == 'imagen' %}
+    <div class="mb-2">
+        <img src="{{ mensaje.imagen.url }}" 
+             alt="Imagen" 
+             class="img-fluid rounded" 
+             style="max-height: 200px; cursor: pointer;"
+             onclick="ampliarImagen(this)">
+    </div>
+
+{% elif mensaje.tipo == 'archivo' %}
+    <div class="mb-2">
+        <div class="card border-0 bg-white bg-opacity-25">
+            <div class="card-body py-2">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-file text-white fa-2x"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3 text-start">
+                        <h6 class="mb-1 text-white">{{ mensaje.nombre_archivo }}</h6>
+                        <small class="text-white">{{ mensaje.formatear_tamano }}</small>
+                    </div>
+                    <div class="flex-shrink-0 ms-3">
+                        <a href="{{ mensaje.archivo.url }}" 
+                           target="_blank" 
+                           class="btn btn-sm btn-light">
+                            <i class="fas fa-download"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% else %}
+    {% if mensaje.contenido %}
+        <p class="mb-2">{{ mensaje.contenido }}</p>
+    {% endif %}
+{% endif %}
                                                 
                                                 <!-- Hora y estado de lectura -->
                                                 <small class="text-white-50 d-block">
@@ -370,6 +377,7 @@
                         <div class="d-none">
                             {{ form.archivo }}
                             {{ form.imagen }}
+                            {{ form.audio }}
                         </div>
                         
                         <!-- Área de entrada -->
@@ -377,18 +385,26 @@
                             <button class="btn btn-outline-secondary" type="button" id="btn-adjuntar">
                                 <i class="fas fa-paperclip"></i>
                             </button>
-                            
+    
                             {{ form.contenido }}
+    
+                            <!-- BOTÓN DE GRABAR AUDIO -->
+                            <button type="button" id="grabarAudioBtn" class="btn btn-outline-secondary" title="Grabar audio">
+                                <i class="fas fa-microphone"></i>
+                            </button>
                             
                             <button class="btn btn-outline-secondary" type="button" id="btn-emojis">
                                 <i class="fas fa-smile"></i>
                             </button>
-                            
+    
                             <button type="submit" class="btn btn-primary" id="btn-enviar">
                                 <i class="fas fa-paper-plane"></i>
                             </button>
                         </div>
-                        
+
+                        <!-- INPUT OCULTO PARA AUDIO -->
+                        <input type="file" name="audio" id="audioFile" style="display:none;">
+
                         <!-- Botones de acción rápida -->
                         <div class="d-flex justify-content-start gap-2 mt-2">
                             <button type="button" class="btn btn-sm btn-outline-secondary" 
@@ -401,6 +417,7 @@
                             </button>
                         </div>
                     </form>
+                    <emoji-picker id="emojiPicker" style="display:none; position: absolute; bottom: 70px; right: 20px; z-index: 1050;"></emoji-picker>
                 </div>
             </div>
         </div>
@@ -514,257 +531,425 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const chatMessages = document.getElementById('chat-messages');
-    
-    // Auto-scroll al final del chat
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-    
-    // Variables para el formulario
+    if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    // Elementos del DOM
     const form = document.getElementById('mensaje-form');
     const contenidoInput = document.getElementById('mensaje-contenido');
     const archivoInput = document.getElementById('archivo-input');
     const imagenInput = document.getElementById('imagen-input');
+    const audioInput = document.getElementById('audioFile');
     const previewContainer = document.getElementById('preview-container');
     const previewIcon = document.getElementById('preview-icon');
     const previewFilename = document.getElementById('preview-filename');
     const previewSize = document.getElementById('preview-size');
-
-    // Conectar botón de emojis
+    const btnEnviar = document.getElementById('btn-enviar');
+    const grabarBtn = document.getElementById('grabarAudioBtn');
     const btnEmojis = document.getElementById('btn-emojis');
-    if (btnEmojis) {
-        btnEmojis.addEventListener('click', mostrarEmojis);
-    }
-
-
-    // Conectar botón de adjuntar archivo para abrir el menú de opciones
     const btnAdjuntar = document.getElementById('btn-adjuntar');
-    if (btnAdjuntar) {
-        btnAdjuntar.addEventListener('click', function(e) {
-            e.preventDefault();
-            // Crear menú de opciones
-            const menu = document.createElement('div');
-            menu.className = 'dropdown-menu show';
-            menu.style.position = 'absolute';
-            menu.style.zIndex = '1000';
-            menu.innerHTML = `
-                <a class="dropdown-item" href="#" onclick="adjuntarArchivo(); return false;">
-                    <i class="fas fa-file me-2"></i>Documento
-                </a>
-                <a class="dropdown-item" href="#" onclick="adjuntarImagen(); return false;">
-                    <i class="fas fa-image me-2"></i>Imagen
-                </a>
-            `;
-            
-            const rect = btnAdjuntar.getBoundingClientRect();
-            menu.style.top = (rect.bottom + window.scrollY) + 'px';
-            menu.style.left = (rect.left + window.scrollX) + 'px';
-            
-            document.body.appendChild(menu);
-            
-            // Cerrar al hacer clic fuera
-            setTimeout(() => {
-                const closeMenu = function(e) {
-                    if (!menu.contains(e.target) && e.target !== btnAdjuntar) {
-                        document.body.removeChild(menu);
-                        document.removeEventListener('click', closeMenu);
-                    }
-                };
-                document.addEventListener('click', closeMenu);
-            }, 100);
-        });
-    }
-
 
     let archivoSeleccionado = null;
     let tipoArchivo = null;
-    
-    // Función para adjuntar archivo
-    window.adjuntarArchivo = function() {
-        archivoInput.click();
-    };
 
-    // Función para mostrar emojis (corregida)
-    window.mostrarEmojis = function() {
-        // Crear un selector de emojis simple
-        const emojis = ['😀', '😂', '😊', '🤔', '👍', '❤️', '🎓', '📚', '✏️', '✅'];
-        const emojiContainer = document.createElement('div');
-        emojiContainer.className = 'emoji-picker bg-white border rounded shadow p-2';
-        emojiContainer.style.position = 'absolute';
-        emojiContainer.style.zIndex = '1000';
-        emojiContainer.style.bottom = '60px';
-        emojiContainer.style.right = '60px';
-    
-        emojis.forEach(emoji => {
-            const span = document.createElement('span');
-            span.textContent = emoji;
-            span.style.fontSize = '1.5rem';
-            span.style.cursor = 'pointer';
-            span.style.margin = '5px';
-            span.onclick = function() {
-                const textarea = document.getElementById('mensaje-contenido');
-                textarea.value += emoji;
-                textarea.focus();
-                document.body.removeChild(emojiContainer);
-            };
-            emojiContainer.appendChild(span);
-        });
-    
-    // Cerrar al hacer clic fuera
-    setTimeout(() => {
-        const closePicker = function(e) {
-            if (!emojiContainer.contains(e.target)) {
-                document.body.removeChild(emojiContainer);
-                document.removeEventListener('click', closePicker);
-            }
-        };
-        document.addEventListener('click', closePicker);
-    }, 100);
-    
-    document.body.appendChild(emojiContainer);
-};
-    
-    // Función para adjuntar imagen
-    window.adjuntarImagen = function() {
-        imagenInput.click();
+    // ========== FUNCIONES AUXILIARES ==========
+    window.adjuntarArchivo = function() {
+        if (archivoInput) archivoInput.click();
     };
-    
-    // Función para eliminar adjunto
+    window.adjuntarImagen = function() {
+        if (imagenInput) imagenInput.click();
+    };
     window.eliminarAdjunto = function() {
         archivoSeleccionado = null;
         tipoArchivo = null;
-        archivoInput.value = '';
-        imagenInput.value = '';
-        previewContainer.style.display = 'none';
+        if (archivoInput) archivoInput.value = '';
+        if (imagenInput) imagenInput.value = '';
+        if (audioInput) audioInput.value = '';
+        if (previewContainer) previewContainer.style.display = 'none';
     };
-    
-    // Función para ampliar imagen
     window.ampliarImagen = function(imgElement) {
-        const modal = new bootstrap.Modal(document.getElementById('imagenModal'));
+        const modalElement = document.getElementById('imagenModal');
         const imagenAmpliada = document.getElementById('imagen-ampliada');
         const descargarBtn = document.getElementById('descargar-imagen');
-        
-        imagenAmpliada.src = imgElement.src;
-        descargarBtn.href = imgElement.src;
-        modal.show();
+        if (modalElement && imagenAmpliada && descargarBtn) {
+            const modal = new bootstrap.Modal(modalElement);
+            imagenAmpliada.src = imgElement.src;
+            descargarBtn.href = imgElement.src;
+            modal.show();
+        }
     };
-    
-    // Manejar selección de archivo
-    archivoInput.addEventListener('change', function(e) {
-        if (this.files.length > 0) {
-            archivoSeleccionado = this.files[0];
-            tipoArchivo = 'archivo';
-            mostrarPreview(archivoSeleccionado);
-        }
-    });
-    
-    // Manejar selección de imagen
-    imagenInput.addEventListener('change', function(e) {
-        if (this.files.length > 0) {
-            archivoSeleccionado = this.files[0];
-            tipoArchivo = 'imagen';
-            mostrarPreview(archivoSeleccionado);
-        }
-    });
-    
-    // Mostrar previsualización del archivo
+
     function mostrarPreview(file) {
+        if (!previewFilename || !previewSize || !previewIcon || !previewContainer) return;
         previewFilename.textContent = file.name;
-        
-        // Calcular tamaño formateado
         let size = file.size;
         let sizeFormatted;
-        if (size < 1024) {
-            sizeFormatted = size + ' B';
-        } else if (size < 1024 * 1024) {
-            sizeFormatted = (size / 1024).toFixed(1) + ' KB';
-        } else {
-            sizeFormatted = (size / (1024 * 1024)).toFixed(1) + ' MB';
-        }
+        if (size < 1024) sizeFormatted = size + ' B';
+        else if (size < 1024 * 1024) sizeFormatted = (size / 1024).toFixed(1) + ' KB';
+        else sizeFormatted = (size / (1024 * 1024)).toFixed(1) + ' MB';
         previewSize.textContent = sizeFormatted;
-        
-        // Cambiar icono según tipo
-        if (file.type.startsWith('image/')) {
-            previewIcon.className = 'fas fa-image text-primary fa-2x';
-        } else if (file.name.toLowerCase().endsWith('.pdf')) {
-            previewIcon.className = 'fas fa-file-pdf text-danger fa-2x';
-        } else if (file.name.toLowerCase().endsWith('.doc') || file.name.toLowerCase().endsWith('.docx')) {
-            previewIcon.className = 'fas fa-file-word text-primary fa-2x';
-        } else if (file.name.toLowerCase().endsWith('.xls') || file.name.toLowerCase().endsWith('.xlsx')) {
-            previewIcon.className = 'fas fa-file-excel text-success fa-2x';
-        } else {
-            previewIcon.className = 'fas fa-file text-primary fa-2x';
-        }
-        
+        if (file.type.startsWith('image/')) previewIcon.className = 'fas fa-image text-primary fa-2x';
+        else if (file.name.toLowerCase().endsWith('.pdf')) previewIcon.className = 'fas fa-file-pdf text-danger fa-2x';
+        else if (file.name.toLowerCase().endsWith('.doc') || file.name.toLowerCase().endsWith('.docx')) previewIcon.className = 'fas fa-file-word text-primary fa-2x';
+        else if (file.name.toLowerCase().endsWith('.xls') || file.name.toLowerCase().endsWith('.xlsx')) previewIcon.className = 'fas fa-file-excel text-success fa-2x';
+        else previewIcon.className = 'fas fa-file text-primary fa-2x';
         previewContainer.style.display = 'block';
     }
-    
-    // Enviar formulario con AJAX
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const btnEnviar = document.getElementById('btn-enviar');
-        const originalHTML = btnEnviar.innerHTML;
-        
-        // Mostrar estado de carga
-        btnEnviar.disabled = true;
-        btnEnviar.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        
-        const formData = new FormData(this);
-        
-        // Agregar archivo si hay uno seleccionado
-        if (archivoSeleccionado && tipoArchivo === 'archivo') {
-            formData.append('archivo', archivoSeleccionado);
-        } else if (archivoSeleccionado && tipoArchivo === 'imagen') {
-            formData.append('imagen', archivoSeleccionado);
+
+    // ========== SELECCIONAR ARCHIVOS ==========
+    if (archivoInput) {
+        archivoInput.addEventListener('change', function() {
+            if (this.files.length > 0) {
+                archivoSeleccionado = this.files[0];
+                tipoArchivo = 'archivo';
+                mostrarPreview(archivoSeleccionado);
+            }
+        });
+    }
+    if (imagenInput) {
+        imagenInput.addEventListener('change', function() {
+            if (this.files.length > 0) {
+                archivoSeleccionado = this.files[0];
+                tipoArchivo = 'imagen';
+                mostrarPreview(archivoSeleccionado);
+            }
+        });
+    }
+
+    // ========== EMojis (sin librería externa) ==========
+    if (btnEmojis) {
+        btnEmojis.addEventListener('click', function(e) {
+            e.stopPropagation();
+            // Eliminar picker previo si existe
+            const oldPicker = document.querySelector('.emoji-simple-picker');
+            if (oldPicker) oldPicker.remove();
+
+            const emojis = ['😀', '😂', '😊', '🤔', '👍', '❤️', '🎓', '📚', '✏️', '✅', '😍', '🥰', '😎', '😭', '😡', '🤯', '💪', '👋', '🙏', '✨'];
+            const picker = document.createElement('div');
+            picker.className = 'emoji-simple-picker bg-white border rounded shadow p-2';
+            picker.style.position = 'absolute';
+            picker.style.zIndex = '1050';
+            picker.style.bottom = '60px';
+            picker.style.right = '60px';
+            picker.style.width = '220px';
+            picker.style.display = 'flex';
+            picker.style.flexWrap = 'wrap';
+            picker.style.gap = '5px';
+            picker.style.backgroundColor = '#fff';
+            emojis.forEach(emoji => {
+                const span = document.createElement('span');
+                span.textContent = emoji;
+                span.style.fontSize = '1.5rem';
+                span.style.cursor = 'pointer';
+                span.style.padding = '5px';
+                span.style.borderRadius = '5px';
+                span.addEventListener('mouseenter', () => span.style.backgroundColor = '#f0f0f0');
+                span.addEventListener('mouseleave', () => span.style.backgroundColor = 'transparent');
+                span.onclick = function() {
+                    if (contenidoInput) contenidoInput.value += emoji;
+                    if (contenidoInput) contenidoInput.focus();
+                    picker.remove();
+                };
+                picker.appendChild(span);
+            });
+            document.body.appendChild(picker);
+            // Cerrar al hacer clic fuera
+            const closePicker = function(e) {
+                if (!picker.contains(e.target) && e.target !== btnEmojis) {
+                    picker.remove();
+                    document.removeEventListener('click', closePicker);
+                }
+            };
+            setTimeout(() => document.addEventListener('click', closePicker), 100);
+        });
+    }
+
+    // ========== MENÚ ADJUNTAR ==========
+    if (btnAdjuntar) {
+        btnAdjuntar.addEventListener('click', function(e) {
+            e.preventDefault();
+            const menuExistente = document.querySelector('.dropdown-menu-temporal');
+            if (menuExistente) menuExistente.remove();
+            const menu = document.createElement('div');
+            menu.className = 'dropdown-menu show dropdown-menu-temporal';
+            menu.style.position = 'absolute';
+            menu.style.zIndex = '1000';
+            menu.innerHTML = `
+                <a class="dropdown-item" href="#" onclick="adjuntarArchivo(); return false;"><i class="fas fa-file me-2"></i>Documento</a>
+                <a class="dropdown-item" href="#" onclick="adjuntarImagen(); return false;"><i class="fas fa-image me-2"></i>Imagen</a>
+            `;
+            const rect = btnAdjuntar.getBoundingClientRect();
+            menu.style.top = (rect.bottom + window.scrollY) + 'px';
+            menu.style.left = (rect.left + window.scrollX) + 'px';
+            document.body.appendChild(menu);
+            const closeMenu = function(e) {
+                if (!menu.contains(e.target) && e.target !== btnAdjuntar) {
+                    menu.remove();
+                    document.removeEventListener('click', closeMenu);
+                }
+            };
+            setTimeout(() => document.addEventListener('click', closeMenu), 100);
+        });
+    }
+
+// ========== GRABACIÓN DE AUDIO ==========
+let mediaRecorder = null;
+let audioChunks = [];
+let grabando = false;
+let tiempoGrabacion = 0;
+let intervaloDuracion = null;
+let streamActual = null;
+let enviandoAudio = false;
+let grabacionIniciada = false; // para evitar múltiples inicios
+const MAX_DURACION_SEG = 180;
+
+// Crear indicador flotante
+let indicador = document.getElementById('grabandoIndicador');
+if (!indicador) {
+    indicador = document.createElement('div');
+    indicador.id = 'grabandoIndicador';
+    indicador.style.display = 'none';
+    indicador.style.position = 'fixed';
+    indicador.style.bottom = '80px';
+    indicador.style.right = '20px';
+    indicador.style.backgroundColor = '#dc3545';
+    indicador.style.color = 'white';
+    indicador.style.padding = '10px 15px';
+    indicador.style.borderRadius = '50px';
+    indicador.style.zIndex = '9999';
+    indicador.style.fontWeight = 'bold';
+    indicador.style.alignItems = 'center';
+    indicador.style.gap = '10px';
+    indicador.innerHTML = '🎙️ Grabando... <span id="tiempoGrabacion">0:00</span> <button id="cancelarGrabacion" style="background:none; border:none; color:white; margin-left:10px; cursor:pointer;">❌</button>';
+    document.body.appendChild(indicador);
+}
+const tiempoSpan = document.getElementById('tiempoGrabacion');
+const cancelarBtn = document.getElementById('cancelarGrabacion');
+
+function actualizarTiempoDisplay() {
+    const minutos = Math.floor(tiempoGrabacion / 60);
+    const segundos = tiempoGrabacion % 60;
+    if (tiempoSpan) tiempoSpan.innerText = `${minutos}:${segundos.toString().padStart(2, '0')}`;
+}
+
+async function detenerGrabacion(procesar = true) {
+    if (!grabando) return;
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+    }
+    if (intervaloDuracion) clearInterval(intervaloDuracion);
+    grabando = false;
+    grabacionIniciada = false;
+    if (indicador) indicador.style.display = 'none';
+    if (grabarBtn) {
+        grabarBtn.classList.remove('btn-danger');
+        grabarBtn.classList.add('btn-outline-secondary');
+    }
+    if (streamActual) {
+        streamActual.getTracks().forEach(track => track.stop());
+        streamActual = null;
+    }
+
+    if (!procesar) {
+        // Cancelar: limpiar todo
+        audioChunks = [];
+        if (audioInput) audioInput.value = '';
+        enviandoAudio = false;
+        return;
+    }
+
+    // Procesar envío solo si hay chunks y no estamos ya enviando
+    if (procesar && audioChunks.length > 0 && !enviandoAudio) {
+        enviandoAudio = true;
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        if (audioBlob.size === 0) {
+            enviandoAudio = false;
+            return;
         }
-        
+        const file = new File([audioBlob], `audio_${Date.now()}.webm`, { type: 'audio/webm' });
+
+        // Usar el formulario principal para mantener la misma lógica
+        const formData = new FormData(form);
+        // Limpiar campos previos de archivo
+        formData.delete('archivo');
+        formData.delete('imagen');
+        formData.delete('audio');
+        // Agregar el nuevo audio
+        formData.append('audio', file);
+        // Si el contenido está vacío, agregar un mensaje por defecto para evitar error de validación
+        let contenido = formData.get('contenido');
+        if (!contenido || contenido.trim() === '') {
+            formData.set('contenido', '🎤 Mensaje de audio');
+        }
+
+        // Obtener CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
         fetch(window.location.href, {
             method: 'POST',
             body: formData,
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrfToken
             }
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
                 // Limpiar formulario
-                contenidoInput.value = '';
+                if (contenidoInput) contenidoInput.value = '';
                 eliminarAdjunto();
-                
-                // Recargar la página para mostrar el nuevo mensaje
-                setTimeout(() => {
-                    location.reload();
-                }, 500);
+                setTimeout(() => location.reload(), 400);
             } else {
-                alert('Error al enviar el mensaje: ' + JSON.stringify(data.errors));
+                alert('Error al enviar audio: ' + JSON.stringify(data.errors));
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            alert('Error de conexión');
+            console.error(error);
+            alert('Error de conexión al enviar audio');
         })
         .finally(() => {
-            btnEnviar.disabled = false;
-            btnEnviar.innerHTML = originalHTML;
+            enviandoAudio = false;
+            audioChunks = [];
+            if (audioInput) audioInput.value = '';
         });
-    });
-    
-    // Enfoque automático en el campo de texto
-    contenidoInput.focus();
-    
-    // Enviar mensaje con Enter (Shift+Enter para nueva línea)
-    contenidoInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            form.dispatchEvent(new Event('submit'));
+    }
+}
+
+async function iniciarGrabacion() {
+    if (grabando || enviandoAudio || grabacionIniciada) return;
+    grabacionIniciada = true;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Tu navegador no soporta grabación de audio.');
+        grabacionIniciada = false;
+        return;
+    }
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        streamActual = stream;
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        mediaRecorder.ondataavailable = event => {
+            if (event.data.size > 0) audioChunks.push(event.data);
+        };
+        mediaRecorder.onstop = () => {
+            // No hacer nada, la lógica de envío está en detenerGrabacion
+        };
+        mediaRecorder.start(100); // recolectar datos cada 100ms
+        grabando = true;
+        tiempoGrabacion = 0;
+        actualizarTiempoDisplay();
+        if (indicador) indicador.style.display = 'flex';
+        if (grabarBtn) {
+            grabarBtn.classList.remove('btn-outline-secondary');
+            grabarBtn.classList.add('btn-danger');
         }
+        intervaloDuracion = setInterval(() => {
+            if (!grabando) return;
+            tiempoGrabacion++;
+            actualizarTiempoDisplay();
+            if (tiempoGrabacion >= MAX_DURACION_SEG) {
+                detenerGrabacion(true);
+                alert('Límite de 3 minutos alcanzado. Enviando audio...');
+            }
+        }, 1000);
+    } catch (err) {
+        console.error(err);
+        alert('No se pudo acceder al micrófono.');
+        grabacionIniciada = false;
+    }
+}
+
+// Cancelar grabación manual (con la X del indicador)
+if (cancelarBtn) {
+    cancelarBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        detenerGrabacion(false);
+        audioChunks = [];
+        if (audioInput) audioInput.value = '';
+        enviandoAudio = false;
+        grabacionIniciada = false;
     });
+}
+
+// Eventos del botón de grabar: solo inicio al presionar, envío al soltar si está dentro
+if (grabarBtn) {
+    let inicioDentro = false;
+    grabarBtn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        inicioDentro = true;
+        iniciarGrabacion();
+    });
+    grabarBtn.addEventListener('mouseup', (e) => {
+        if (grabando && inicioDentro) {
+            detenerGrabacion(true);
+        }
+        inicioDentro = false;
+    });
+    // Si el mouse sale del botón sin soltar, no cancelamos, solo esperamos
+    grabarBtn.addEventListener('mouseleave', () => {
+        // No hacemos nada, la grabación continúa
+    });
+    // Para móviles: touchstart y touchend
+    grabarBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        inicioDentro = true;
+        iniciarGrabacion();
+    });
+    grabarBtn.addEventListener('touchend', (e) => {
+        if (grabando && inicioDentro) {
+            detenerGrabacion(true);
+        }
+        inicioDentro = false;
+    });
+    grabarBtn.addEventListener('touchcancel', (e) => {
+        if (grabando) detenerGrabacion(false);
+        inicioDentro = false;
+    });
+}
+
+    // ========== ENVÍO DEL FORMULARIO AJAX ==========
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (!btnEnviar) return;
+            const originalHTML = btnEnviar.innerHTML;
+            btnEnviar.disabled = true;
+            btnEnviar.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            const formData = new FormData(this);
+            if (archivoSeleccionado && tipoArchivo === 'archivo') formData.set('archivo', archivoSeleccionado);
+            else if (archivoSeleccionado && tipoArchivo === 'imagen') formData.set('imagen', archivoSeleccionado);
+            if (audioInput && audioInput.files && audioInput.files.length > 0) formData.set('audio', audioInput.files[0]);
+            fetch(window.location.href, { method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        if (contenidoInput) contenidoInput.value = '';
+                        eliminarAdjunto();
+                        setTimeout(() => location.reload(), 400);
+                    } else alert('Error: ' + JSON.stringify(data.errors));
+                })
+                .catch(error => { console.error(error); alert('Error de conexión'); })
+                .finally(() => {
+                    btnEnviar.disabled = false;
+                    btnEnviar.innerHTML = originalHTML;
+                });
+        });
+    }
+
+    // Enviar con Enter
+    if (contenidoInput) {
+        contenidoInput.focus();
+        contenidoInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (form) form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+            }
+        });
+    }
 });
 </script>
 
 <style>
-
-/* Agregar estilos para el chat mejorado */
 .emoji-picker {
     display: flex;
     flex-wrap: wrap;
@@ -774,7 +959,6 @@ document.addEventListener('DOMContentLoaded', function() {
 .dropdown-menu {
     animation: fadeIn 0.2s ease-in;
 }
-
 
 .chat-messages {
     background-color: #f8f9fa;
@@ -810,14 +994,11 @@ document.addEventListener('DOMContentLoaded', function() {
     border-color: #ced4da;
 }
 
-
-/* Mejorar la apariencia de los botones del chat */
-#btn-adjuntar:hover, #btn-emojis:hover {
+#btn-adjuntar:hover, #btn-emojis:hover, #grabarAudioBtn:hover {
     background-color: #e9ecef;
 }
 
-
-#btn-adjuntar, #btn-emojis {
+#btn-adjuntar, #btn-emojis, #grabarAudioBtn {
     border-radius: 50% !important;
     width: 40px;
     height: 40px;
@@ -835,8 +1016,6 @@ document.addEventListener('DOMContentLoaded', function() {
     justify-content: center;
 }
 
-
-/* Estilo para cuando hay archivo adjunto */
 #preview-container {
     animation: slideDown 0.3s ease-out;
 }
@@ -845,7 +1024,6 @@ document.addEventListener('DOMContentLoaded', function() {
     from { opacity: 0; transform: translateY(-20px); }
     to { opacity: 1; transform: translateY(0); }
 }
-
 
 .dropdown-menu {
     border: none;
@@ -856,7 +1034,6 @@ document.addEventListener('DOMContentLoaded', function() {
     background-color: #f8f9fa;
 }
 
-/* Scrollbar personalizada */
 #chat-messages::-webkit-scrollbar {
     width: 6px;
 }

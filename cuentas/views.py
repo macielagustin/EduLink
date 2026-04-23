@@ -47,13 +47,52 @@ from django.db.models.functions import Coalesce
 
 
 # Agregar estas funciones utilitarias al inicio de views.py
-def crear_notificacion(usuario, tipo, mensaje, enlace=''):
-    Notificacion.objects.create(
+# cuentas/views.py
+from django.template.loader import get_template
+from django.template import TemplateDoesNotExist
+from .utils import enviar_email_notificacion
+
+def template_exists(template_name):
+    try:
+        get_template(template_name)
+        return True
+    except TemplateDoesNotExist:
+        return False
+
+def crear_notificacion(usuario, tipo, mensaje, enlace='', enviar_email=True):
+    # Guardar notificación interna
+    notificacion = Notificacion.objects.create(
         usuario=usuario,
         tipo=tipo,
         mensaje=mensaje,
         enlace=enlace
     )
+    
+    # Enviar email si corresponde
+    if enviar_email and usuario.email:
+        asunto = f"EduLink: {dict(Notificacion.TIPOS).get(tipo, 'Nueva notificación')}"
+        contexto = {
+            'usuario': usuario,
+            'tipo': tipo,
+            'mensaje': mensaje,
+            'enlace': enlace,
+            'fecha': timezone.now(),
+        }
+        # Intentar usar plantilla específica por tipo, sino genérica
+        template_especifico = f'emails/notificacion_{tipo}.html'
+        if template_exists(template_especifico):
+            template = template_especifico
+        else:
+            template = 'emails/notificacion_generica.html'
+        
+        enviar_email_notificacion(
+            destinatario=usuario.email,
+            asunto=asunto,
+            template_html=template,
+            contexto=contexto
+        )
+    
+    return notificacion
 
 def verificar_disponibilidad_maestro(maestro, fecha_propuesta, duracion_minutos):
     """Verifica si el maestro tiene disponibilidad en la fecha propuesta"""
@@ -1630,7 +1669,12 @@ def ver_conversacion(request, conversacion_id):
             mensaje.remitente = request.user
             
             # Determinar el tipo de mensaje
-            if mensaje.imagen:
+            if 'audio' in request.FILES:
+                mensaje.archivo = request.FILES['audio']
+                mensaje.tipo = 'audio'
+                mensaje.nombre_archivo = mensaje.archivo.name
+                mensaje.tamano_archivo = mensaje.archivo.size
+            elif mensaje.imagen:
                 mensaje.tipo = 'imagen'
                 mensaje.nombre_archivo = mensaje.imagen.name
                 mensaje.tamano_archivo = mensaje.imagen.size

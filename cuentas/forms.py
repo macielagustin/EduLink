@@ -385,6 +385,8 @@ class SolicitudClaseForm(forms.ModelForm):
 
 
 class MensajeForm(forms.ModelForm):
+    audio = forms.FileField(required=False, label='Grabar audio')
+
     archivo = forms.FileField(
         required=False,
         widget=forms.FileInput(attrs={
@@ -405,7 +407,7 @@ class MensajeForm(forms.ModelForm):
 
     class Meta:
         model = Mensaje
-        fields = ['contenido', 'archivo', 'imagen']
+        fields = ['contenido', 'archivo', 'imagen', 'audio']
         widgets = {
             'contenido': forms.Textarea(attrs={
                 'class': 'form-control',
