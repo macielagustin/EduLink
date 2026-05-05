@@ -41,26 +41,38 @@
                                            class="list-group-item list-group-item-action border-0 py-3 px-4 hover-bg">
                                             <div class="row align-items-center">
                                                 <!-- Avatar -->
-                                                <div class="col-auto">
-                                                    <div class="position-relative">
-                                                        {% if request.user.rol == 'ALUMNO' %}
-                                                            <img src="{{ conversacion.maestro.usuario.foto_perfil.url|default:'/static/images/avatar-default.png' }}" 
-                                                                 alt="{{ conversacion.maestro.usuario.get_full_name }}" 
-                                                                 class="rounded-circle" width="56" height="56">
-                                                            {% if conversacion.maestro.usuario.verificado %}
-                                                                <span class="position-absolute bottom-0 end-0 bg-primary rounded-circle p-1" 
-                                                                      style="width: 16px; height: 16px;" 
-                                                                      title="Usuario verificado">
-                                                                    <i class="fas fa-check text-white" style="font-size: 10px;"></i>
-                                                                </span>
-                                                            {% endif %}
-                                                        {% else %}
-                                                            <img src="{{ conversacion.alumno.usuario.foto_perfil.url|default:'/static/images/avatar-default.png' }}" 
-                                                                 alt="{{ conversacion.alumno.usuario.get_full_name }}" 
-                                                                 class="rounded-circle" width="56" height="56">
-                                                        {% endif %}
-                                                    </div>
-                                                </div>
+<div class="col-auto">
+    <div class="position-relative">
+        {% if request.user.rol == 'ALUMNO' %}
+            {% if conversacion.maestro.usuario.foto_perfil %}
+                <img src="{{ conversacion.maestro.usuario.foto_perfil.url }}" 
+                     alt="{{ conversacion.maestro.usuario.get_full_name }}" 
+                     class="rounded-circle" width="56" height="56">
+            {% else %}
+                <img src="{% static 'images/avatar-default.png' %}" 
+                     alt="{{ conversacion.maestro.usuario.get_full_name }}" 
+                     class="rounded-circle" width="56" height="56">
+            {% endif %}
+            {% if conversacion.maestro.usuario.verificado %}
+                <span class="position-absolute bottom-0 end-0 bg-primary rounded-circle p-1" 
+                      style="width: 16px; height: 16px;" 
+                      title="Usuario verificado">
+                    <i class="fas fa-check text-white" style="font-size: 10px;"></i>
+                </span>
+            {% endif %}
+        {% else %}
+            {% if conversacion.alumno.usuario.foto_perfil %}
+                <img src="{{ conversacion.alumno.usuario.foto_perfil.url }}" 
+                     alt="{{ conversacion.alumno.usuario.get_full_name }}" 
+                     class="rounded-circle" width="56" height="56">
+            {% else %}
+                <img src="{% static 'images/avatar-default.png' %}" 
+                     alt="{{ conversacion.alumno.usuario.get_full_name }}" 
+                     class="rounded-circle" width="56" height="56">
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
 
                                                 <!-- Información -->
                                                 <div class="col">

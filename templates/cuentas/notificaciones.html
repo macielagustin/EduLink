@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Mis Notificaciones | EduLink{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <h1 class="h3 mb-4">📢 Mis Notificaciones</h1>
+    <div class="card shadow-sm">
+        <div class="list-group list-group-flush">
+            {% for notificacion in notificaciones %}
+                <a href="{{ notificacion.enlace|default:'#' }}" class="list-group-item list-group-item-action {% if not notificacion.leida %}bg-light border-start border-primary{% endif %}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="mb-1">{{ notificacion.mensaje }}</p>
+                            <small class="text-muted">{{ notificacion.fecha_creacion|timesince }} atrás</small>
+                        </div>
+                        {% if not notificacion.leida %}
+                            <span class="badge bg-primary rounded-pill">Nueva</span>
+                        {% endif %}
+                    </div>
+                </a>
+            {% empty %}
+                <div class="list-group-item text-center text-muted">
+                    No tienes notificaciones.
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    <!-- Paginación -->
+    {% if notificaciones.has_other_pages %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if notificaciones.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page=1">« Primera</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ notificaciones.previous_page_number }}">Anterior</a></li>
+            {% endif %}
+            <li class="page-item disabled"><span class="page-link">Página {{ notificaciones.number }} de {{ notificaciones.paginator.num_pages }}</span></li>
+            {% if notificaciones.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ notificaciones.next_page_number }}">Siguiente</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ notificaciones.paginator.num_pages }}">Última »</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

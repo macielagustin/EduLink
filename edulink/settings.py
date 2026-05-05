@@ -167,5 +167,4 @@ EMAIL_USE_TLS = True
 
 EMAIL_HOST_USER = 'edulink.adm1n@gmail.com'  # la cuenta que creaste para EduLink
 EMAIL_HOST_PASSWORD = 'dgqb ffsr ltav ayuc'
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
-
+DEFAULT_FROM_EMAIL = 'EduLink <edulink.adm1n@gmail.com>'

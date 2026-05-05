@@ -59,8 +59,11 @@ def template_exists(template_name):
     except TemplateDoesNotExist:
         return False
 
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+
 def crear_notificacion(usuario, tipo, mensaje, enlace='', enviar_email=True):
-    # Guardar notificación interna
     notificacion = Notificacion.objects.create(
         usuario=usuario,
         tipo=tipo,
@@ -68,29 +71,36 @@ def crear_notificacion(usuario, tipo, mensaje, enlace='', enviar_email=True):
         enlace=enlace
     )
     
-    # Enviar email si corresponde
     if enviar_email and usuario.email:
-        asunto = f"EduLink: {dict(Notificacion.TIPOS).get(tipo, 'Nueva notificación')}"
-        contexto = {
+        # Asunto personalizado según tipo
+        asuntos = {
+            'mensaje': '📩 Nuevo mensaje en EduLink',
+            'solicitud': '📌 Nueva solicitud de clase',
+            'clase_aceptada': '✅ Clase confirmada',
+            'clase_rechazada': '❌ Clase rechazada',
+            'review': '⭐ Nueva reseña recibida',
+        }
+        asunto = asuntos.get(tipo, '📢 Notificación de EduLink')
+        
+        html_mensaje = render_to_string('emails/notificacion_generica.html', {
             'usuario': usuario,
-            'tipo': tipo,
             'mensaje': mensaje,
             'enlace': enlace,
             'fecha': timezone.now(),
-        }
-        # Intentar usar plantilla específica por tipo, sino genérica
-        template_especifico = f'emails/notificacion_{tipo}.html'
-        if template_exists(template_especifico):
-            template = template_especifico
-        else:
-            template = 'emails/notificacion_generica.html'
+        })
+        texto_plano = strip_tags(html_mensaje)
         
-        enviar_email_notificacion(
-            destinatario=usuario.email,
-            asunto=asunto,
-            template_html=template,
-            contexto=contexto
-        )
+        try:
+            send_mail(
+                subject=asunto,
+                message=texto_plano,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[usuario.email],
+                html_message=html_mensaje,
+                fail_silently=False,
+            )
+        except Exception as e:
+            print(f"Error enviando email a {usuario.email}: {e}")
     
     return notificacion
 
@@ -1647,7 +1657,7 @@ def lista_conversaciones(request):
 def ver_conversacion(request, conversacion_id):
     conversacion = get_object_or_404(Conversacion, id=conversacion_id)
     
-    # Verificar que el usuario tiene permiso para ver esta conversación
+    # Verificar permisos (igual que tenías)
     if request.user.rol == 'ALUMNO':
         alumno = get_object_or_404(Alumno, usuario=request.user)
         if conversacion.alumno != alumno:
@@ -1689,7 +1699,23 @@ def ver_conversacion(request, conversacion_id):
             conversacion.ultimo_mensaje = timezone.now()
             conversacion.save()
             
-            # Si es una petición AJAX, devolver JSON
+            # ========== NUEVO: Notificar al destinatario ==========
+            # Determinar quién es el otro usuario
+            if request.user == conversacion.alumno.usuario:
+                destinatario = conversacion.maestro.usuario
+            else:
+                destinatario = conversacion.alumno.usuario
+            
+            # Crear notificación (y email) para el destinatario
+            crear_notificacion(
+                usuario=destinatario,
+                tipo='mensaje',
+                mensaje=f"Tienes un nuevo mensaje de {request.user.get_full_name()}",
+                enlace=f'/mensajes/{conversacion.id}/'
+            )
+            # ====================================================
+            
+            # Si es AJAX, devolver JSON
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({
                     'success': True,
@@ -1710,7 +1736,6 @@ def ver_conversacion(request, conversacion_id):
     # Marcar mensajes como leídos
     mensajes.filter(leido=False).exclude(remitente=request.user).update(leido=True)
     
-    # Obtener estadísticas de archivos
     archivos_compartidos = mensajes.filter(tipo__in=['imagen', 'archivo'])
     
     return render(request, 'mensajes/conversacion.html', {
@@ -2111,9 +2136,10 @@ def agenda_usuario(request):
 def get_event_color(tipo_evento):
     """Asigna colores según el tipo de evento"""
     colores = {
-        'clase': '#28a745',      # Verde
+        'clase': '#ffc107',      # Amarillo
         'ocupacion': '#dc3545',  # Rojo
-        'disponible': '#007bff', # Azul
+        'disponible': '#28a745', # Verde
+        'evento': '#007bff',      # Azul
     }
     return colores.get(tipo_evento, '#6c757d')
 
@@ -4059,6 +4085,9 @@ def dashboard_admin(request):
             total_maestros=Count('maestros')
         ).order_by('-total_clases')[:10]
 
+        from cuentas.models import TicketSoporte
+        tickets_recientes = TicketSoporte.objects.filter(estado__in=['abierto', 'en_progreso']).order_by('-fecha_creacion')[:5]
+
         context = {
             'total_usuarios': total_usuarios,
             'total_alumnos': total_alumnos,
@@ -4070,6 +4099,7 @@ def dashboard_admin(request):
             'ingresos_totales': ingresos_totales,
             'nuevos_usuarios_mes': nuevos_usuarios_mes,
             'materias_populares': materias_populares,
+            'tickets_recientes': tickets_recientes,
         }
 
         return render(request, 'admin/dashboard_admin.html', context)
@@ -4600,5 +4630,15 @@ def exportar_estadisticas_pdf(request, año, meses, usuarios_mes, ingresos_mes,
 
     doc.build(elements)
     return response
+
+
+@login_required
+def listar_notificaciones(request):
+        notificaciones = Notificacion.objects.filter(usuario=request.user).order_by('-fecha_creacion')
+        # Paginación (por ejemplo 20 por página)
+        paginator = Paginator(notificaciones, 20)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        return render(request, 'cuentas/notificaciones.html', {'notificaciones': page_obj})
 
 

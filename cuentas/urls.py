@@ -84,6 +84,7 @@ urlpatterns = [
     # Notificaciones
     path('notificaciones/', views.obtener_notificaciones, name='obtener_notificaciones'),
     path('notificaciones/<int:notificacion_id>/leida/', views.marcar_notificacion_leida, name='marcar_notificacion_leida'),
+    path("notificaciones/", views.listar_notificaciones, name="listar_notificaciones"),
     
     # Calendario
     path('maestro/calendario/', views.calendario_maestro, name='calendario_maestro'),

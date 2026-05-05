@@ -140,6 +140,7 @@ class DisponibilidadUsuario(models.Model):
             ('clase', 'Clase'),
             ('ocupacion', 'Ocupación Personal'),
             ('disponible', 'Disponible'),
+            ('evento', 'Evento'),
         ],
         default='ocupacion'
     )
@@ -194,6 +195,7 @@ class SolicitudClase(models.Model):
     
     ESTADOS_PAGO = [
         ('pendiente', 'Pendiente'),
+        ('confirmado_alumno', 'Pagado por alumno (pendiente verificación)'),
         ('pagado', 'Pagado'),
         ('reembolsado', 'Reembolsado'),
         ('cancelado', 'Cancelado'),
